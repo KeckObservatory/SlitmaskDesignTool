@@ -1,0 +1,115 @@
+body {
+	background-color: #fffffd;
+	font-family: sans-serif;
+	margin-top: 0;
+}
+
+#kecklogo {
+	float: left;
+	margin: 0;
+	width: 82px;
+	height: 72px;
+	background: transparent url(./kecklogo.gif) no-repeat top left;
+}
+
+h2 .#headline {
+	float: left;
+	margin: 0;
+	padding: 10px 0 0 40px;
+	font-size: 200%;
+}
+
+#keckmenu {
+	float: right;
+	width: 100%;
+	margin: -72px 0 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+#keckmenu li {
+	float: right;
+	margin: 0;
+	padding: 0;
+	font-family: "Lucida Grande", sans-serif;
+	font-size: 70%;
+}
+
+#keckmenu p {
+	float: none;
+	display: block;
+	margin: 0 1px 0 0;
+	padding: 2px 4px;
+	color: #000;
+	text-decoration: none;
+	background: #dde;
+	border: 1px solid #eef;
+}
+
+#keckmenu p:hover {
+	color: #333;
+	padding-bottom: 2px;
+	border-color: #500;
+	background: #fee;
+	border: 1px solid #333;
+}
+
+#headerTable {
+	background-color: #ffffdd;
+	width: 100%;
+}
+
+#footerTable {
+	font-size: 70%;
+}
+
+#buttonPanel tr td {
+	align-content: center;
+}
+
+#contentTable {
+	background-color: #eeeedd;
+}
+
+#contentTable tr td {
+	vertical-align: top;
+	background-color: #ffffee;
+}
+
+#contentPanel {
+	width: 100%;
+}
+
+#contentCell {
+	width: 100%;
+}
+
+#canvasDiv {
+	width: 800px;
+	height: 500px;
+}
+
+#targetListFrame {
+	visibility: hidden;
+	display: none;
+	width: 2px;
+	height: 2px;
+	border: solid 1px black;
+	background-color: #ffffff;
+}
+
+#paramTable {
+	font-size: 90%;
+	background-color: #ccc;
+}
+
+#paramTable td {
+	padding-right: 5px;
+	background-color: #eeeeee;
+}
+
+#paramTable th {
+	padding-right: 5px;
+	text-align: right;
+	background-color: #dfdfdf;
+}
