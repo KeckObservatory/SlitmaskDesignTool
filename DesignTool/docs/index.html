@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="Cache-Control" content="no-cache;must-revalidate">
+<meta charset="UTF-8">
+<title>Slitmask Design Tool</title>
+<link rel='stylesheet' type='text/css' href='smdt.css'>
+<script src='ajaxv2.js'></script>
+<script src='canvasShow.js?r=1'></script>
+<script src='smdt.js'></script>
+<script>
+	
+</script>
+</head>
+<body onload='SlitmaskDesignTool();'>
+	<table id='headerTable'>
+		<tr>
+			<td><p id='kecklogo'></p>
+				<h2 id='headline'>&nbsp;Slitmask Design Tool Prototype</h2>
+				<ul id='keckmenu'>
+					<li id='Links'><p>Links</p></li>
+					<li id='Sofware'><p>Software</p></li>
+					<li id='Keck'><p>Keck</p></li>
+				</ul>
+	</table>
+
+	<form name='form2' id='form2' method='post'
+		enctype='multipart/form-data' action='loadParams'
+		target='targetListFrame'>
+		<table id='contentTable'>
+			<tr>
+				<td>
+				<td id='contentCell'>
+
+					<h3>Input Parameters</h3>
+					<table id='contentPanel'>
+						<tr>
+							<td>
+
+								<table id='paramTable'>
+									<tr>
+										<th>Target List:
+										<td><input type='file' id='targetList' name='targetList'
+											value="mask_ex1.txt"> Input file of targets
+										<th>Output File:
+										<td><input id='outputFilefd' value="mask_ex2.lst">
+											Output list selected/non-selected
+									<tr>
+										<th>Output Fits:
+										<td><input id='outputFitsfd' value="mask_ex2.fits">
+											Mask Design File (FITS)
+										<th>zoom_factor
+										<td><input id='zoomFactorfd' value="0.0">
+											zoom_factor
+									<tr>
+										<th>Center RA:
+										<td><input id='centerRAfd' value="14.2637033333">
+											RA of field
+										<th>Center DEC:
+										<td><input id='centerDECfd' value=" 25.0395388889">
+											Dec of field
+									<tr>
+										<th>PA:
+										<td><input id='positionAnglefd' value=" 30.0"> PA
+											of field (deg)
+										<th>Equinox:
+										<td><input id='equinoxfd' value=" 2000.0">
+											Equinox of coordinates
+									<tr>
+										<th>Min. slit length:
+										<td><input id='minSlitLenfd' value=" 10.0">
+											Minimum slit length (arcsec)
+										<th>Slit Sep.
+										<td><input id='minSlitSepfd' value=" 0.35">
+											Separation between slits (arcsec)
+									<tr>
+										<th>Slit width:
+										<td><input id='slitWidthfd' value=" 1.0"> Width
+											of slit (arcsec)
+										<th>Box size:
+										<td><input id='boxSizefs' value=" 4.0"> Alignment
+											box size (arcsec)
+									<tr>
+										<th>Blue wavelength:
+										<td><input id='bluewaveLenfd' value=" 5000.0">
+											Shortest wavelength of interest (&#x212B;)
+										<th>Red wavelength:
+										<td><input id='redwaveLenfd' value=" 9000.0">
+											Longest wavelength of interest (&#x212B;)
+									<tr>
+										<th>Proj slit length
+										<td><input id='projSlitLenfd' value=" no">
+											Project slit length to preserve in spatial direction?
+										<th>No overlap
+										<td><input id='nooverlapfd' value=" yes"> Adjust
+											slit lengths to avoid overlap? (YES)
+									<tr>
+										<th>Center wavelength:
+										<td><input id='centerwaveLenfd' value=" 7500.0">
+											wavelength for refraction (&#x212B;)
+										<th>Temperature:
+										<td><input id='temperaturefd' value=" 0.0"> Air
+											temp (degC)
+									<tr>
+										<th>Pressure:
+										<td><input id='pressurefd' value="615.0"> Air
+											pressure (millibar, same as hPa)
+										<th>Mask Id:
+										<td><input id='maskIdfd' value="Example_Mask_2">
+											Full Name of Mask
+									<tr>
+										<th>Mask name:
+										<td><input id='masknamefd' value="ExMsk2"> Name
+											of Mask for GUI (6 char or less)
+										<th>Obs. date:
+										<td><input id='obsdatefd' value="2016-07-15">
+											Date of intended use (YYYY-MM-DD)
+									<tr>
+										<th>Author:
+										<td><input id='authorfd' value="Carlos Alvarez ">
+											Designer of Mask (name )
+										<th>Observer:
+										<td><input id='observerNamefd' value="Carlos Alvarez ">
+											Observer (name )
+									<tr>
+										<th>Project:
+										<td><input id='projNamefd' value="Test"> Project
+											name <thi colspan=2>&nbsp; 
+								</table> <br> <input type='button' id='loadParams'
+								name='loadParams' value='Apply Parameters'>
+						<tr>
+							<td>Status: <span id='statusDiv'>&nbsp;</span>
+						<tr>
+							<td>
+								<table id='buttonPanel'>
+									<tr>
+										<td>
+											<div id='canvasDiv'>Initializing ...</div>
+											<br>
+											Mouse-Left: pan; Shift-Left: zoom; Ctrl-Left: rotate; Alt-Left: scale; Dbl-click: reset
+										<td><input type='button' id='resetDisplay'
+											value='Reset Display'> <br> Min. Priority: <input
+											id='minPriority' value='0'> <br> <input
+											type='checkbox' id='showAll' checked> Show All <br>
+											<input type='checkbox' id='showSelected' checked>
+											Show selected <br> <br> <input type='button'
+											id='quit' value='Quit'>
+								</table>
+					</table>
+		</table>
+	</form>
+	<hr>
+	<table id='footerTable'>
+		<tr>
+			<td>Slitmask Design Tool Prototype - (C) 2018 - W. M. Keck
+				Observatory
+	</table>
+	<iframe name='targetListFrame' id='targetListFrame' allowfullscreen></iframe>
+</body>
+</html>
