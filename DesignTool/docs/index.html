@@ -6,6 +6,8 @@
 <title>Slitmask Design Tool</title>
 <link rel='stylesheet' type='text/css' href='smdt.css'>
 <script src='ajaxv2.js'></script>
+<script src='TargetTable.js'></script>
+<script src='inOutChecker.js'></script>
 <script src='canvasShow.js?r=1'></script>
 <script src='smdt.js'></script>
 <script>
@@ -31,124 +33,162 @@
 			<tr>
 				<td>
 				<td id='contentCell'>
-
-					<h3>Input Parameters</h3>
+					<table id='targetListName'>
+						<tr>
+							<td>Target List:
+							<td><input type='file' id='targetList' name='targetList'
+								value="mask_ex1.txt" title="Input file of targets">
+							<td><input type='button' id='loadTargets' name='loadTargets'
+								value='Load targets'>
+							<td>
+								<input type='button' id='showHideParams' value='Show Parameters'>
+						</tr>
+					</table> 
+					<table id='paramTable' style='visibility:hidden; display:none'>
+						<tr><td>
+								<h3>Input Parameters</h3><tr>
+							<th>Output Fits:
+							<td><input id='outputFitsfd' value="mask.fits"
+								title="Mask Design File (FITS)">
+							<th>zoom_factor
+							<td><input id='zoomFactorfd' value="0.0" title="zoom_factor">
+						<tr>
+							<th>Center RA [hr]:
+							<td><input id='inputRAfd' value="0.0" title="RA of field">
+							<th>Center DEC:
+							<td><input id='inputDECfd' value="0.0" title="Dec of field">
+						<tr>
+							<th>PA:
+							<td><input id='positionAnglefd' value=" 0.0"
+								title="PA of field (deg)">
+							<th>Equinox:
+							<td><input id='equinoxfd' value=" 2000.0"
+								title="Equinox of coordinates">
+						<tr>
+							<th>Min. slit length:
+							<td><input id='minSlitLenfd' value=" 10.0"
+								title="Minimum slit length (arcsec)">
+							<th>Slit Sep.
+							<td><input id='minSlitSepfd' value=" 0.35"
+								title="Separation between slits (arcsec)">
+						<tr>
+							<th>Slit width:
+							<td><input id='slitWidthfd' value=" 1.0"
+								title="Width of slit (arcsec)">
+							<th>Box size:
+							<td><input id='boxSizefs' value=" 4.0"
+								title="Alignment box size (arcsec)">
+						<tr>
+							<th>Blue wavelength:
+							<td><input id='bluewaveLenfd' value="5000.0"
+								title="Shortest wavelength of interest (&#x212B;)">
+							<th>Red wavelength:
+							<td><input id='redwaveLenfd' value=" 9000.0"
+								title="Longest wavelength of interest (&#x212B;)">
+						<tr>
+							<th>Proj slit length
+							<td><input id='projSlitLenfd' value=" no"
+								title="Project slit length to preserve in spatial direction?">
+							<th>No overlap
+							<td><input id='nooverlapfd' value=" yes"
+								title="Adjust slit lengths to avoid overlap? (YES)">
+						<tr>
+							<th>Center wavelength:
+							<td><input id='centerwaveLenfd' value=" 7500.0"
+								title="wavelength for refraction(&#x212B;)">
+							<th>Temperature:
+							<td><input id='temperaturefd' value=" 0.0"
+								title="Air temp (degC)">
+						<tr>
+							<th>Pressure:
+							<td><input id='pressurefd' value="615.0"
+								title="Air pressure (millibar, same as hPa)">
+							<th>Mask Id:
+							<td><input id='maskIdfd' value="Example_Mask_2"
+								title="Full Name of Mask">
+						<tr>
+							<th>Mask name:
+							<td><input id='masknamefd' value="ExMsk2"
+								title="Name of Mask for GUI (6 char or less)">
+							<th>Obs. date:
+							<td><input id='obsdatefd' value="2000-01-01"
+								title="Date of intended use (YYYY-MM-DD)">
+						<tr>
+							<th>Author:
+							<td><input id='authorfd' value="Carlos Alvarez "
+								title="Designer of Mask (name)">
+							<th>Observer:
+							<td><input id='observerNamefd' value="Carlos Alvarez "
+								title="Observer name">
+						<tr>
+							<th>Project:
+							<td><input id='projNamefd' value="New Mask"
+								title="Project name">
+							<th>&nbsp;
+							<td>&nbsp;
+					</table>
 					<table id='contentPanel'>
 						<tr>
 							<td>
-
-								<table id='paramTable'>
-									<tr>
-										<th>Target List:
-										<td><input type='file' id='targetList' name='targetList'
-											value="mask_ex1.txt"> Input file of targets
-										<th>Output File:
-										<td><input id='outputFilefd' value="mask_ex2.lst">
-											Output list selected/non-selected
-									<tr>
-										<th>Output Fits:
-										<td><input id='outputFitsfd' value="mask_ex2.fits">
-											Mask Design File (FITS)
-										<th>zoom_factor
-										<td><input id='zoomFactorfd' value="0.0">
-											zoom_factor
-									<tr>
-										<th>Center RA:
-										<td><input id='centerRAfd' value="14.2637033333">
-											RA of field
-										<th>Center DEC:
-										<td><input id='centerDECfd' value=" 25.0395388889">
-											Dec of field
-									<tr>
-										<th>PA:
-										<td><input id='positionAnglefd' value=" 30.0"> PA
-											of field (deg)
-										<th>Equinox:
-										<td><input id='equinoxfd' value=" 2000.0">
-											Equinox of coordinates
-									<tr>
-										<th>Min. slit length:
-										<td><input id='minSlitLenfd' value=" 10.0">
-											Minimum slit length (arcsec)
-										<th>Slit Sep.
-										<td><input id='minSlitSepfd' value=" 0.35">
-											Separation between slits (arcsec)
-									<tr>
-										<th>Slit width:
-										<td><input id='slitWidthfd' value=" 1.0"> Width
-											of slit (arcsec)
-										<th>Box size:
-										<td><input id='boxSizefs' value=" 4.0"> Alignment
-											box size (arcsec)
-									<tr>
-										<th>Blue wavelength:
-										<td><input id='bluewaveLenfd' value=" 5000.0">
-											Shortest wavelength of interest (&#x212B;)
-										<th>Red wavelength:
-										<td><input id='redwaveLenfd' value=" 9000.0">
-											Longest wavelength of interest (&#x212B;)
-									<tr>
-										<th>Proj slit length
-										<td><input id='projSlitLenfd' value=" no">
-											Project slit length to preserve in spatial direction?
-										<th>No overlap
-										<td><input id='nooverlapfd' value=" yes"> Adjust
-											slit lengths to avoid overlap? (YES)
-									<tr>
-										<th>Center wavelength:
-										<td><input id='centerwaveLenfd' value=" 7500.0">
-											wavelength for refraction (&#x212B;)
-										<th>Temperature:
-										<td><input id='temperaturefd' value=" 0.0"> Air
-											temp (degC)
-									<tr>
-										<th>Pressure:
-										<td><input id='pressurefd' value="615.0"> Air
-											pressure (millibar, same as hPa)
-										<th>Mask Id:
-										<td><input id='maskIdfd' value="Example_Mask_2">
-											Full Name of Mask
-									<tr>
-										<th>Mask name:
-										<td><input id='masknamefd' value="ExMsk2"> Name
-											of Mask for GUI (6 char or less)
-										<th>Obs. date:
-										<td><input id='obsdatefd' value="2016-07-15">
-											Date of intended use (YYYY-MM-DD)
-									<tr>
-										<th>Author:
-										<td><input id='authorfd' value="Carlos Alvarez ">
-											Designer of Mask (name )
-										<th>Observer:
-										<td><input id='observerNamefd' value="Carlos Alvarez ">
-											Observer (name )
-									<tr>
-										<th>Project:
-										<td><input id='projNamefd' value="Test"> Project
-											name <thi colspan=2>&nbsp; 
-								</table> <br> <input type='button' id='loadParams'
-								name='loadParams' value='Apply Parameters'>
 						<tr>
-							<td>Status: <span id='statusDiv'>&nbsp;</span>
+							<td><table>
+									<tr>
+										<td>Status: <span id='statusDiv'>&nbsp;</span>
+								</table></td>
 						<tr>
 							<td>
 								<table id='buttonPanel'>
 									<tr>
 										<td>
-											<div id='canvasDiv'>Initializing ...</div>
-											<br>
-											Mouse-Left: pan; Shift-Left: zoom; Ctrl-Left: rotate; Alt-Left: scale; Dbl-click: reset
+											<div id='canvasDiv'>Initializing ...</div> <br>
+											<div id='mouseStatus'></div> &#x2795; Selected target;
+											&#x2796;Target; &#x25FB; Alignment box; <br> Mouse-Left:
+											move field; Shift-Left: rotate field; Ctrl-Left: rotate view;
+											Alt-Left: scale; Dbl-click: reset <br> Moves: h: left;
+											l: right; j: move up; k: down Zoom: &gt;: zoom in; &lt;: zoom
+											out.
 										<td><input type='button' id='resetDisplay'
-											value='Reset Display'> <br> Min. Priority: <input
-											id='minPriority' value='0'> <br> <input
-											type='checkbox' id='showAll' checked> Show All <br>
-											<input type='checkbox' id='showSelected' checked>
-											Show selected <br> <br> <input type='button'
-											id='quit' value='Quit'>
+											value='Reset Display'> &nbsp; <input type='button'
+											id='resetOffsets' value='Reset Offsets'> <br>
+											Min. Priority: <input id='minPriority' value='0'> <br>
+
+											<input type='radio' name='showSel' id='showAll' checked>
+											Show all targets <input type='radio' name='showSel'
+											id='showSelected'> Show selected <input type='radio'
+											name='showSel' id='showByPriority'> Show by priority
+
+											<br> <input type='checkbox' id='useDSS'> Use DSS
+											<br> <input type='checkbox' id='showAlignBox'>
+											Show align box <br>
+											<table id='selectionMode'>
+												<tr>
+													<td><input type='radio' name='navMode' id='enableNav'>
+														Enable navigation <input type='radio' name='navMode'
+														id='lockNav'> Lock navigation <input type='radio'
+														name='navMode' id='enableSelection'> Enable
+														selection
+												<tr>
+													<td>
+														<div id='testDiv'></div>
+														<table>
+															<tr>
+																<td>Center RA:
+																<td><input id='centerRAfd' value=''>
+															<tr>
+																<td>Center DEC:
+																<td><input id='centerDECfd' value=''>
+															<tr>
+																<td>Angle:
+																<td><input id='rotAngle' value=''>
+														</table>
+											</table>
 								</table>
 					</table>
 		</table>
+		<input type='hidden' id='formUseDSS' value='0' name='formUseDSS'>
 	</form>
+	<br>
+	<div id='targetTableDiv'></div>
 	<hr>
 	<table id='footerTable'>
 		<tr>

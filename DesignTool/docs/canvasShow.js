@@ -48,8 +48,11 @@ function TxMatrix() {
 
 			mat[0][0] = a * cosa - b * sina;
 			mat[0][1] = a * sina + b * cosa;
-			mat[1][0] = c * cosa - d * sina;
-			mat[1][1] = c * sina + d * cosa;
+			
+			// mat[1][0] = c * cosa - d * sina;
+			// mat[1][1] = c * sina + d * cosa;
+			mat[1][0] = -mat[0][1];
+			mat[1][1] = mat[0][0];
 
 			mat[0][2] = e * cosa - f * sina + xc;
 			mat[1][2] = e * sina + f * cosa + yc;
@@ -59,10 +62,18 @@ function TxMatrix() {
 
 	self.getScale = function() {
 		with (self) {
-			var ca = (mat[0][0] + mat[1][1]) / 2;
-			var sa = (mat[0][1] + mat[1][0]) / 2;
-			var l = Math.hypot(ca, sa);
-			return l;
+			var ca2 = (mat[0][0] * mat[1][1]);
+			var sa2 = (mat[0][1] * mat[1][0]);
+			return Math.sqrt(Math.abs(ca2-sa2));
+		}
+	};
+	
+	self.getRotAngle = function () {
+		// Returns angle in radians
+		with (self) {
+			var ca = (mat[0][0] + mat[1][1])/2;
+			var sa = (mat[0][1] - mat[1][0])/2;
+			return Math.atan2(sa, ca);
 		}
 	};
 
@@ -102,6 +113,42 @@ function TxMatrix() {
 		self.mat = [ [ 1, 0, 0 ], [ 0, 1, height ], [ 0, 0, 1 ] ];
 	};
 
+	// World to screen coordinates
+	self.w2s = function (x, y, flipY) {
+		var tx = self.getTx(flipY);
+		var x1 = x * tx[0] - y * tx[1] + tx[4];
+		var y1 = -x * tx[2] + y * tx[3] + tx[5];
+		
+		return [x1, y1];
+	};
+	
+	// Screen to world coordinates
+	self.s2w = function (x, y, flipY) {
+		// inverse transform
+		var tx = self.getTx(flipY);
+		var det = tx[0] * tx[3] - tx[1] * tx[2];
+		var x1 = x - tx[4];
+		var y1 = y - tx[5];
+		var x2 = (x1 * tx[3] - y1 * tx[2]) / det;
+		var y2 = (-x1 * tx[1] + y1 * tx[0]) / det;
+		
+		return [x2, y2];		
+	};
+	
+	self.toString = function () {
+		var angDeg = self.getRotAngle() / Math.PI * 180.0; 
+		var tx = self.getTx(0);
+		var out = "<table><tr>" +
+		"<td>" + tx[0].toFixed(2) + "<td>" + tx[1].toFixed(2) + 
+		"<td>Angle:" + angDeg.toFixed(2) +
+		"<tr>" +
+		"<td>" + tx[2].toFixed(2) + "<td>" + tx[3].toFixed(2) +
+		"<tr>" +
+		"<td>" + tx[4].toFixed(2) + "<td>" + tx[5].toFixed(2) +		
+		"</table>";
+		return out;
+	};
+	
 	self.reset(0);
 } // TxMatrix
 
@@ -110,7 +157,10 @@ function TxMatrix() {
 //
 function CanvasShow(containerName) {
 	var self = this;
-
+	
+	var AlignBox = -2;
+	var GuideBox = -99;
+	
 	// For displaying mouse-over values and cuts
 	self.rawData = null;
 
@@ -118,19 +168,74 @@ function CanvasShow(containerName) {
 	self.anchorx = 0;
 	self.anchory = 0;
 	self.dragging = 0;
-	self.fromX = 0;
-	self.fromY = 0;
-	self.mustFit = 1;
 
-	self.showMaxPriority = 9999;
+	self.skyX = 0;
+	self.skyY = 0;
+	self.mustFit = 1;
+	self.northAngle = 90;
+	self.eastAngle = 0;
+	self.centerRaDeg = 0;
+	self.centerDecDeg = 0;
+
+	self.showMinPriority = -999;
 
 	self.scale = 1;
 	self.tMatrix = new TxMatrix();
-	self.xPscale = self.yPscale = 1;
-	self.maskOfsetX = 130;
-	self.maskOffsetY = 320;
+	self.maskTx = new TxMatrix();
+	self.maskOffsetX = 0;
+	self.maskOffsetY = 0;
 	self.slitColor = '#FF0000';
 	self.maskColor = '#8888FF';
+	self.rotAngle = 0;
+
+	// for selecting targets
+	self.findIt = 0;
+	self.searchX = 0;
+	self.searchY = 0;
+	self.thold = 0;
+	self.selectedTargetIdx = -1;	
+	
+	self.maskLayout = [[-498.0, 131.0, 0],
+		[-498.0, -14.0, 1],
+		[-460.0, -67.0, 1],
+		[-420.0, -110.0, 1],
+		[-360.0, -161.0, 1],
+		[-259.7, -161.0, 1],
+		[-259.7, 131.0, 1],
+		[-498.0, 131.0, 2],
+		[-249.3, 131.0, 0],
+		[-249.3, -161.0, 1],
+		[-164.0, -161.0, 1],
+		[-132.0, -141.0, 1],
+		[-98.0, -125.0, 1],
+		[-51.0, -112.0, 1],
+		[-5.2, -109.0, 1],
+		[-5.2, 131.0, 1],
+		[-249.3, 131.0, 2],
+		[5.2, 131.0, 0],
+		[5.2, -109.0, 1],
+		[52.0, -111.0, 1],
+		[100.0, -126.0, 1],
+		[134.0, -142.0, 1],
+		[164.0, -161.0, 1],
+		[249.3, -161.0, 1],
+		[249.3, 131.0, 1],
+		[5.2, 131.0, 2],
+		[259.7, 131.0, 0],
+		[259.7, -161.0, 1],
+		[360.0, -161.0, 1],
+		[420.0, -110.0, 1],
+		[460.0, -67.0, 1],
+		[498.0, -14.0, 1],
+		[498.0, 131.0, 1],
+		[259.7, 131.0, 2],	
+		// Cross to mark center.
+		[-11.850, 0.000, 0],
+		[11.850, 0.000, 3],
+		[0.000, -11.850, 0],
+		[0.000, 11.850, 3],
+		];
+		
 
 	self.contElem = E(containerName);
 
@@ -139,15 +244,60 @@ function CanvasShow(containerName) {
 	function E(n) {
 		return document.getElementById(n);
 	}
+	
+	function abs(x) {
+		if (x < 0) return -x;
+		return x;
+	}
+	
+	function showMsg (dname, msg) {
+		E(dname).innerHTML = msg;
+	}
 
 	function toggleSmoothing(ctx, onoff) {
 		ctx.imageSmoothingEnabled = onoff;
 		ctx.mozImageSmoothingEnabled = onoff;
 		ctx.webkitImageSmoothingEnabled = onoff;
 		ctx.msImageSmoothingEnabled = onoff;
-	}
-	;
+	}	
 
+	function toSexa (inDeg) {
+		var val = inDeg;
+		var sign = ' ';
+		if (val < 0) { sign = '-';
+			val = -val;
+		}
+		var dd = Math.floor(val);
+		val = (val - dd) * 60;
+		var mm = Math.floor(val);
+		var ss = (val - mm) * 60;
+		if (dd < 10) dd = '0' + dd;
+		if (mm < 10) mm = '0' + mm;
+		var cc = ':';
+		if (ss < 10) cc = ':0';
+		return sign + dd + ':' + mm + cc + ss.toFixed(2);
+	}
+	
+	function degrees(rad) {
+		return rad * 180.0 / Math.PI;
+	}
+	
+	function radians(deg) {
+		return deg * Math.PI / 180.0;
+	}
+	
+	function rotate (angRad, x, y) {
+		var sa = Math.sin(angRad);
+		var ca = Math.cos(angRad);
+		return rotate1 (sa, ca, x, y);
+	}
+	
+	function rotate1 (sa, ca, x, y) {
+		var x1 = x * ca - y * sa;
+		var y1 = x * sa + y * ca;
+		return [x1, y1];
+	}
+	
 	function Filter(ctx, width, height) {
 		/*
 		 * Creates a temporary canvas element with given width and height. ctx
@@ -158,12 +308,17 @@ function CanvasShow(containerName) {
 
 		self.offset = -42;
 		self.outCtx = ctx;
+		
 		self.tmpCanvas = document.createElement("canvas");
-
 		self.tmpCanvas.width = width;
 		self.tmpCanvas.height = height;
-
 		self.tmpCtx = self.tmpCanvas.getContext("2d");
+		
+		self.tmpCanvas2 = document.createElement("canvas");
+		self.tmpCanvas2.width = width;
+		self.tmpCanvas2.height = height;
+		self.tmpCtx2 = self.tmpCanvas2.getContext("2d");
+		
 		toggleSmoothing(self.tmpCtx, false);
 
 		self.applyScaleOffset = function(data, scale, offset) {
@@ -197,7 +352,7 @@ function CanvasShow(containerName) {
 			self.offset = offset;
 		};
 
-		self.drawImage = function(img) {
+		self.drawImage = function(img, offx, offy) {
 			/*-
 				Convenient function, applies the filter and draws the image on the output canvas.
 				
@@ -209,7 +364,8 @@ function CanvasShow(containerName) {
 			// Applies transformation
 			// self.tmpCanvas.width = self.tmpCanvas.width;
 			// self.tmpCtx.drawImage(img, 0, 0, img.width, img.height);
-			self.tmpCtx.drawImage(img, 0, 0);
+			
+			self.tmpCtx.drawImage(img, offx, offy);
 
 			var imgData = self.tmpCtx.getImageData(0, 0, self.tmpCanvas.width,
 					self.tmpCanvas.height);
@@ -217,10 +373,31 @@ function CanvasShow(containerName) {
 			// Applies contrast
 			self.applyScaleOffset(imgData.data, self.scale, self.offset);
 			// Copies to output canvas
-			self.outCtx.putImageData(imgData, 0, 0);
-			self.scaledImageData = self.outCtx.getImageData(0, 0,
-					self.tmpCanvas.width, self.tmpCanvas.height);
+			
+			// self.scaledImageData = self.outCtx.getImageData(0, 0,
+			// self.tmpCanvas.width, self.tmpCanvas.height);
 		};
+		
+		// Split drawImage into two functions
+		self.drawToOutputPart1 = function (img, offx, offy) {
+			self.tmpCtx.drawImage(img, offx, offy);
+
+			var imgData = self.tmpCtx.getImageData(0, 0, self.tmpCanvas.width,
+					self.tmpCanvas.height);
+
+			// Applies contrast
+			self.applyScaleOffset(imgData.data, self.scale, self.offset);
+			// Copies to output canvas
+
+			self.tmpCtx2.putImageData(imgData, 0, 0);
+		};
+		
+		self.drawToOutputPart2 = function () {
+			var imgData = self.tmpCtx2.getImageData(0, 0, self.tmpCanvas.width,
+					self.tmpCanvas.height);
+			self.outCtx.putImageData(imgData, 0, 0);			
+		};
+		return this;
 	} /* End of Filter */
 
 	self.initialize = function() {
@@ -233,6 +410,8 @@ function CanvasShow(containerName) {
 		if (cv.getContext) {
 			var cont = self.contElem;
 			self._Canvas = cv;
+            cv.tabIndex = 99999;
+            cont.tabIndex = 99999;
 			cv.width = cont.clientWidth;
 			cv.height = cont.clientHeight;
 			if (cv.width == 0 || cv.height == 0) {
@@ -249,16 +428,54 @@ function CanvasShow(containerName) {
 			self.img = new Image();
 			self.img.onload = function() {
 				if (self.mustFit) {
-					self.fitImage();
+					self.fitMask();
 					self.mustFit = 0;
 				}
-				self.redrawTxImage(self.tMatrix);
+				self.redrawTxImage();
 			};
+			self.findMaskMinMax();
 		} else {
 			alert("Your browser does not support canvas\nPlease use another browser.");
 		}
 	};
 
+	self.findMaskMinMax = function () {
+		var layout = self.maskLayout;
+		var i;
+		var minx, miny, maxx, maxy;
+		minx = miny = 999999;
+		maxx = maxy = -999999;
+		
+		for (i in layout) {
+			var row = layout[i];
+			var x = row[0];
+			var y = row[1];
+			minx = Math.min(minx, x);
+			miny = Math.min(miny, y);
+			maxx = Math.max(maxx, x);
+			maxy = Math.max(maxy, y);
+		}
+		self.maskMinMax = [minx, miny, maxx, maxy];
+	};
+	
+	self.fitMask = function () {		
+		var mmm = self.maskMinMax;
+		var xrange = mmm[2] - mmm[0];
+		var yrange = mmm[3] - mmm[1];
+
+		var cv = self._Canvas;
+		var sw = cv.width / xrange;
+		var sh = cv.height / yrange;
+		var scale = Math.min(sw, sh) * 0.9;		
+		
+		var x = cv.width / 2;
+		var y = cv.height / 2;
+		
+		self.tMatrix.reset(0);
+		self.tMatrix.scale(scale);
+		self.tMatrix.translate(x, y);
+	};
+	
 	self.fitImage = function() {
 		// Calculates the scale factor to fit the image in canvas
 		var cv = self._Canvas;
@@ -279,34 +496,417 @@ function CanvasShow(containerName) {
 		self.tMatrix.reset(yOrigin);
 		self.tMatrix.scale(scale);
 		self.tMatrix.translate(x, y);
+		
+		// self.maskTx.reset(yOrigin);
+		// self.maskTx.scale(1);
+		// self.maskTx.translate(x+self.maskOffsetX, x+self.maskOffsetY);
 	};
 
-	self.redrawTxImage = function(t) {
+	self.showPositionInfo = function () {
+        var maskAngleRad = self.maskTx.getRotAngle();
+        
+		var north = 90 - self.northAngle;		
+		var angle = north + degrees(self.tMatrix.getRotAngle());
+
+		var sx = self.xPscale;
+		var sy = self.yPscale;
+		
+		var rxy = rotate(radians(north), -self.skyY*sy, -self.skyX*sx);
+		
+		var decDeg = self.centerDecDeg - rxy[0] / 3600;		
+		
+		var cosDec = Math.cos (radians(decDeg));
+		cosDec = Math.max (cosDec, 1E-4);
+		
+		var raHrs = (self.centerRaDeg  - rxy[1] / 3600 / cosDec) / 15;				
+			
+        E('centerRAfd').value = toSexa(raHrs);
+        E('centerDECfd').value = toSexa(decDeg);
+        E('rotAngle').value = angle.toFixed(3);
+        showMsg ('statusDiv', degrees(maskAngleRad)  + " " + north + " scale " + self.tMatrix.getScale());
+	};
+	
+	self.drawCompass = function (ctx) {		
+		
+		function arrow (ctx, x0, y0, x1, y1, size) {
+			var dx = x1 - x0;
+			var dy = y1 - y0;
+			
+			var len = Math.sqrt(dx*dx + dy*dy);
+			var dx0 = dx / len;
+			var dy0 = dy / len;
+			var pdx = -dy0;
+			var pdy = dx0;
+			
+			var px0 = x1 - dx0 * size;
+			var py0 = y1 - dy0 * size;
+			var size2 = size/2;
+			
+			ctx.moveTo (x0, y0);
+			ctx.lineTo (x1, y1);
+			ctx.lineTo (px0 + pdx*size2, py0 + pdy*size2);
+			ctx.lineTo (px0 - pdx*size2, py0 - pdy*size2);
+			ctx.lineTo (x1, y1);
+		}
+		
+		var color = '#ffff00';
+		var rotAngleDeg = degrees(self.tMatrix.getRotAngle()) + 90 - self.northAngle;		
+		var aRad = radians(rotAngleDeg);
+		var ca = Math.cos(aRad);
+		var sa = Math.sin(aRad);
+		
+		var x0 = 70;
+		var y0 = 70;
+		var len = 50;
+		
+		var north = rotate1 (sa, ca, 0, -len);
+		var northText = rotate1 (sa, ca, 0, -len-10);
+		var east = rotate1 (sa, ca, -len, 0);
+		var eastText = rotate1 (sa, ca, -len-10, 0); 
+		
+		with (ctx) {
+			setTransform (1, 0, 0, 1, 0, 0);			
+			strokeStyle = color;	
+			lineWidth = 1;
+		
+			beginPath();	
+			arrow (ctx, x0, y0, x0+north[0], y0+north[1], 8);			
+			arrow (ctx, x0, y0, x0+east[0], y0+east[1], 8);
+			
+			stroke();
+			
+			strokeText ('N', x0+northText[0], y0+northText[1]);
+			strokeText ('E', x0+eastText[0], y0+eastText[1]);
+		}
+	};	
+
+	self.reallyDrawTxImage = function () {		
+	
 		// Applies transform and redraws image.
 		var cv = self._Canvas;
-
+		var tx = self.tMatrix;
+		var tp = tx.getTx(self.flipY);
+		var scaleF = tx.getScale();
+		
+		var iwidth = self.img.width/2;
+		var iheight = self.img.height/2;		
+		
 		with (self._Ctx) {
 			setTransform(1, 0, 0, 1, 0, 0);
-			clearRect(0, 0, cv.width, cv.height);
-			var tp = t.getTx(self.flipY);
+			clearRect(0, 0, cv.width, cv.height);			
 			transform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
 		}
-
-		self.filter.drawImage(self.img, 0, 0);
-
+	
+		self.filter.drawToOutputPart1 (self.img, self.skyX - iwidth, self.skyY - iheight);
+	
 		// Draw this after drawing the DSS/background image
 		// because contrast filter is applied to the DSS/background image.
+		var destCtx = self.filter.tmpCtx2;
+		with (destCtx) {
+			// setTransform(1, 0, 0, 1, 0, 0);
+			setTransform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
 
-		with (self.destCtx) {
-			setTransform(1, 0, 0, 1, 0, 0);
-			var tp = t.getTx(self.flipY);
-			transform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
-			self.drawTargets(self.destCtx);
-			transform(1, 0, 0, 1, 130, 320);
-			self.drawMask(self.destCtx);
-			setTransform(1, 0, 0, 1, 0, 0);
+			// transform(1, 0, 0, 1, self.maskOffsetX, self.maskOffsetY);
+			var checker = self.drawMask(destCtx);
+			
+			self.drawTargets(destCtx, checker);			
+		}
+		
+		self.filter.drawToOutputPart2 ();
+		
+		self.showPositionInfo();
+		self.drawCompass(self.destCtx);
+		
+	};
+
+	self.redrawTxImage = function() {
+		window.requestAnimationFrame (self.reallyDrawTxImage);
+	};
+	
+	self.drawPolylines = function (ctx, lines, color) {
+		with (ctx) {
+			strokeStyle = color;
+			var s = self.tMatrix.getScale();
+			if (s < 1)
+				lineWidth = 1 / s;
+			else
+				lineWidth = 1;
+			beginPath();
+			var x0 = 0, y0 = 0;
+			for (i in lines) {
+				var row = lines[i];
+				var x = row[0];
+				var y = row[1];
+				var code = row[2];
+				if (code == 0) {
+					x0 = x;
+					y0 = y;
+					moveTo(x, y);
+					continue;
+				}
+				if (code == 1 || code == 3) {
+					lineTo(x, y);
+					continue;
+				}
+				if (code == 2) {
+					lineTo(x0, y0);
+				}
+			}
+			stroke();
 		}
 	};
+	
+	//
+	// Draws targets according to options
+	//
+	self.drawTargets = function(ctx, checker) {	
+		function addTo (list, idx, x, y) {
+			list.push (idx);
+			if (self.findIt) {
+				var dx = Math.abs(self.searchX - x);
+				var dy = Math.abs(self.searchY - y);
+				if (dx < self.thold && dy < self.thold) {
+					var dist = Math.hypot(dx, dy);
+					if (dist < minDist) {
+						minDist = dist;
+						self.minDist = dist;
+						self.selectedTargetIdx = i;
+					}
+				}
+			}
+		}
+		
+		function classify () {
+			for (i = 0; i < len; ++i) {
+				var x = xpos[i] + skyx;
+				var y = ypos[i] + skyy;
+				var pri = pcode[i];	
+				if (pri == AlignBox) {
+					if (showAlignBox)
+						addTo (alignBoxIdx, i, x, y);
+				}
+				else {
+					if (showSelected && selected[i]) {
+						if (checker.checkPoint (x, y)) 
+							addTo (selectedInIdx, i, x, y);
+						else
+							addTo (selectedOutIdx, i, x, y);
+						continue;
+					}
+					if (showByPriority && pri >= showPriority) {
+						if (selected[i]) {
+							if (checker.checkPoint (x, y)) 
+								addTo (selectedInIdx, i, x, y);
+							else
+								addTo (selectedOutIdx, i, x, y);
+							continue;
+						}
+						if (checker.checkPoint (x, y)) {
+							addTo (showInIdx, i, x, y);
+						}
+						else {
+							addTo (showOutIdx, i, x, y);
+						}
+					}				
+				}
+			}
+		}
+		
+		function calcSlitDisplayAngle () {
+			var rotAngleDeg = degrees(self.tMatrix.getRotAngle()) + 90 - self.northAngle;		
+			var aRad = -radians(rotAngleDeg);
+			var ca = Math.cos(aRad);
+			var sa = Math.sin(aRad);
+			
+			vec1 = rotate1(sa, ca, radiusX2, 0);
+			vec2 = rotate1(sa, ca, 0, radiusX2);
+		}
+		
+		function drawAlignBox (x, y) {
+			// alignemtn box
+			with (ctx) {
+				moveTo(x - vec1[0] - vec2[0], y - vec1[1] - vec2[1]);
+				lineTo(x + vec1[0] - vec2[0], y + vec1[1] - vec2[1]);
+				lineTo(x + vec1[0] + vec2[0], y + vec1[1] + vec2[1]);
+				lineTo(x - vec1[0] + vec2[0], y - vec1[1] + vec2[1]);
+				lineTo(x - vec1[0] - vec2[0], y - vec1[1] - vec2[1]);
+			}
+			
+			// ctx.moveTo(x - radius, y - radius);
+			// ctx.rect(x - radius, y - radius, radiusX2, radiusX2);
+		}
+
+		function drawTarget (x, y) {
+			with (ctx) {
+				moveTo(x - vec1[0], y - vec1[1]);
+				lineTo(x + vec1[0], y + vec1[1]);				
+				// moveTo(x - vec2[0], y - vec2[1]);
+				// lineTo(x + vec2[0], y + vec2[1]);
+			}
+		}
+		
+		function drawSelTarget (x, y) {
+			with (ctx) {
+				moveTo(x - vec1[0], y - vec1[1]);
+				lineTo(x + vec1[0], y + vec1[1]);				
+				moveTo(x - vec2[0], y - vec2[1]);
+				lineTo(x + vec2[0], y + vec2[1]);
+			}			
+		}
+		
+		function drawClickedOn (x, y) {
+			with (ctx) {
+				arc (x, y, radiusX2, 0, 2*Math.PI);
+			}
+		}
+		
+		function drawList (tlist, color, fnc) {
+			var idx;
+			ctx.strokeStyle = color;
+			ctx.beginPath();
+			for (idx in tlist) {
+				var i = tlist[idx];				
+				var x = xpos[i] + skyx;
+				var y = ypos[i] + skyy;
+				fnc(x, y);
+			}
+			ctx.stroke();
+		}
+		
+		var targets = self.targets;
+		if (!targets)
+			return;
+
+		if (!targets.xpos)
+			return;
+
+		var xpos = targets.xpos;
+		var ypos = targets.ypos;
+		var selected = targets.select;
+		var pcode = targets.pcode;
+		var len = xpos.length;
+				
+		var selectedInIdx = [];
+		var selectedOutIdx = []
+		var showInIdx = [];
+		var showOutIdx = [];
+		var alignBoxIdx = [];
+		
+		var height2 = self._Canvas.height;
+		var i;
+		var radius = 1;
+		var radiusX2 = radius * 2;
+		var minDist = 1E10;
+
+		var vec1 = [radius, 0];
+		var vec2 = [0, radius];
+		
+		var skyx = self.skyX;
+		var skyy = self.skyY;
+        var showAll = E('showAll').checked;
+        var showAlignBox = E('showAlignBox').checked;
+        var showSelected = E('showSelected').checked;
+        var showByPriority = E('showByPriority').checked;
+        var showPriority = self.showMinPriority;
+        
+        if (showAll) {
+        	showPriority = -1;
+        	showByPriority = 1;
+        	showSelected = 1;
+        } 
+        
+        var s = self.tMatrix.getScale();
+		if (s < 1)
+			ctx.lineWidth = Math.floor(1 / s + 1);
+		else
+			ctx.lineWidth = 1;
+
+		calcSlitDisplayAngle ();
+		classify();
+		drawList (alignBoxIdx, '#ff0000', drawAlignBox);
+		
+		drawList (selectedInIdx, '#99ff99', drawSelTarget);
+		drawList (showInIdx, '#99ff99', drawTarget);
+
+		drawList (selectedOutIdx, '#ff0000', drawSelTarget);
+		drawList (showOutIdx, '#ff0000', drawTarget);
+		
+		if (self.selectedTargetIdx >= 0) {
+			radiusX2 = radiusX2 + 4;
+			drawList([self.selectedTargetIdx], '#ffffff', drawClickedOn);
+		}
+	};	
+
+	self.selectTarget = function (mx, my) {		
+		var skyx = self.skyX;
+		var skyy = self.skyY;
+		var tmat = self.tMatrix;
+		var xy = tmat.s2w (mx, my, 0);
+		
+		self.searchX = xy[0];
+		self.searchY = xy[1];
+		self.thold = tmat.getScale() * 7;
+		
+		var sIdx = self.selectedTargetIdx;
+		if (sIdx >=0) {
+			self.targetTable.markNormal (sIdx); 
+		}
+		self.selectedTargetIdx = -1;
+		self.findIt = 1;	
+		self.reallyDrawTxImage();
+		self.findIt = 0;
+		
+		var i, row;
+		var found = self.selectedTargetIdx;
+		if (found >= 0) {
+			self.targetTable.scrollTo (found);
+			self.targetTable.highLight (found);
+		}
+	};
+	
+	self.clickedRow = function (evt) {
+		var oldIdx = self.selectedTargetIdx;
+		var tId = this.id;
+		var idx = Number(tId.replace('target', ''));
+
+		self.targetTable.markNormal (oldIdx);
+		self.targetTable.highLight (idx);
+		self.selectedTargetIdx = idx;
+		self.reallyDrawTxImage();
+	};
+	
+	self.drawMask = function(ctx) {
+		function rotateP (mtx, layout) {
+			var i;
+			var tx = mtx.mat;
+			var a = tx[0][0];
+			var b = tx[0][1];
+			var c = tx[1][0];
+			var d = tx[1][1];
+			var e = tx[0][2];
+			var f = tx[1][2];			
+			var out = Array();
+			for (i in layout) {
+				var row = layout[i];
+				var x = (row[0]-rotX) * sx;
+				var y = (row[1]-rotY) * sy;
+				out.push([a * x + c * y+rotX, b * x + d * y+rotY, row[2]]);
+			}
+			return out;
+		}
+		
+		var sx = 1.0/ self.xPscale;
+		var sy = 1.0/ self.yPscale;
+		var rotX = self.maskOffsetX;
+		var rotY = self.maskOffsetY;		
+		var mtx = self.maskTx;
+		
+		var layout1 = rotateP(mtx, self.maskLayout);		
+		var checker = InOutChecker (layout1);
+		self.drawPolylines (ctx, layout1, self.maskColor);
+		return checker;
+	};
+	
 
 	// Gets absolute position x/y in pixel coordinates of an element.
 	// Returns array [x, y]
@@ -323,13 +923,21 @@ function CanvasShow(containerName) {
 			x : absLeft,
 			y : absTop
 		};
-	}
+	};
 
 	self.mouseUp = function(evt) {
 		evt = evt || window.event;
 		evt.stopPropagation();
 		evt.preventDefault();
+		var mx = evt.pageX;
+		var my = evt.pageY;
+		var dx = mx - self.anchorx;
+		var dy = my - self.anchory;
 		self.dragging = 0;
+        if (E('enableSelection').checked && abs(dx) < 2 && abs(dy) < 2) {
+			var ePos = getAbsPosition(self.contElem);		
+			self.selectTarget (mx - ePos.x, my - ePos.y);
+		}
 		return false;
 	};
 
@@ -337,8 +945,8 @@ function CanvasShow(containerName) {
 		evt = evt || window.event;
 		evt.stopPropagation();
 		evt.preventDefault();
-		self.anchorx = evt.pageX;
-		self.anchory = evt.pageY;
+		self.lastmx = self.anchorx = evt.pageX;
+		self.lastmy = self.anchory = evt.pageY;
 		self.dragging = 1;
 		var cv = self._Canvas;
 		var ePos = getAbsPosition(self.contElem);
@@ -349,37 +957,91 @@ function CanvasShow(containerName) {
 	};
 
 	self.reportPxValue = function(mx, my) {
-		if (!self.rawData)
-			return;
 		var tmat = self.tMatrix;
-		var tx = tmat.getTx();
-		var det = tx[0] * tx[3] - tx[1] * tx[2];
-		var mx1 = mx - tx[4];
-		var my1 = my - tx[5];
-		var x = (mx1 * tx[3] - my1 * tx[2]) / det;
-		var y = (-mx1 * tx[1] + my1 * tx[0]) / det;
-		if (self.showPxValue) {
-			self.showPxValue(x, y);
-		}
-		if (!self.rawData)
-			return;
+		var xy = tmat.s2w (mx, my, 0);
+		var sx = self.xPscale;
+		var sy = self.yPscale;
+		
+		var rxy = rotate(radians(90-self.northAngle), (xy[1]-self.skyY)*sy, (xy[0]-self.skyX)*sx);
+		
+		var dec = self.centerDecDeg - (rxy[0]) / 3600;
+		
+		var cosDec = Math.cos (radians(dec));
+		cosDec = Math.max (cosDec, 1E-4);
+		
+		var raHrs = (self.centerRaDeg - (rxy[1]) / 3600 / cosDec) / 15;
+		while (raHrs > 24) raHrs -= 24;
+		while (raHrs < 0) raHrs += 24;
+
+		showMsg('mouseStatus', "RA hrs= " + toSexa(raHrs) + " DEC deg= "  + toSexa(dec) +
+				" x=" + xy[0].toFixed(2) + " y=" + xy[1].toFixed(2));			
+	};
+	
+	self.zoomAll = function (mv) {
+		var tx = self.tMatrix;
+		var cv = self._Canvas;
+		var xc = cv.width / 2;
+		var yc = cv.height / 2;
+		var scale = Math.pow(1.01, mv);
+		tx.scaleCenter(scale, xc, yc);
+	};
+	
+	self.panAll = function (dx, dy) {
+		var tx = self.tMatrix;
+		tx.translate(dx, dy);
+	};	
+
+	self.rotateAround = function (angRad) {
+		//
+		// Rotates sky around center of mask,
+		// such that the remains at the same display position.
+		//
+		var tx = self.tMatrix;
+		var xy = tx.w2s (self.maskOffsetX, self.maskOffsetY, false);		
+		
+		tx.rotate(angRad, xy[0], xy[1]);
+	};
+	
+	self.rotateAll = function (ang) {
+		// Rotates the image around center of canvas
+		var tx = self.tMatrix;
+		var cv = self._Canvas;
+		var xc = cv.width / 2;
+		var yc = cv.height / 2;
+		tx.rotate(ang, xc, yc);
+	};	
+	
+	self.panSky = function (dx, dy) {
+		var tx = self.tMatrix;
+		var cv = self._Canvas;
+		var xc = cv.width / 2;
+		var yc = cv.height / 2;
+		var scale = tx.getScale();
+
+		var mat = tx.mat;
+		var a = mat[0][0];
+		var b = mat[0][1];
+		var c = mat[1][0];
+		var d = mat[1][1];
+		
+		var ndx = a * dx + b * dy;
+		var ndy = c * dx + d * dy;
+		
+		self.skyX += ndx / scale /scale;
+		self.skyY += ndy /scale /scale;
 	};
 
-	self.mouseMove = function(evt) {
-		function zoom() {
-			// Zooming
-			var scale = Math.pow(1.01, -dy);
-			tx.scaleCenter(scale, xc, yc);
-		}
-		function pan() {
-			// Panning
-			tx.translate(dx, dy);
-		}
-		function rotate() {
-			// Rotates the image around center of canvas
-			tx.rotate(newAngle - self.baseAngle, xc, yc);
+	self.rotateMask = function (ang) {
+		// Rotates mask around center of canvas
+		var tx = self.maskTx;
 
-		}
+		var cv = self._Canvas;
+		var xc = cv.width / 2;
+		var yc = cv.height / 2;
+		tx.rotate(ang, xc, yc);
+	};
+	
+	self.mouseMove = function(evt) {
 		function contrasting() {
 			// Contrast/Brightness
 			var f = (mx - ePos.x) / xc;
@@ -398,141 +1060,97 @@ function CanvasShow(containerName) {
 		var mx = evt.pageX;
 		var my = evt.pageY;
 
-		var dx = mx - self.anchorx;
-		var dy = my - self.anchory;
+		var dx = mx - self.lastmx;
+		var dy = my - self.lastmy;
 		var ePos = getAbsPosition(self.contElem);
 
 		if (!self.dragging) {
 			self.reportPxValue(mx - ePos.x, my - ePos.y);
 			return;
 		}
+        if (!E('enableNav').checked)
+            return;
 
 		var tx = self.tMatrix;
 		var cv = self._Canvas;
 		var xc = cv.width / 2;
 		var yc = cv.height / 2;
-
+		var scale = tx.getScale();
+		
 		var newAngle = Math.atan2(my - yc - ePos.y, mx - xc - ePos.x);
-
+		
 		// shiftKey, ctrlKey, altKey
 		if (evt.shiftKey) {
-			zoom()
+			self.rotateMask (-newAngle+self.baseAngle);
+			// self.rotateAll(newAngle-self.baseAngle);
+			self.rotateAround (newAngle-self.baseAngle);
 		} else if (evt.ctrlKey) {
-			rotate();
+			self.rotateAll(newAngle-self.baseAngle);
 		} else if (evt.altKey) {
 			contrasting();
 		} else {
-			pan();
+			self.panSky(dx, dy);
 		}
 
-		self.redrawTxImage(tx);
-		self.anchorx = mx;
-		self.anchory = my;
+		self.redrawTxImage();
+		self.lastmx = mx;
+		self.lastmy = my;
 		self.baseAngle = newAngle;
 		return false;
 	};
 
-	//
-	// Draws targets according to options
-	//
-	self.drawTargets = function(ctx) {
-		var targets = self.targets;
-		if (!targets)
-			return;
-
-		var xpos = targets.xpos;
-		var ypos = targets.ypos;
-		var selected = targets.select;
-		var pcode = targets.pcode;
-		var len = xpos.length;
-		var height2 = self._Canvas.height;
-		var i;
-		var PI2 = Math.PI * 2;
-		var radius = 2;
-		var radiusX2 = radius * 2;
-		with (ctx) {
-			strokeStyle = self.slitColor;
-			var s = self.tMatrix.getScale();
-			if (s < 1)
-				lineWidth = Math.floor(1 / s + 1);
-			else
-				lineWidth = 1;
-			E('statusDiv').innerHTML = s;
-			beginPath();
-			for (i = 0; i < len; ++i) {
-				var x = xpos[i];
-				var y = ypos[i];
-				var pri = pcode[i];
-
-				if (pri == -2) {
-					moveTo(x - radius, y - radius);
-					rect(x - radius, y - radius, radiusX2, radiusX2);
-				} else { // if (pri > self.showMinPriority) {
-					var sel = selected[i];
-					// moveTo(x + radius, y);
-					// arc (x, y, radius, 0, PI2);
-					moveTo(x - radius, y);
-					lineTo(x + radiusX2, y);
-				}
-			}
-			stroke();
-		}
-	};
-
-	self.drawMask = function(ctx) {
-		var layout = [ [ 5.10, 453.74, 0 ], [ 6.16, 233.80, 1 ],
-				[ 82.12, 161.63, 1 ], [ 244.82, 163.17, 1 ],
-				[ 244.82, 455.51, 1 ], [ 0.00, 0.00, 2 ],
-				[ 256.20, 455.87, 0 ], [ 256.20, 163.17, 1 ],
-				[ 333.46, 165.54, 1 ], [ 363.08, 185.81, 1 ],
-				[ 410.60, 207.38, 1 ], [ 452.20, 218.28, 1 ],
-				[ 498.53, 221.83, 1 ], [ 498.53, 457.88, 1 ],
-				[ 0.00, 0.00, 2 ], [ 510.26, 460.96, 0 ],
-				[ 510.26, 225.27, 1 ], [ 552.92, 220.65, 1 ],
-				[ 597.48, 207.73, 1 ], [ 631.49, 193.04, 1 ], ,
-				[ 671.07, 168.86, 1 ], [ 752.59, 168.86, 1 ],
-				[ 752.59, 460.37, 1 ], [ 0.00, 0.00, 2 ],
-				[ 765.15, 464.52, 0 ], [ 765.15, 171.94, 1 ],
-				[ 856.75, 171.94, 1 ], [ 1005.24, 318.17, 1 ],
-				[ 1005.24, 464.76, 1 ], [ 0.00, 0.00, 2 ] ];
-		var i;
-		var xscale = self.xPscale;
-		var yscale = self.yPscale;
-
-		with (ctx) {
-			strokeStyle = self.maskColor;
-			var s = self.tMatrix.getScale();
-			if (s < 1)
-				lineWidth = Math.floor(1 / s + 1);
-			else
-				lineWidth = 1;
-			beginPath();
-			var x0 = 0, y0 = 0;
-			for (i in layout) {
-				var row = layout[i];
-				var x = row[0] * xscale;
-				var y = row[1] * yscale;
-				var code = row[2];
-				if (code == 0) {
-					x0 = x;
-					y0 = y;
-					moveTo(x, y);
-					continue;
-				}
-				if (code == 1) {
-					lineTo(x, y);
-					continue;
-				}
-				if (code == 2) {
-					lineTo(x0, y0);
-				}
-			}
-			stroke();
-		}
-	};
-
 	self.mouseExit = function(evt) {
 		self.dragging = 0;
+	};
+
+	self.moveLeft = function() {
+		self.skyX -= 10;
+	};
+
+	self.moveRight = function() {
+		self.skyX += 10;
+	};
+
+	self.moveUp = function() {
+		self.skyY -= 10;
+	};
+
+	self.moveDown = function() {
+		self.skyY += 10;
+	};
+
+	self.keypressed = function(evt) {
+        if (!E('enableNav').checked)
+            return;
+        evt.preventDefault();
+		var k = evt.key;
+		switch (k) {
+		case 'h':
+			self.panAll(5, 0);
+			break;
+		case 'l':
+			self.panAll(-5, 0);
+			break;
+		case 'j':
+			self.panAll(0, 5);
+			break;
+		case 'k':
+			self.panAll(0, -5);
+			break;
+		case '+':
+		case '>':
+		case '.':
+			self.zoomAll (3);
+			break;
+		case '-':
+		case '<':
+		case ',':
+			self.zoomAll (-3);
+			break;
+		default:	
+			break;
+		}
+		self.redrawTxImage();
 	};
 
 	self.setMinPriority = function(mprio) {
@@ -547,25 +1165,64 @@ function CanvasShow(containerName) {
 	self.fit = function() {
 		self.mustFit = 1;
 	};
-
+	
 	self.resetDisplay = function() {
 		// Refit image and redraw
 		if (!self.img)
 			return;
-		self.fitImage();
+		var maskAngleRad = self.maskTx.getRotAngle();
+		// showMsg ('testDiv', "mask=" + self.maskTx.toString() + "sky=" +
+		// self.tMatrix.toString());
+		self.fitMask();
+		self.rotateAround (-maskAngleRad);
 		self.filter.setParams(1, 0);
-		self.redrawTxImage(self.tMatrix);
+		self.redrawTxImage();
 	};
+	
+	self.resetOffsets = function() {
+		/*
+		 * SkyX, SkyY = position of the sky, The matrix tmatrix is for display
+		 * only. The rotation in maskTx is the real rotation.
+		 */
+		self.skyX = 0;
+		self.skyY = 0;		
 
-	self.refreshImage = function() {
-		// Same as redraw image, but no parameters
-		self.redrawTxImage(self.tMatrix);
+		// var before = "mask=" + self.maskTx.toString() + "sky=" +
+		// self.tMatrix.toString();
+
+		var maskAngleRad = self.maskTx.getRotAngle();
+		
+		self.maskTx.reset(0);
+		self.maskTx.scale(1);
+
+		self.rotateAround (maskAngleRad);
+		
+		// var after = "mask=" + self.maskTx.toString() + "sky=" +
+		// self.tMatrix.toString();
+		// showMsg ('testDiv', "before " + before + "<br>after=" + after);
+		
+		self.redrawTxImage();
 	};
-
-	self.doubleClick = function(evt) {
-		self.resetDisplay();
+	
+	self.setTargets = function(targets) {
+		self.targets = targets;
+		
+		var raHours = targets.raHour;
+		var decDegs = targets.decDeg;
+		var raSexa = [];
+		var decSexa = [];
+		for (i in raHours) {
+			var raH = raHours[i];
+			var dec = decDegs[i];
+			raSexa[i] = toSexa(raH);
+			decSexa[i] = toSexa(dec);
+		}
+		targets.raSexa = raSexa;
+		targets.decSexa = decSexa;
+		self.targetTable = TargetTable (E('targetTableDiv'), targets);
+		self.targetTable.setOnClickCB (self.clickedRow);
 	};
-
+	
 	self.initialize();
 
 	self.contElem.onmouseup = self.mouseUp;
@@ -573,6 +1230,7 @@ function CanvasShow(containerName) {
 	self.contElem.onmousemove = self.mouseMove;
 	self.contElem.onmouseout = self.mouseExit;
 	self.contElem.ondblclick = self.doubleClick;
+	window.onkeypress = self.keypressed;
 
 	return this;
 }

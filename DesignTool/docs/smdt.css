@@ -1,5 +1,5 @@
 body {
-	background-color: #fffffd;
+	background-color: #ffffee;
 	font-family: sans-serif;
 	margin-top: 0;
 }
@@ -68,7 +68,7 @@ h2 .#headline {
 }
 
 #contentTable {
-	background-color: #eeeedd;
+	//background-color: #eeeedd;
 }
 
 #contentTable tr td {
@@ -87,6 +87,8 @@ h2 .#headline {
 #canvasDiv {
 	width: 800px;
 	height: 500px;
+	border: solid 1px white;
+	background-color: black;
 }
 
 #targetListFrame {
@@ -99,8 +101,7 @@ h2 .#headline {
 }
 
 #paramTable {
-	font-size: 90%;
-	background-color: #ccc;
+	font-size: 90%;	
 }
 
 #paramTable td {
@@ -113,3 +114,68 @@ h2 .#headline {
 	text-align: right;
 	background-color: #dfdfdf;
 }
+
+#mouseStatus {
+	font-weight: bold;
+}
+
+#targetTableDiv {
+	background-color: #ffffee;
+}
+
+#targetTable {
+	font-size: 80%;
+	border-collapse: collapse;
+	width: 720px;
+}
+
+#targetTable tbody {
+	display: block;
+	overflow-y: auto;
+	height: 300px;
+	padding: 0px;	
+}
+
+#targetTable thead tr {
+	display: block;
+	padding: 0px;
+}
+
+#targetTable thead tr td {
+	padding: 2px 2px 2px 2px;
+	text-align: right;
+	background-color: #dfdfdf;
+	border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.selectedRow td {
+	padding: 2px 2px 2px 2px;
+	text-align: right;
+	background-color: #ccffee;
+	border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.hiRow td {
+	padding: 2px 2px 2px 2px;
+	text-align: right;
+	background-color: #ffcccc;
+	border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.evenRow td {
+	padding: 2px 2px 2px 2px;
+	text-align: right;
+	background-color: #eeeecc;
+	border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.oddRow td {
+	padding: 2px 2px 2px 2px;
+	text-align: right;
+	background-color: #ffffee;
+	border: solid 1px #aaaaaa;
+}
+
+
+
+
