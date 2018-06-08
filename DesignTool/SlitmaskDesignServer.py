@@ -13,58 +13,56 @@ from smdtLibs import utils
 from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
 from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
+from smdtLogger import SMDTLogger
 
 GlobalData = {}
 
 
 def _getData(_id):
     d = GlobalData.get(_id)
-    return SlitmaskDesignTool(b'') if not d else d 
-
+    if not d:
+        d = SlitmaskDesignTool(b'', 0, None)
+    return d
+    
 def _setData(_id, smdata):
     GlobalData[_id] = smdata
 
-
 class SMDesignHandler (EasyHTTPHandler):    
     PNGImage = "image/png"
+    config = None
 
     def echo (self, req, qstr):
         return self.response(json.dumps(qstr), self.PlainTextType)
     
     @utils.tryEx
-    def loadParams (self, req, qstr):        
-        content = qstr['targetList'][0]
-        _setData('smdt', SlitmaskDesignTool(content))
-        print ("uploaded")
+    def loadParams (self, req, qstr):
+        """
+        Respond to the form action
+        """        
+        content = qstr['targetList'][0]    
+        print (content)    
+        useDSS = self.intVal(qstr, 'formUseDSS', 0) 
+        _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
+        SMDTLogger.info ("uploaded")
         return self.response('OK', self.PlainTextType)
     
     @utils.tryEx
     def getTargets (self, req, qstr):
+        """
+        Returns the targets that were loaded via loadParams()
+        """
         sm = _getData('smdt')
-        return self.response(sm.targetList.toJson(), self.PNGImage)        
+        return self.response(sm.targetList.toJson(), self.PlainTextType)        
     
     @utils.tryEx 
     def getDSSImage (self, req, qstr):
-        sm = _getData('smdt')        
+        sm = _getData('smdt')    
         return self.response(sm.drawDSSImage(), self.PNGImage)
     
     @utils.tryEx 
     def getROIInfo (self, req, qstr):
-        sm = _getData('smdt')
-        
-            
-        out = sm.getDSSInfo()    
-            
-        """
-        return tl.dssSizeDeg, hdr.platescl, hdr.xpsize, hdr.ypsize, \
-            hdr.getHeader('NAXIS1', 0), hdr.getHeader('NAXIS2', 0)
-            
-        dssSize, pltScale, xpsize, ypsize, xsize, ysize = sm.getDSSInfo ()
-        
-        out = {'dssSize': dssSize, 'dssPlatescale': pltScale,
-            'xpsize': xpsize, 'ypsize': ypsize,
-            'xsize': xsize, 'ysize': ysize }
-        """
+        sm = _getData('smdt')        
+        out = sm.getDSSInfo() 
         return self.response(json.dumps(out), self.PlainTextType)
         
     def quit (self, req, qstr):
@@ -73,6 +71,8 @@ class SMDesignHandler (EasyHTTPHandler):
         os._exit(1)
         return self.response('[]', self.PlainTextType)
 
+    def log_message (self, msg, *args):
+        SMDTLogger.info (msg, *args)
     
 class SWDesignServer:
 
@@ -111,6 +111,7 @@ if __name__ == "__main__":
                 defConfigName = fn
         print ("Using config file ", defConfigName)
         cf = ConfigFile(defConfigName)
+        SMDesignHandler.config = cf
         SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
         SMDesignHandler.logEnabled = cf.get('logEnabled', False)       
         smd.start(cf.get('port', 50080))

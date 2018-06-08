@@ -19,34 +19,25 @@ from Targets import TargetList
         
 class SlitmaskDesignTool:
 
-    def __init__(self, tlistRaw):
+    def __init__(self, tlistRaw, useDSS, config):
         tlist = io.StringIO(tlistRaw.decode('UTF-8'))
-        self.setTargetList(tlist)
+        self.setTargetList(tlist, useDSS, config)
       
-    def setTargetList (self, tlist):
-        self.targetList = TargetList(tlist)          
+    def setTargetList (self, tlist, useDSS, config):
+        self.targetList = TargetList(tlist, useDSS, config)          
     
     def drawDSSImage (self):
         """
         Returns the DSS image that covers the targets
-        """        
+        If no DSS requested, then just return an empty image.
+        """       
         outData = io.BytesIO()
-        plt.imsave(outData, self.targetList.dssData, origin='upper', format='png', cmap='gray')
+        # print(self.targetList.dssData.shape)
+        plt.imsave(outData, self.targetList.dssData, origin='lower', format='png', cmap='gray')
         outData.seek(0)
         return outData.read()
-    
+        
     def getDSSInfo (self):
-        def addHeader (keyname):
-            out[keyname] = hdr.getHeader(keyname, 0)
-            
-        tl = self.targetList
-        hdr = tl.fheader
-        nlist = 'platescl', 'xpsize', 'ypsize', 'raDeg', 'decDeg'            
-        out = { n: hdr.__dict__[n] for n in nlist }
-        
-        addHeader('NAXIS1')
-        addHeader('NAXIS2')
-        out['centerRADeg'] = "%.7f" % tl.centerRADeg
-        out['centerDEC'] = "%.7f" % tl.centerDEC
-        return out
-        
+        # print ("DSS ", self.targetList.getDSSInfo())
+        return self.targetList.getDSSInfo()
+    
