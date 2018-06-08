@@ -22,8 +22,11 @@ class Dss2Client:
         hostport: hostname:portNr
         """
         self.hostport = hostport
-        
-    def getFITS (self, raDeg, decDeg, radiusDeg, dataSet='dss2red'):
+
+    def _dummyFITS (self, raDeg, decDeg, searchDeg, dataSet='dss2red'):
+           return None
+       
+    def _getFITS (self, raDeg, decDeg, searchDeg, dataSet='dss2red'):
         """
         dataSet: dss2red, dss2ir, dss2blue
         """        
@@ -31,7 +34,7 @@ class Dss2Client:
         query = []
         query.append('raDeg=%f' % raDeg)
         query.append('decDeg=%f' % decDeg)
-        query.append('sRadiusDeg=%f' % radiusDeg)
+        query.append('searchDeg=%f' % searchDeg)
         query.append('dataSet=%s' % dataSet)
         
         conn.request ('GET', '/getimage?' + '&'.join(query))
@@ -43,4 +46,12 @@ class Dss2Client:
         else:
             print ("unexpected response", resp.status, '*')
         conn.close()
-        return out     
+        return out
+    
+    def getFITS (self, raDeg, decDeg, searchDeg, dataSet='dss2red'):
+        try:
+            if self.hostport == None:
+                return None
+            return self._getFITS (raDeg, decDeg, searchDeg, dataSet)
+        except:
+            return self._dummyFITS (raDeg, decDeg, searchDeg, dataSet)

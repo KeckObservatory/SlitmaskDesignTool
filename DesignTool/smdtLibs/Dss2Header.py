@@ -2,29 +2,77 @@ import traceback
 import sys
 import math
 
-class DssHeader:
-    def __init__ (self, headers=None):
-        self.headers = headers
-        if headers:
-            self.getWCS ()
+import numpy as np
+from smdtLibs import utils
+import astropy.wcs as wcs
 
-    def sexd2Degree (self, dms):
-        dd, mm, ss = [float(x) for x in dms.split()]
-        return dd + mm/60 + ss/3600
-
-    def norm360(self, ang):
-        while ang >= 360:
-            ang -= 360
-        while ang < 0:
-            ang += 360
-        return ang
+class DssWCSHeader:
+    def __init__(self, raDeg, decDeg, width, height):
+        plateScale = 1.0/3600
+        self.raDeg = raDeg
+        self.decDeg = decDeg
+        
+        w = wcs.WCS(naxis=2)
+        w.wcs.ctype = ['RA---TAN', 'DEC--TAN']
+        w.wcs.cdelt = [plateScale, plateScale]
+        w.wcs.crpix = [width//2, height//2] #[67.61, -105.74] # ref in pixel
+        w.wcs.crval = [raDeg, decDeg] # ref in world coordinates
+        self.wcs = w
+        self.defineKwds (width, height)
+        
+    def xy2rd (self, xin, yin):
+        print ("xy2rd, not implemented")        
+        pass
     
-    def getHeader (self, keyname, defValue):
+    def rd2xy (self, ra, dec):
+        xcen, ycen = self.wcs.wcs_world2pix([self.raDeg], [self.decDeg], 0)
+        
+        x0, y0 = xcen[0], ycen[0]        
+        xs, ys = self.wcs.wcs_world2pix(ra*15, dec, 1)
+        
+        return [(x0-x) for x in xs], [(y0-y) for y in ys]
+    
+    def skyPA (self):
+        raDeg, decDeg = self.raDeg, self.decDeg
+        smallAng = 100.0 / 3600.0
+        
+        decDeg1 = decDeg + smallAng
+        raDeg1 = raDeg + smallAng
+        
+        wcs = self.wcs
+        
+        x0, y0 = wcs.wcs_world2pix([raDeg], [decDeg], 0)
+        x1, y1 = wcs.wcs_world2pix([raDeg], [decDeg1], 0)        
+        x2, y2 = wcs.wcs_world2pix([raDeg1], [decDeg], 0)
+        
+        north = math.degrees(math.atan2(y1-y0, x1-x0))
+        east = math.degrees(math.atan2(y2-y0, x2-x0))
+        
+        return north, east        
+    
+    def defineKwds (self, width, height):        
+        self.naxis1 = width
+        self.naxis2 = height
+        
+        self.xpsize = 15.0295 # pixel size in micron
+        self.ypsize = 15.0    # pixel size in micron 
+        self.platescl = 67.20 # arcsec/mm
+        
+    
+class DssHeader:
+    def __init__ (self, headers, raDeg, decDeg):
+        self.headers = headers
+        self.centerRaDeg = raDeg
+        self.centerDecDeg = decDeg
+        if headers:
+            self._getWCS ()
+    
+    def _getHeader (self, keyname, defValue):
         value = self.headers.get(keyname)
         return value if value else defValue
 
-    def getFloat (self, keyname, defValue):
-        value = self.getHeader(keyname, defValue)
+    def _getFloat (self, keyname, defValue):
+        value = self._getHeader(keyname, defValue)
         return float (value)
     
     def getFootprint (self, steps=5):
@@ -45,12 +93,15 @@ class DssHeader:
             
         return out
     
-    def getWCS (self):
+    def _getWCS (self):
         """ Extracts info from headers.
         """
         if len (self.headers) == 0: return
-        getFloat = self.getFloat
-        getHeader = self.getHeader
+        getFloat = self._getFloat
+        getHeader = self._getHeader
+        
+        self.naxis1 = getHeader ('NAXIS1', 0)
+        self.naxis2 = getHeader ('NAXIS2', 0)
         amdx = []
         amdy = []
         #AMDX, AMDY = 'AMDREX', 'AMDREY'
@@ -63,7 +114,7 @@ class DssHeader:
         self.amdx = amdx
         self.amdy = amdy
         
-        self.raDeg = 15 * self.sexd2Degree ('%s %s %s' % (
+        self.raDeg = 15 * utils.sexg2Float ('%s %s %s' % (
             getHeader ('PLTRAH', 0), 
             getHeader ('PLTRAM', 0), 
             getHeader ('PLTRAS', 0))) 
@@ -72,7 +123,7 @@ class DssHeader:
         if '-' in getHeader ('PLTDECSN', ''):
             decSign = -1
 
-        self.decDeg = decSign * self.sexd2Degree ('%s %s %s' % (
+        self.decDeg = decSign * utils.sexg2Float('%s %s %s' % (
             getHeader ('PLTDECD', 0), 
             getHeader ('PLTDECM', 0), 
             getHeader ('PLTDECS', 0))) 
@@ -89,14 +140,17 @@ class DssHeader:
         self.ppo6 = getFloat ('PPO6', 0)  
 
         self.platescl = getFloat ('PLTSCALE', 0)
+        #self._printVars()
     
-    def printVars (self):
+    def _printVars (self):
         print ("xoff", self.xpoff, "yoff", self.ypoff)
         print ("xpsize", self.xpsize, "ypsize", self.ypsize)
+        print ("xSize", self.xSize, "ySize", self.ySize)
         print ("ppo3", self.ppo3, "ppo6", self.ppo6)
         print ("raDeg", self.raDeg, "decDeg", self.decDeg)
+        print ("platescale", self.platescl)
 
-    def xy2rd (self, xin, yin):
+    def _xy2rd (self, xin, yin):
         """ xin, yin in image pixel coordinates
             Returns ra/dec in degree corresponding to xin/yin
         """
@@ -164,7 +218,7 @@ class DssHeader:
         dec = dec / toRad
         return ra, dec
 
-    def rd2xy(self, ra, dec):
+    def _rd2xy(self, ra, dec):
         """ given ra/dec in degree
             Returns x/y in image pixel coordinate
         """
@@ -277,22 +331,77 @@ class DssHeader:
         x = (self.ppo3 - obx*1000.0)/self.xpsize - self.xpoff - 0.5
         y = (self.ppo6 + oby*1000.0)/self.ypsize - self.ypoff - 0.5
         return x, y 
+    
 
-    def skyPA (self):
+    def xy2rd (self, xs, ys):
+        raDeg, decDeg = [], []
+        fxy2rd = self._xy2rd        
+        for x, y in zip(xs, ys):
+            rao, deco = fxy2rd(x, y)
+            raDeg.append(rao)
+            decDeg.append(deco)
+        return raDeg, decDeg
+    
+    def rd2xy(self, raHourList, decDegList):
+        xout, yout = [], []
+        frd2xy = self._rd2xy
+        x0, y0 = frd2xy(self.centerRaDeg, self.centerDecDeg)
+        for ra, dec in zip(raHourList, decDegList):
+            x, y = frd2xy(ra*15, dec)
+            xout.append(x-x0)
+            yout.append(y0-y)
+        return xout, yout               
+
+    def skyPAZ (self):
+        """
+        Return Position angles north and east in degree
+        """        
+        
         """ Gets center pixel x/y """
-        xc = self.getFloat ("NAXIS1", 0)/2.0
-        yc = self.getFloat ("NAXIS2", 0)/2.0
+        xc = self._getFloat ("NAXIS1", 0)/2.0
+        yc = self._getFloat ("NAXIS2", 0)/2.0
         """ Converts to ra/dec in degree """
-        r1, d1 = self.xy2rd(xc, yc)
+        r1, d1 = self._xy2rd(xc, yc)
 
         """ Moves 20 arcsec north """
         """ converts back to x/y in image pixels """
         d2 = d1 + 100.0 / 3600.0
         #print "ra ", deg2Sexd (r1/15.0), " dec " , deg2Sexd (d1)
         r2 = r1
-        x2, y2 = self.rd2xy(r2, d2)
+        
+        d3 = d1
+        r3 = r1 + 100.0/3600.0;
+        
+        x2, y2 = self._rd2xy(r2, d2)
+        x3, y3 = self._rd2xy(r3, d3); 
 
         """ Returns position angle in degree """
-        pa = math.atan2 ((y2-yc), (x2-xc)) / math.pi * 180
+        north = math.degrees(math.atan2 ((y2-yc), (x2-xc)))
+        east = math.degrees(math.atan2 ((y3-yc), (x3-xc)))
+        
         #print xc, yc, x2, y2
-        return pa
+        return north, east
+
+
+    def skyPA (self):
+        """
+        Return Position angles north and east in degree
+        """        
+        
+        """ Gets center pixel x/y """
+        xc = self._getFloat ("NAXIS1", 0)/2.0
+        yc = self._getFloat ("NAXIS2", 0)/2.0
+        
+        """ Converts to ra/dec in degree """
+        r1, d1 = self._xy2rd(xc, yc-100)
+        r2, d2 = self._xy2rd(xc, yc+100)
+        
+        r3, d3 = self._xy2rd(xc-100, yc)        
+        r4, d4 = self._xy2rd(xc+100, yc)
+         
+        """ Returns position angle in degree """
+        north = math.degrees(math.atan2 ((d2-d1), (r2-r1)))
+        east = math.degrees(math.atan2 ((d4-d3), (r4-r3)))
+        
+        #print xc, yc, x2, y2
+        return north, east
