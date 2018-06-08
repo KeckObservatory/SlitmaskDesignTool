@@ -40,7 +40,6 @@ class SMDesignHandler (EasyHTTPHandler):
         Respond to the form action
         """        
         content = qstr['targetList'][0]    
-        print (content)    
         useDSS = self.intVal(qstr, 'formUseDSS', 0) 
         _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
         SMDTLogger.info ("uploaded")
