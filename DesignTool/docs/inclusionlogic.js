@@ -1,5 +1,11 @@
 
-
+/*
+ * Takes a set of points (corners of the CCDs) and returns
+ * a set of the min and max x and y points.
+ *
+ * return minMax: set of min and max points for quick
+ *      exclusion of points outside of the CCD perimeter
+ */
 function minMaxPts(ccdPts){
     var minX = pow(2,31)-1;
     var maxX = 0;
@@ -20,6 +26,11 @@ function minMaxPts(ccdPts){
     return minMax;
 };
 
+/*
+ * Takes the set of CCD points and splits them into individual CCDS
+ *
+ * return ccds: returns the CCD points split into four separate arrays
+ */
 function splitCCDs(ccdPts){
     var ccds = [[], [], [], []];
 
@@ -114,11 +125,16 @@ function isInCCD(listPts, ccdPts){
     var minMax = minMaxPts(ccdPts);
     var ccds = splitCCDs(ccdPts);
 
+    var minX = minMax['minX'];
+    var maxX = minMax['maxX'];
+    var minY = minMax['minY'];
+    var maxY = minMax['maxY'];
+
     for (int i=0; i<listPts.length; i++){
-        if (listPts[i][0] < minMax['minX'] ||
-                listPts[i][0] > minMax['maxX'] ||
-                listPts[i][1] < minMax['minY'] ||
-                listPts[i][1] > minMax['maxY']){
+        if (listPts[i][0] < minX ||
+                listPts[i][0] > maxX ||
+                listPts[i][1] < minY ||
+                listPts[i][1] > maxY){
                     outPts.push(listPts[i]);
                 }
         else if(listPts[i][0] ){
@@ -130,6 +146,8 @@ function isInCCD(listPts, ccdPts){
 };
 
 /*********************
+ * Original checks. Only checks 1 point at a time.
+ *
  * Checks if an object is within the mask?
  * x: x-value of the object location on the mask
  * y: y-value of the object location on the mask
@@ -168,4 +186,4 @@ function chk_stat(x, y, full_check){
 
     // Everything looks okay
     return true;
-}
+};
