@@ -256,7 +256,7 @@ function CanvasShow(containerName) {
 
 	function toggleSmoothing(ctx, onoff) {
 		ctx.imageSmoothingEnabled = onoff;
-		ctx.mozImageSmoothingEnabled = onoff;
+		//ctx.mozImageSmoothingEnabled = onoff;
 		ctx.webkitImageSmoothingEnabled = onoff;
 		ctx.msImageSmoothingEnabled = onoff;
 	}	
@@ -295,7 +295,7 @@ function CanvasShow(containerName) {
 	function rotate1 (sa, ca, x, y) {
 		var x1 = x * ca - y * sa;
 		var y1 = x * sa + y * ca;
-		return [x1, y1];
+		return [Math.floor(x1), Math.floor(y1)];
 	}
 	
 	function Filter(ctx, width, height) {
@@ -320,6 +320,7 @@ function CanvasShow(containerName) {
 		self.tmpCtx2 = self.tmpCanvas2.getContext("2d");
 		
 		toggleSmoothing(self.tmpCtx, false);
+		toggleSmoothing(self.tmpCtx2, false);
 
 		self.applyScaleOffset = function(data, scale, offset) {
 			/*
@@ -351,32 +352,6 @@ function CanvasShow(containerName) {
 			self.scale = scale;
 			self.offset = offset;
 		};
-
-		self.drawImage = function(img, offx, offy) {
-			/*-
-				Convenient function, applies the filter and draws the image on the output canvas.
-				
-				The image is first drawn on the temp canvas.
-				Then it takes the pixels from the temp canvas and filters them and
-				draws the result on the output canvas.
-			 */
-
-			// Applies transformation
-			// self.tmpCanvas.width = self.tmpCanvas.width;
-			// self.tmpCtx.drawImage(img, 0, 0, img.width, img.height);
-			
-			self.tmpCtx.drawImage(img, offx, offy);
-
-			var imgData = self.tmpCtx.getImageData(0, 0, self.tmpCanvas.width,
-					self.tmpCanvas.height);
-
-			// Applies contrast
-			self.applyScaleOffset(imgData.data, self.scale, self.offset);
-			// Copies to output canvas
-			
-			// self.scaledImageData = self.outCtx.getImageData(0, 0,
-			// self.tmpCanvas.width, self.tmpCanvas.height);
-		};
 		
 		// Split drawImage into two functions
 		self.drawToOutputPart1 = function (img, offx, offy) {
@@ -387,12 +362,13 @@ function CanvasShow(containerName) {
 
 			// Applies contrast
 			self.applyScaleOffset(imgData.data, self.scale, self.offset);
-			// Copies to output canvas
-
+			// Copies image to ctx2
 			self.tmpCtx2.putImageData(imgData, 0, 0);
+			// After this, new update should go to ctx2.
 		};
 		
 		self.drawToOutputPart2 = function () {
+			// When updates are completed, copy ctx2 to output
 			var imgData = self.tmpCtx2.getImageData(0, 0, self.tmpCanvas.width,
 					self.tmpCanvas.height);
 			self.outCtx.putImageData(imgData, 0, 0);			
@@ -418,7 +394,7 @@ function CanvasShow(containerName) {
 				cv.width = cv.height = 400;
 			}
 			cont.replaceChild(cv, cont.childNodes[0]);
-			ctx = cv.getContext("2d");
+			var ctx = cv.getContext("2d");
 			ctx.scale(1, 1);
 			toggleSmoothing(ctx, false);
 			self.destCtx = ctx;
@@ -433,6 +409,7 @@ function CanvasShow(containerName) {
 				}
 				self.redrawTxImage();
 			};
+			self.zoomCanvas = new ZoomCanvas(E('zoomCanvasDiv'));
 			self.findMaskMinMax();
 		} else {
 			alert("Your browser does not support canvas\nPlease use another browser.");
@@ -601,36 +578,31 @@ function CanvasShow(containerName) {
 	
 		// Draw this after drawing the DSS/background image
 		// because contrast filter is applied to the DSS/background image.
-		var destCtx = self.filter.tmpCtx2;
-		with (destCtx) {
+		var ctx2 = self.filter.tmpCtx2;
+		with (ctx2) {
 			// setTransform(1, 0, 0, 1, 0, 0);
 			setTransform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
 
 			// transform(1, 0, 0, 1, self.maskOffsetX, self.maskOffsetY);
-			var checker = self.drawMask(destCtx);
+			var checker = self.drawMask(ctx2);
 			
-			self.drawTargets(destCtx, checker);			
+			self.drawTargets(ctx2, checker);			
 		}
 		
 		self.filter.drawToOutputPart2 ();
 		
 		self.showPositionInfo();
 		self.drawCompass(self.destCtx);
-		
+		 
 	};
 
 	self.redrawTxImage = function() {
 		window.requestAnimationFrame (self.reallyDrawTxImage);
 	};
 	
-	self.drawPolylines = function (ctx, lines, color) {
+	self.drawPolylines = function (ctx, lines, color, linewidth) {
 		with (ctx) {
 			strokeStyle = color;
-			var s = self.tMatrix.getScale();
-			if (s < 1)
-				lineWidth = 1 / s;
-			else
-				lineWidth = 1;
 			beginPath();
 			var x0 = 0, y0 = 0;
 			for (i in lines) {
@@ -663,9 +635,11 @@ function CanvasShow(containerName) {
 		function addTo (list, idx, x, y) {
 			list.push (idx);
 			if (self.findIt) {
+				// Check if target is near to where the mouse was clicked.
 				var dx = Math.abs(self.searchX - x);
 				var dy = Math.abs(self.searchY - y);
 				if (dx < self.thold && dy < self.thold) {
+					// If close enough, then if this target is the closest one.
 					var dist = Math.hypot(dx, dy);
 					if (dist < minDist) {
 						minDist = dist;
@@ -677,6 +651,8 @@ function CanvasShow(containerName) {
 		}
 		
 		function classify () {
+			// Depending on if target is inside/outside, or selected, push it to
+			// a different list to be displayed later.
 			for (i = 0; i < len; ++i) {
 				var x = xpos[i] + skyx;
 				var y = ypos[i] + skyy;
@@ -684,30 +660,30 @@ function CanvasShow(containerName) {
 				if (pri == AlignBox) {
 					if (showAlignBox)
 						addTo (alignBoxIdx, i, x, y);
+					continue;
 				}
-				else {
-					if (showSelected && selected[i]) {
+				if (showSelected && selected[i]) {
+					if (checker.checkPoint (x, y)) 
+						addTo (selectedInIdx, i, x, y);
+					else
+						addTo (selectedOutIdx, i, x, y);
+					continue;
+				}
+				if (showByPriority && pri >= showPriority) {
+					if (selected[i]) {
 						if (checker.checkPoint (x, y)) 
 							addTo (selectedInIdx, i, x, y);
 						else
 							addTo (selectedOutIdx, i, x, y);
 						continue;
 					}
-					if (showByPriority && pri >= showPriority) {
-						if (selected[i]) {
-							if (checker.checkPoint (x, y)) 
-								addTo (selectedInIdx, i, x, y);
-							else
-								addTo (selectedOutIdx, i, x, y);
-							continue;
-						}
-						if (checker.checkPoint (x, y)) {
-							addTo (showInIdx, i, x, y);
-						}
-						else {
-							addTo (showOutIdx, i, x, y);
-						}
-					}				
+					if (checker.checkPoint (x, y)) {
+						addTo (showInIdx, i, x, y);
+					}
+					else {
+						addTo (showOutIdx, i, x, y);
+					}
+					continue;
 				}
 			}
 		}
@@ -766,8 +742,8 @@ function CanvasShow(containerName) {
 			ctx.beginPath();
 			for (idx in tlist) {
 				var i = tlist[idx];				
-				var x = xpos[i] + skyx;
-				var y = ypos[i] + skyy;
+				var x = Math.floor(xpos[i] + skyx);
+				var y = Math.floor(ypos[i] + skyy);
 				fnc(x, y);
 			}
 			ctx.stroke();
@@ -794,10 +770,11 @@ function CanvasShow(containerName) {
 		
 		var height2 = self._Canvas.height;
 		var i;
-		var radius = 1;
+		var radius = 2;
 		var radiusX2 = radius * 2;
 		var minDist = 1E10;
-
+		
+		var s = self.tMatrix.getScale();		
 		var vec1 = [radius, 0];
 		var vec2 = [0, radius];
 		
@@ -813,14 +790,16 @@ function CanvasShow(containerName) {
         	showPriority = -1;
         	showByPriority = 1;
         	showSelected = 1;
-        } 
+        }
         
-        var s = self.tMatrix.getScale();
-		if (s < 1)
+		if (s < 1) {
+			radius = Math.min (15, radius/s);
+			radiusX2 = radius * 2;
 			ctx.lineWidth = Math.floor(1 / s + 1);
-		else
+		} else {
 			ctx.lineWidth = 1;
-
+		}	
+		
 		calcSlitDisplayAngle ();
 		classify();
 		drawList (alignBoxIdx, '#ff0000', drawAlignBox);
@@ -845,7 +824,7 @@ function CanvasShow(containerName) {
 		
 		self.searchX = xy[0];
 		self.searchY = xy[1];
-		self.thold = tmat.getScale() * 7;
+		self.thold = Math.min(tmat.getScale() * 7, 5);
 		
 		var sIdx = self.selectedTargetIdx;
 		if (sIdx >=0) {
@@ -899,11 +878,16 @@ function CanvasShow(containerName) {
 		var sy = 1.0/ self.yPscale;
 		var rotX = self.maskOffsetX;
 		var rotY = self.maskOffsetY;		
-		var mtx = self.maskTx;
+		var mtx = self.maskTx;		
+
+		var s = self.tMatrix.getScale();
+		var lineWidth = 1;
+		if (s < 1)
+			lineWidth = 1.0 / s;
 		
 		var layout1 = rotateP(mtx, self.maskLayout);		
 		var checker = InOutChecker (layout1);
-		self.drawPolylines (ctx, layout1, self.maskColor);
+		self.drawPolylines (ctx, layout1, self.maskColor, lineWidth);
 		return checker;
 	};
 	
@@ -937,6 +921,7 @@ function CanvasShow(containerName) {
         if (E('enableSelection').checked && abs(dx) < 2 && abs(dy) < 2) {
 			var ePos = getAbsPosition(self.contElem);		
 			self.selectTarget (mx - ePos.x, my - ePos.y);
+			self.zoomCanvas.update (self.destCtx, mx - ePos.x, my - ePos.y); 
 		}
 		return false;
 	};
@@ -974,7 +959,9 @@ function CanvasShow(containerName) {
 		while (raHrs < 0) raHrs += 24;
 
 		showMsg('mouseStatus', "RA hrs= " + toSexa(raHrs) + " DEC deg= "  + toSexa(dec) +
-				" x=" + xy[0].toFixed(2) + " y=" + xy[1].toFixed(2));			
+				" x=" + xy[0].toFixed(2) + " y=" + xy[1].toFixed(2));		
+		
+		self.zoomCanvas.update (self.destCtx, mx, my); 
 	};
 	
 	self.zoomAll = function (mv) {
