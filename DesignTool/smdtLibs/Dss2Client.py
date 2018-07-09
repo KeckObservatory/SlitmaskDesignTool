@@ -43,9 +43,10 @@ class Dss2Client:
         if resp.status == 200:
             data = resp.read()
             out = pf.open(io.BytesIO(data))
+            conn.close()
         else:
-            print ("unexpected response", resp.status, '*')
-        conn.close()
+            conn.close()
+            raise Exception ("unexpected response {}".format(resp.status))
         return out
     
     def getFITS (self, raDeg, decDeg, searchDeg, dataSet='dss2red'):
@@ -55,3 +56,14 @@ class Dss2Client:
             return self._getFITS (raDeg, decDeg, searchDeg, dataSet)
         except:
             return self._dummyFITS (raDeg, decDeg, searchDeg, dataSet)
+
+
+if __name__ == "__main__":
+    url = "10.96.0.223:50041"
+    raDeg = 10
+    decDeg = 11
+    sizeDeg = 0.3
+    dss2 = Dss2Client (url) 
+    fits = dss2.getFITS(raDeg, decDeg, sizeDeg) 
+    print (fits[0].header.cards)
+    

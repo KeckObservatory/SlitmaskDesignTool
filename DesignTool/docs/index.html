@@ -8,6 +8,7 @@
 <script src='ajaxv2.js'></script>
 <script src='TargetTable.js'></script>
 <script src='inOutChecker.js'></script>
+<script src='zoomCanvas.js?r=1'></script>
 <script src='canvasShow.js?r=1'></script>
 <script src='smdt.js'></script>
 <script>
@@ -40,13 +41,15 @@
 								value="mask_ex1.txt" title="Input file of targets">
 							<td><input type='button' id='loadTargets' name='loadTargets'
 								value='Load targets'>
-							<td>
-								<input type='button' id='showHideParams' value='Show Parameters'>
+							<td><input type='button' id='showHideParams'
+								value='Show Parameters'>
 						</tr>
-					</table> 
-					<table id='paramTable' style='visibility:hidden; display:none'>
-						<tr><td>
-								<h3>Input Parameters</h3><tr>
+					</table>
+					<table id='paramTable' style='visibility: hidden; display: none'>
+						<tr>
+							<td>
+								<h3>Input Parameters</h3>
+						<tr>
 							<th>Output Fits:
 							<td><input id='outputFitsfd' value="mask.fits"
 								title="Mask Design File (FITS)">
@@ -140,19 +143,14 @@
 								<table id='buttonPanel'>
 									<tr>
 										<td>
-											<div id='canvasDiv'>Initializing ...</div> <br>
-											<div id='mouseStatus'></div> &#x2795; Selected target;
-											&#x2796;Target; &#x25FB; Alignment box; <br> Mouse-Left:
-											move field; Shift-Left: rotate field; Ctrl-Left: rotate view;
-											Alt-Left: scale; Dbl-click: reset <br> Moves: h: left;
-											l: right; j: move up; k: down Zoom: &gt;: zoom in; &lt;: zoom
-											out.
-										<td><input type='button' id='resetDisplay'
-											value='Reset Display'> &nbsp; <input type='button'
-											id='resetOffsets' value='Reset Offsets'> <br>
-											Min. Priority: <input id='minPriority' value='0'> <br>
-
-											<input type='radio' name='showSel' id='showAll' checked>
+											<div id='canvasDiv'>Initializing ...</div>									
+										<td>
+											<div id='zoomCanvasDiv'>Initializing ...</div> <br> <input
+											type='button' id='resetDisplay' value='Reset Display'>
+											&nbsp; <input type='button' id='resetOffsets'
+											value='Reset Offsets'> <br> Min. Priority: <input
+											id='minPriority' value='0'> <br> <input
+											type='radio' name='showSel' id='showAll' checked>
 											Show all targets <input type='radio' name='showSel'
 											id='showSelected'> Show selected <input type='radio'
 											name='showSel' id='showByPriority'> Show by priority
@@ -172,16 +170,23 @@
 														<div id='testDiv'></div>
 														<table>
 															<tr>
-																<td>Center RA:
+																<td>Center RA [hh:mm:ss]:
 																<td><input id='centerRAfd' value=''>
 															<tr>
-																<td>Center DEC:
+																<td>Center DEC [dd:mm:ss]:
 																<td><input id='centerDECfd' value=''>
 															<tr>
-																<td>Angle:
+																<td>Sky Angle [deg]:
 																<td><input id='rotAngle' value=''>
 														</table>
 											</table>
+									<tr>
+										<td><div id='mouseStatus'></div> &#x2795; Selected
+											target; &#x2796;Target; &#x25FB; Alignment box; <br>
+											Mouse-Left: move field; Shift-Left: rotate field; Ctrl-Left:
+											rotate view; Alt-Left: scale; Dbl-click: reset <br>
+											Moves: h: left; l: right; j: move up; k: down Zoom: &gt;:
+											zoom in; &lt;: zoom out.
 								</table>
 					</table>
 		</table>

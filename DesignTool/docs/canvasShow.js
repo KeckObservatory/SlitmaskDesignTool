@@ -256,7 +256,7 @@ function CanvasShow(containerName) {
 
 	function toggleSmoothing(ctx, onoff) {
 		ctx.imageSmoothingEnabled = onoff;
-		//ctx.mozImageSmoothingEnabled = onoff;
+		ctx.mozImageSmoothingEnabled = onoff;
 		ctx.webkitImageSmoothingEnabled = onoff;
 		ctx.msImageSmoothingEnabled = onoff;
 	}	
@@ -575,25 +575,27 @@ function CanvasShow(containerName) {
 		}
 	
 		self.filter.drawToOutputPart1 (self.img, self.skyX - iwidth, self.skyY - iheight);
-	
+		
 		// Draw this after drawing the DSS/background image
 		// because contrast filter is applied to the DSS/background image.
 		var ctx2 = self.filter.tmpCtx2;
 		with (ctx2) {
-			// setTransform(1, 0, 0, 1, 0, 0);
-			setTransform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
+			setTransform(1, 0, 0, 1, 0, 0);
+			
+			//setTransform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
 
 			// transform(1, 0, 0, 1, self.maskOffsetX, self.maskOffsetY);
-			var checker = self.drawMask(ctx2);
+			var maskLayout = self.drawMask(ctx2);
 			
+			var checker = new InOutChecker (maskLayout);
+			//setTransform(1, 0, 0, 1, 0, 0);
 			self.drawTargets(ctx2, checker);			
 		}
 		
 		self.filter.drawToOutputPart2 ();
 		
 		self.showPositionInfo();
-		self.drawCompass(self.destCtx);
-		 
+		self.drawCompass(self.destCtx);		 
 	};
 
 	self.redrawTxImage = function() {
@@ -632,6 +634,9 @@ function CanvasShow(containerName) {
 	// Draws targets according to options
 	//
 	self.drawTargets = function(ctx, checker) {	
+		
+		// This function is called once per target.
+		// It adds the target to the given list.
 		function addTo (list, idx, x, y) {
 			list.push (idx);
 			if (self.findIt) {
@@ -656,14 +661,20 @@ function CanvasShow(containerName) {
 			for (i = 0; i < len; ++i) {
 				var x = xpos[i] + skyx;
 				var y = ypos[i] + skyy;
+				var sxy = tmax.w2s (x, y);
+				var sx = sxy[0];
+				var sy = sxy[1];
+				
 				var pri = pcode[i];	
+				xOut.push(sx);
+				yOut.push(sy);
 				if (pri == AlignBox) {
 					if (showAlignBox)
 						addTo (alignBoxIdx, i, x, y);
 					continue;
 				}
 				if (showSelected && selected[i]) {
-					if (checker.checkPoint (x, y)) 
+					if (checker.checkPoint (sx, sy)) 
 						addTo (selectedInIdx, i, x, y);
 					else
 						addTo (selectedOutIdx, i, x, y);
@@ -671,13 +682,13 @@ function CanvasShow(containerName) {
 				}
 				if (showByPriority && pri >= showPriority) {
 					if (selected[i]) {
-						if (checker.checkPoint (x, y)) 
+						if (checker.checkPoint (sx, sy)) 
 							addTo (selectedInIdx, i, x, y);
 						else
 							addTo (selectedOutIdx, i, x, y);
 						continue;
 					}
-					if (checker.checkPoint (x, y)) {
+					if (checker.checkPoint (sx, sy)) {
 						addTo (showInIdx, i, x, y);
 					}
 					else {
@@ -742,8 +753,8 @@ function CanvasShow(containerName) {
 			ctx.beginPath();
 			for (idx in tlist) {
 				var i = tlist[idx];				
-				var x = Math.floor(xpos[i] + skyx);
-				var y = Math.floor(ypos[i] + skyy);
+				var x = xOut[i];
+				var y = yOut[i];
 				fnc(x, y);
 			}
 			ctx.stroke();
@@ -756,6 +767,7 @@ function CanvasShow(containerName) {
 		if (!targets.xpos)
 			return;
 
+		var tmax = self.tMatrix;
 		var xpos = targets.xpos;
 		var ypos = targets.ypos;
 		var selected = targets.select;
@@ -767,16 +779,19 @@ function CanvasShow(containerName) {
 		var showInIdx = [];
 		var showOutIdx = [];
 		var alignBoxIdx = [];
+		var xOut = [];
+		var yOut = [];
 		
 		var height2 = self._Canvas.height;
 		var i;
-		var radius = 2;
+
+		var s = tmax.getScale();
+		var radius = 2 * s;
 		var radiusX2 = radius * 2;
 		var minDist = 1E10;
-		
-		var s = self.tMatrix.getScale();		
-		var vec1 = [radius, 0];
-		var vec2 = [0, radius];
+				
+		var vec1 = [radiusX2, 0];
+		var vec2 = [0, radiusX2];
 		
 		var skyx = self.skyX;
 		var skyy = self.skyY;
@@ -792,15 +807,19 @@ function CanvasShow(containerName) {
         	showSelected = 1;
         }
         
+        /*
 		if (s < 1) {
 			radius = Math.min (15, radius/s);
 			radiusX2 = radius * 2;
 			ctx.lineWidth = Math.floor(1 / s + 1);
 		} else {
 			ctx.lineWidth = 1;
-		}	
+		}
+		*/
+        ctx.lineWidth = 1;
+        ctx.lineCap ='square';
 		
-		calcSlitDisplayAngle ();
+		//calcSlitDisplayAngle ();
 		classify();
 		drawList (alignBoxIdx, '#ff0000', drawAlignBox);
 		
@@ -820,11 +839,12 @@ function CanvasShow(containerName) {
 		var skyx = self.skyX;
 		var skyy = self.skyY;
 		var tmat = self.tMatrix;
+		var scale = tmat.getScale();
 		var xy = tmat.s2w (mx, my, 0);
 		
 		self.searchX = xy[0];
 		self.searchY = xy[1];
-		self.thold = Math.min(tmat.getScale() * 7, 5);
+		self.thold = Math.min(7 / scale, 7);
 		
 		var sIdx = self.selectedTargetIdx;
 		if (sIdx >=0) {
@@ -869,7 +889,14 @@ function CanvasShow(containerName) {
 				var row = layout[i];
 				var x = (row[0]-rotX) * sx;
 				var y = (row[1]-rotY) * sy;
-				out.push([a * x + c * y+rotX, b * x + d * y+rotY, row[2]]);
+
+				var rx = a * x + c * y + rotX;
+				var ry = b * x + d * y + rotY;
+				
+				var sxy = tmax.w2s(rx, ry);
+				var x0 = sxy[0];
+				var y0 = sxy[1];
+				out.push([x0, y0, row[2]]);
 			}
 			return out;
 		}
@@ -879,16 +906,15 @@ function CanvasShow(containerName) {
 		var rotX = self.maskOffsetX;
 		var rotY = self.maskOffsetY;		
 		var mtx = self.maskTx;		
-
-		var s = self.tMatrix.getScale();
+		var tmax = self.tMatrix;
+		var s = tmax.getScale();
 		var lineWidth = 1;
-		if (s < 1)
-			lineWidth = 1.0 / s;
+		//if (s < 1)
+		//	lineWidth = 1.0 / s;
 		
-		var layout1 = rotateP(mtx, self.maskLayout);		
-		var checker = InOutChecker (layout1);
+		var layout1 = rotateP(mtx, self.maskLayout);
 		self.drawPolylines (ctx, layout1, self.maskColor, lineWidth);
-		return checker;
+		return layout1;
 	};
 	
 
@@ -1191,6 +1217,12 @@ function CanvasShow(containerName) {
 		self.redrawTxImage();
 	};
 	
+	self.reDrawTable = function () {
+		E('targetTableDiv').innerHTML = self.targetTable.showTable();
+		self.targetTable.setOnClickCB (self.clickedRow);
+		self.targetTable.setSortClickCB (self.reDrawTable);
+	};
+	
 	self.setTargets = function(targets) {
 		self.targets = targets;
 		
@@ -1206,8 +1238,8 @@ function CanvasShow(containerName) {
 		}
 		targets.raSexa = raSexa;
 		targets.decSexa = decSexa;
-		self.targetTable = TargetTable (E('targetTableDiv'), targets);
-		self.targetTable.setOnClickCB (self.clickedRow);
+		self.targetTable = new TargetTable (targets);
+		self.reDrawTable ();
 	};
 	
 	self.initialize();

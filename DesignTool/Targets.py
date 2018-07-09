@@ -65,11 +65,8 @@ class TargetList:
         if len(targets) <= 0:
             raDeg, decDeg = 0, 0
         else:
-            raDeg, decDeg = self.centerRADeg, self.centerDEC
-            
-        SMDTLogger.info ("raHour %s, decDeg %s", utils.toSexagecimal(raDeg / 15),
-            utils.toSexagecimal(decDeg))
-        
+            raDeg, decDeg = self.centerRADeg, self.centerDEC 
+
         self.dssFits = dss2.getFITS(raDeg, decDeg, self.dssSizeDeg) if useDSS else None
         
         if self.dssFits == None:
@@ -77,7 +74,10 @@ class TargetList:
             w = h
             self.dssData = np.zeros(shape=(h, w))
             self.fheader = Dss2Header.DssWCSHeader(raDeg, decDeg, w, h)
+            SMDTLogger.info("No DSS, use WCS") 
         else:
+            SMDTLogger.info ("Load DSS RA %s hr, DEC %s deg", utils.toSexagecimal(raDeg / 15),
+                         utils.toSexagecimal(decDeg))
             self.dssData = self.dssFits[0].data
             self.fheader = Dss2Header.DssHeader(self.dssFits[0].header, raDeg, decDeg)        
         
@@ -106,11 +106,12 @@ class TargetList:
             try:
                 return float(x)
             except:
-                return math.nan
+                return 0
                   
         out = []
         cols = 'name', 'raHour', 'decDeg', 'eqx', 'mag', 'band', 'pcode', \
-            'sample', 'select', 'slitPA', 'length1', 'length2', 'slitWidth'
+            'sample', 'select', 'slitPA', 'length1', 'length2', 'slitWidth', \
+            'index'
         
         for nr, line in enumerate(fh):
             if not line:
@@ -126,7 +127,7 @@ class TargetList:
                 continue
             # print (nr, "len", parts)
             
-            template = ['', '', 2000.0, 99, 'I', 99, 0, 1, 0, 4.0, 4.0, 1.5]                
+            template = ['', '', 2000.0, 99, 'I', 99, 0, 1, 0, 4.0, 4.0, 1.5, 0]                
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
             if self._checkPA (parts):
@@ -165,7 +166,7 @@ class TargetList:
                 pass
             target = (name, raHour, decDeg,
                     eqx, mag, band, pcode,
-                    sample, select, slitPA, length1, length2, slitWidth)
+                    sample, select, slitPA, length1, length2, slitWidth, nr)
             out.append(target)        
         df = pd.DataFrame(out, columns=cols)
         if self.centerRADeg == self.centerDEC and self.centerRADeg == 0:
@@ -192,6 +193,9 @@ class TargetList:
         targets['ypos'] = ys
         
     def getDSSInfo (self):
+        """
+        Returns a dict with keywords that look like fits headers
+        """
         hdr = self.fheader
         
         nlist = 'platescl', 'xpsize', 'ypsize'  # , 'raDeg', 'decDeg'            
@@ -220,7 +224,7 @@ class TargetList:
         return json.dumps(data1)                    
 
     """
-    Migrated routines from dsimulator
+    Migrated routines from dsimulator by LR
     ==================================    
     """
     

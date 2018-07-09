@@ -21,11 +21,6 @@ function SlitmaskDesignTool() {
 		self.statusDiv.innerHTML = msg;
 	}
 
-	function callback(data) {
-		alert('got ' + data);
-		return;
-	}
-
 	self.loadParams = function() {
 		var filename = E('targetList');
 		if (!filename.value) {
@@ -146,7 +141,8 @@ function SlitmaskDesignTool() {
 	self.canvasShow = CanvasShow('canvasDiv');
 	self.canvasShow.setMinPriority(E('minPriority').value);
 	self.loadBackgroundImage();
-
+	
+	E('enableSelection').checked = true;
 	E('showHideParams').onclick = self.showHideParams;
 	E('targetListFrame').onload = self.loadAll;
 	E('loadTargets').onclick = self.loadParams;

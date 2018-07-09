@@ -65,6 +65,7 @@ h2 .#headline {
 
 #buttonPanel tr td {
 	align-content: center;
+	vertical-align: top;
 }
 
 #contentTable {
@@ -89,6 +90,13 @@ h2 .#headline {
 	height: 500px;
 	border: solid 1px white;
 	background-color: black;
+}
+
+#zoomCanvasDiv {
+	width: 200px;
+	height:200px;
+	border: solid 1px black;
+	background-color: black;	
 }
 
 #targetListFrame {
@@ -126,14 +134,16 @@ h2 .#headline {
 #targetTable {
 	font-size: 80%;
 	border-collapse: collapse;
-	width: 720px;
+	width: 855px;
 }
 
 #targetTable tbody {
 	display: block;
 	overflow-y: auto;
 	height: 300px;
-	padding: 0px;	
+	padding: 0px;
+	scroll-behavior: smooth;
+		
 }
 
 #targetTable thead tr {
@@ -141,7 +151,7 @@ h2 .#headline {
 	padding: 0px;
 }
 
-#targetTable thead tr td {
+#targetTable thead tr th {
 	padding: 2px 2px 2px 2px;
 	text-align: right;
 	background-color: #dfdfdf;

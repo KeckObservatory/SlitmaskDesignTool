@@ -1,14 +1,29 @@
-function TargetTable (container, targets) {
+function TargetTable (targets) {
 
 	function E(n) {return document.getElementById(n);}
 	
 	var self = this;
+	self.reDrawTargetTable = function () {};
 	
-	self.container = container;
 	self.targets = targets;
+	self.columns = [
+		['Name', 100, 'name', 0],
+		['RA', 90, 'raSexa', 0],
+		['DEC', 90, 'decSexa', 0],
+		['Prior', 70, 'pcode', 0],
+		['Select', 70, 'select', 0],
+		['Slit PA', 70, 'slitPA', 0],
+		['Magn', 70, 'mag', 0],
+		['Band', 50, 'band', 0],
+		['Len1', 50, 'length1', 0],
+		['Len2', 50, 'length2', 0],
+		['SlitWidth', 70, 'slitWidth', 0]];
 	
 	self.showTable = function () {
+		// columns: name, width, up/down:-1,0,1
+	
 		var i;
+		var columns = self.columns;
 		var names = targets.name;
 		var raHours = targets.raSexa;
 		var decDegs = targets.decSexa;
@@ -19,45 +34,74 @@ function TargetTable (container, targets) {
 		var bands = targets.band;
 		var len1s = targets.length1;
 		var len2s = targets.length2;
-		var slitWidths = targets.slitWidth;
+		var slitWidths = targets.slitWidth;		
+	
 		buf = [];
 		buf.push ("<table id='targetTable'>");
-		buf.push("<thead><tr>" +
-				"<td width='100px'>Name</td>" +
-				"<td width='70px'>RA</td>" +
-				"<td width='70px'>DEC</td>" +
-				"<td width='50px'>PCode</td>" +
-				"<td width='50px'>Selected</td>" +
-				"<td width='50px'>Slit PA</td>" +
-				"<td width='50px'>Mag</td>" +
-				"<td width='50px'>Band</td>" +
-				"<td width='50px'>Len1</td>" +
-				"<td width='50px'>Len2</td>" +
-				"<td width='50px'>SlitWidth</td>" +
-				"</tr></thead><tbody id='targetTableBody'>"
-				);
-		for (i in names) {
+		buf.push("<thead><tr>");
+		
+		// Build the header row
+		for (i in columns) {
+			var col = columns[i];
+			var label = col[0];
+			var width = col[1];
+			var name = col[2];
+			var dir = col[3];
+			var arrow = '';
+			if (dir > 0) arrow = ' &#9650; ';
+			if (dir < 0) arrow = ' &#9660; ';
+			buf.push ("<th width='" + width + "px' id='sortIdx" + i + "'>" + label + arrow + "</td>");
+		
+		}
+		buf.push("</tr></thead><tbody id='targetTableBody'>");
+		
+		// Table body content
+		var idx;
+		var sortedIdx = self.sortIndices;
+		for (idx in names) {
+			i = sortedIdx[idx];
 			var tId = "target" + i;
-			var klass = i % 2 == 0 ? 'evenRow' : 'oddRow';			
-			var row = "<tr id='" + tId + "' class='" + klass + "'><td width='100px'>" + names[i] +
-			"<td width='70px'>" + raHours[i] +
-			"<td width='70px'>" + decDegs[i] +
-			"<td width='50px'>" + pcodes[i] +
-			"<td width='50px'>" + selecteds[i] +
-			"<td width='50px'>" + slitPAs[i] +
-			"<td width='50px'>" + mags[i].toFixed(2) +
-			"<td width='50px'>" + bands[i] +
-			"<td width='50px'>" + len1s[i] +
-			"<td width='50px'>" + len2s[i] +
-			"<td width='50px'>" + slitWidths[i] +
-			"</tr>";				
-			buf.push (row);
+			var klass = idx % 2 == 0 ? 'evenRow' : 'oddRow';			
+			buf.push ("<tr id='" + tId + "' class='" + klass + "'>");
+			buf.push ("<td width='" + columns[0][1] + "'>" + names[i]);
+			buf.push ("<td width='" + columns[1][1] + "'>" + raHours[i]);
+			buf.push ("<td width='" + columns[2][1] + "'>" + decDegs[i]);
+			buf.push ("<td width='" + columns[3][1] + "'>" + pcodes[i]);
+			buf.push ("<td width='" + columns[4][1] + "'>" + selecteds[i]);
+			buf.push ("<td width='" + columns[5][1] + "'>" + slitPAs[i]);
+			buf.push ("<td width='" + columns[6][1] + "'>" + mags[i].toFixed(2));
+			buf.push ("<td width='" + columns[7][1] + "'>" + bands[i]);
+			buf.push ("<td width='" + columns[8][1] + "'>" + len1s[i]);
+			buf.push ("<td width='" + columns[9][1] + "'>" + len2s[i]);
+			buf.push ("<td width='" + columns[10][1] + "'>" + slitWidths[i]);
+			buf.push ("</tr>");
 		}
 		buf.push ("</tbody></table>");
+		
+		// Returns table as HTML string
 		return buf.join("");
+	};	
+	
+	self.genSortFunction = function (idx) {
+		// Returns the function with the sort index
+		return function () {
+			self.sortTable (idx);
+		};	
+	};
+	
+	self.setSortClickCB = function (fn) {
+		// Setup the callback of the header row.
+		var i;
+		for (i in self.columns) {
+			E('sortIdx' + i).onclick = self.genSortFunction (i);
+		}
+		// fn is a callback function to allow the caller 
+		// to send the content of the table to an element that is unknown to this class.
+		self.reDrawTargetTable = fn;
 	};
 	
 	self.setOnClickCB = function (fn) {
+		// Setup the function to call when a row in the target table is clicked on.
 		var i;
 		for (i in self.targets.xpos) {
 			E('target' + i).onclick = fn;
@@ -65,30 +109,94 @@ function TargetTable (container, targets) {
 	};
 	
 	self.scrollTo = function (idx) {
+		// Smooth scroll to the desired idx/reversed-idx.
+		// See CSS file.
 		if (idx < 0) return;
 		var tBody = E('targetTableBody');
 		if (tBody && self.targets.xpos) { 
-			var scrollY = idx * tBody.scrollHeight / self.targets.xpos.length;
+			var nIdx = self.reverseIndices[idx];
+			var scrollY = nIdx * tBody.scrollHeight / self.targets.xpos.length;
 			tBody.scrollTop = scrollY;
 		}
 	};
 	
 	self.highLight = function (idx) {
 		if (idx < 0) return;
-		E('target' + idx).className = 'hiRow';
+		var elem = E('target' + idx);
+		if (elem) elem.className = 'hiRow';
 	};
 	
 	self.markSelected = function (idx) {
 		if (idx < 0) return;
-		E('target' + idx).className = 'selectedRow';
+		var elem = E('target' + idx);
+		if (elem) elem.className = 'selectedRow';
 	};
 	
 	self.markNormal = function (idx) {
 		if (idx < 0) return;
-		E('target' + idx).className = idx % 2 == 0 ? 'evenRow' : 'oddRow';
+		// Make sure target/elem exists.
+		var elem = E('target' + idx);
+		if (elem) elem.className = idx % 2 == 0 ? 'evenRow' : 'oddRow';
 	};
 	
-	container.innerHTML = self.showTable();
+	self.sortTable = function (idx) {
+		function sortUp (a, b) {
+			var elem1 = dataCol[a];
+			var elem2 = dataCol[b];
+			if (elem1 < elem2) return -1;
+			if (elem1 > elem2) return 1;
+			return 0;
+		}
+		function sortDown (a, b) {
+			var elem1 = dataCol[a];
+			var elem2 = dataCol[b];
+			if (elem1 < elem2) return 1;
+			if (elem1 > elem2) return -1;
+			return 0;
+		}
+		var targets = self.targets;
+		var i;
+		var info = self.columns[Math.max(idx, 0)];
+		var dataCol = targets[info[2]];
+		var indices = new Array (dataCol.length);
+		var upDown = info[3];
+		
+		// Remember original sort order
+		for (i in dataCol) {
+			indices[i] = i;
+		}
+		
+		// Reset all sort flags
+		for (i in self.columns) {
+			self.columns[i][3] = 0;
+		}
+		
+		// idx < 0 means original order, same as no sort
+		if (idx >= 0) {
+			// Check sort order up or down
+			if (upDown >= 0) {
+				indices.sort(sortUp);
+				info[3] = -1;
+			}
+			else {
+				indices.sort(sortDown);
+				info[3] = 1;	
+			}
+		}
+		
+		// Setup reversed index table.
+		for (i in indices) {
+			self.reverseIndices[indices[i]] = i;
+		}
+		self.sortIndices = indices;
+		
+		// Call the caller supplied function.
+		self.reDrawTargetTable();
+	};
+	
+	self.sortIndices = new Array(self.targets.length);
+	self.reverseIndices = new Array(self.targets.length);
+	self.sortTable (-1);
 	
 	return self;
 }

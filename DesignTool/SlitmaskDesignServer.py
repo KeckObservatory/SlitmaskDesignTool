@@ -13,7 +13,7 @@ from smdtLibs import utils
 from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
 from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
-from smdtLogger import SMDTLogger
+from smdtLogger import SMDTLogger, infoLog
 
 GlobalData = {}
 
@@ -42,10 +42,9 @@ class SMDesignHandler (EasyHTTPHandler):
         content = qstr['targetList'][0]    
         useDSS = self.intVal(qstr, 'formUseDSS', 0) 
         _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
-        SMDTLogger.info ("uploaded")
         return self.response('OK', self.PlainTextType)
     
-    @utils.tryEx
+    @utils.tryEx   
     def getTargets (self, req, qstr):
         """
         Returns the targets that were loaded via loadParams()
@@ -54,8 +53,9 @@ class SMDesignHandler (EasyHTTPHandler):
         return self.response(sm.targetList.toJson(), self.PlainTextType)        
     
     @utils.tryEx 
+    @infoLog
     def getDSSImage (self, req, qstr):
-        sm = _getData('smdt')    
+        sm = _getData('smdt')  
         return self.response(sm.drawDSSImage(), self.PNGImage)
     
     @utils.tryEx 
@@ -63,10 +63,10 @@ class SMDesignHandler (EasyHTTPHandler):
         sm = _getData('smdt')        
         out = sm.getDSSInfo() 
         return self.response(json.dumps(out), self.PlainTextType)
-        
-    def quit (self, req, qstr):
-        print("req", req, qstr)
-        self.log_message("%s", "Terminated")
+    
+    @infoLog
+    def quit (self, req, qstr):        
+        SMDTLogger.info ("%s", "Terminated")
         os._exit(1)
         return self.response('[]', self.PlainTextType)
 
