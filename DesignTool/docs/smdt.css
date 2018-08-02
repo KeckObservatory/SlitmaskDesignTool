@@ -186,6 +186,34 @@ h2 .#headline {
 	border: solid 1px #aaaaaa;
 }
 
+#targetForms tr td {
+	vertical-align: top;
+}
 
+#targetFormTable {	
+	font-size: 80%;
+	border-collapse: collapse;
+}
 
+#targetFormTable tr th {
+	background-color: #eeeecc;
+	text-align: left;
+	vertical-align: bottom;
+	height: 20px;
+	padding: 2px 5px 2px 5px;
+}
 
+#targetFormTable tr td {
+	height: 20px;
+	vertical-align: bottom;
+	padding: 2px 5px 2px 5px;
+}
+
+#targetName {
+	background-color: #eeeeff;
+	padding: 10px;
+}
+
+#recalculateMask {
+	font-size: 110%;
+}

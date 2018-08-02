@@ -11,7 +11,8 @@ function TargetTable (targets) {
 		['RA', 90, 'raSexa', 0],
 		['DEC', 90, 'decSexa', 0],
 		['Prior', 70, 'pcode', 0],
-		['Select', 70, 'select', 0],
+		['Sel', 35, 'select', 0],
+		['In', 35, 'inMask', 0],		
 		['Slit PA', 70, 'slitPA', 0],
 		['Magn', 70, 'mag', 0],
 		['Band', 50, 'band', 0],
@@ -29,6 +30,7 @@ function TargetTable (targets) {
 		var decDegs = targets.decSexa;
 		var pcodes = targets.pcode;
 		var selecteds = targets.select;
+		var inMask = targets.inMask;
 		var slitPAs = targets.slitPA;
 		var mags = targets.mag;
 		var bands = targets.band;
@@ -68,12 +70,13 @@ function TargetTable (targets) {
 			buf.push ("<td width='" + columns[2][1] + "'>" + decDegs[i]);
 			buf.push ("<td width='" + columns[3][1] + "'>" + pcodes[i]);
 			buf.push ("<td width='" + columns[4][1] + "'>" + selecteds[i]);
-			buf.push ("<td width='" + columns[5][1] + "'>" + slitPAs[i]);
-			buf.push ("<td width='" + columns[6][1] + "'>" + mags[i].toFixed(2));
-			buf.push ("<td width='" + columns[7][1] + "'>" + bands[i]);
-			buf.push ("<td width='" + columns[8][1] + "'>" + len1s[i]);
-			buf.push ("<td width='" + columns[9][1] + "'>" + len2s[i]);
-			buf.push ("<td width='" + columns[10][1] + "'>" + slitWidths[i]);
+			buf.push ("<td width='" + columns[5][1] + "'>" + inMask[i]);
+			buf.push ("<td width='" + columns[6][1] + "'>" + slitPAs[i]);
+			buf.push ("<td width='" + columns[7][1] + "'>" + mags[i].toFixed(2));
+			buf.push ("<td width='" + columns[8][1] + "'>" + bands[i]);
+			buf.push ("<td width='" + columns[9][1] + "'>" + len1s[i]);
+			buf.push ("<td width='" + columns[10][1] + "'>" + len2s[i]);
+			buf.push ("<td width='" + columns[11][1] + "'>" + slitWidths[i]);
 			buf.push ("</tr>");
 		}
 		buf.push ("</tbody></table>");
@@ -103,7 +106,7 @@ function TargetTable (targets) {
 	self.setOnClickCB = function (fn) {
 		// Setup the function to call when a row in the target table is clicked on.
 		var i;
-		for (i in self.targets.xpos) {
+		for (i in self.targets.index) {
 			E('target' + i).onclick = fn;
 		}
 	};
@@ -113,9 +116,9 @@ function TargetTable (targets) {
 		// See CSS file.
 		if (idx < 0) return;
 		var tBody = E('targetTableBody');
-		if (tBody && self.targets.xpos) { 
+		if (tBody && self.targets.index) { 
 			var nIdx = self.reverseIndices[idx];
-			var scrollY = nIdx * tBody.scrollHeight / self.targets.xpos.length;
+			var scrollY = nIdx * tBody.scrollHeight / self.targets.index.length;
 			tBody.scrollTop = scrollY;
 		}
 	};

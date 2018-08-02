@@ -38,7 +38,11 @@ function ZoomCanvas(container) {
 		}
 	};
 	
-	self.update = function (sourceCtx, x, y) {	
+	self.update = function (sourceCtx, x, y) {
+		//
+		// Copies a region x0,y0,w,h from the source context
+		// and draws it on the destination context, tmpCanvas.
+		//
 		var cv = self._Canvas;
 		var factor = 4;
 		var w = Math.floor(cv.width/factor);

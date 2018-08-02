@@ -15,6 +15,7 @@ import smdtLibs.Dss2Client as Dss2Client
 import smdtLibs.Dss2Header as DSS2Header
 
 from Targets import TargetList
+from maskLayouts import MaskLayouts
 
         
 class SlitmaskDesignTool:
@@ -37,7 +38,29 @@ class SlitmaskDesignTool:
         outData.seek(0)
         return outData.read()
         
-    def getDSSInfo (self):
-        # print ("DSS ", self.targetList.getDSSInfo())
-        return self.targetList.getDSSInfo()
+    def getROIInfo (self):
+        """
+        Returns information on the region of interest, like center RA/DEC and platescale, etc
+        """
+        return self.targetList.getROIInfo()
     
+    def getMaskLayout (self, instrument='deimos'):
+        """
+        Gets the mask layout, which is defined in maskLayout.py as a python data structure for convenience.
+        """
+        try:
+            return MaskLayouts[instrument];
+        except:
+            return ((0,0,0),)
+    
+    def recalculateMask (self, targetIdx, raDeg, decDeg, paDeg):
+        targets = self.targetList
+        targets.centerRADeg = raDeg
+        targets.centerDEC = decDeg
+        targets.positionAngle = paDeg       
+        targets.reCalcCoordinates (raDeg, decDeg, paDeg)
+        newTargets= targets.select (targetIdx)
+        
+        return newTargets
+        
+        

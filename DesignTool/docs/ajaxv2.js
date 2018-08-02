@@ -89,8 +89,8 @@ function AjaxClass() {
 		xt
 				.setRequestHeader("Content-Type",
 						"application/x-www-form-urlencoded");
-		xt.setRequestHeader("Content-length", content.length);
-		xt.setRequestHeader("Connection", "close");
+		//xt.setRequestHeader("Content-length", content.length);
+		//xt.setRequestHeader("Connection", "close");
 		xt.send(content);
 	};
 

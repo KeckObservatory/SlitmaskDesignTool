@@ -30,9 +30,7 @@ def toSexagecimal (deg, plus=" "):
     mm = int (t)
     ss = (t - mm) * 60
 
-    ssStr = "%.2f" % ss
-    if ss < 9.999:
-        ssStr = '0' + ssStr
+    ssStr = "%05.2f" % ss
 
     return "%s%02d:%02d:%s" % (sign, hh, mm, ssStr)
 
@@ -62,9 +60,9 @@ def sec2hour (sec):
     hh = isec / 3600
     mm = (isec % 3600) / 60
     ss = (isec % 60) + (sec - isec)
-    ssStr = "%.2f" % ss
-    if ss < 10:
-        ssStr = '0' + ssStr
+    ssStr = "%05.2f" % ss
+    #if ss < 10:
+    #    ssStr = '0' + ssStr
     return "%02d:%02d:%s" % (hh, mm, ssStr)
 
 def norm360Angle (ang):

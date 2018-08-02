@@ -32,7 +32,7 @@ class SMDesignHandler (EasyHTTPHandler):
     config = None
 
     def echo (self, req, qstr):
-        return self.response(json.dumps(qstr), self.PlainTextType)
+        return json.dumps(qstr), self.PlainTextType
     
     @utils.tryEx
     def loadParams (self, req, qstr):
@@ -42,7 +42,7 @@ class SMDesignHandler (EasyHTTPHandler):
         content = qstr['targetList'][0]    
         useDSS = self.intVal(qstr, 'formUseDSS', 0) 
         _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
-        return self.response('OK', self.PlainTextType)
+        return 'OK', self.PlainTextType
     
     @utils.tryEx   
     def getTargets (self, req, qstr):
@@ -50,19 +50,45 @@ class SMDesignHandler (EasyHTTPHandler):
         Returns the targets that were loaded via loadParams()
         """
         sm = _getData('smdt')
-        return self.response(sm.targetList.toJson(), self.PlainTextType)        
+        return sm.targetList.toJson(), self.PlainTextType       
     
     @utils.tryEx 
-    @infoLog
     def getDSSImage (self, req, qstr):
         sm = _getData('smdt')  
-        return self.response(sm.drawDSSImage(), self.PNGImage)
+        return sm.drawDSSImage(), self.PNGImage
     
     @utils.tryEx 
     def getROIInfo (self, req, qstr):
         sm = _getData('smdt')        
-        out = sm.getDSSInfo() 
-        return self.response(json.dumps(out), self.PlainTextType)
+        out = sm.getROIInfo() 
+        return json.dumps(out), self.PlainTextType
+    
+    @utils.tryEx
+    def getMaskLayout (self, req, qstr):        
+        sm = _getData('smdt')        
+        inst = self.getDefValue (qstr, 'instrument', 'deimos')
+        return json.dumps(sm.getMaskLayout(inst)), self.PlainTextType
+    
+    @utils.tryEx 
+    def recalculateMask (self, req, qstr):
+        sm = _getData('smdt')
+        vals = self.getDefValue(qstr, 'insideTargets', '')
+        currRaDeg = self.floatVal(qstr, 'currRaDeg', 0)
+        currDecDeg = self.floatVal(qstr, 'currDecDeg', 0)
+        currAngleDeg = self.floatVal(qstr, 'currAngleDeg', 0)
+        parts = vals.split(',')
+        if len(parts):
+            targetIdx = [int(x) for x in vals.split(',')]        
+            out = sm.recalculateMask (targetIdx, currRaDeg, currDecDeg, currAngleDeg)
+            return sm.targetList.toJson(out), self.PlainTextType
+        return sm.targetList.toJson(), self.PlainTextType
+    
+    @utils.tryEx 
+    def updateTarget (self, req, qstr):
+        sm = _getData('smdt')
+        
+        sm.targetList.updateTarget(self.getDefValue(qstr, 'values', ''))
+        return "[]", self.PlainTextType
     
     @infoLog
     def quit (self, req, qstr):        
@@ -109,7 +135,8 @@ if __name__ == "__main__":
             if os.path.isfile(fn):
                 defConfigName = fn
         print ("Using config file ", defConfigName)
-        cf = ConfigFile(defConfigName)
+        cf = ConfigFile(defConfigName)        
+        _setData('smdt', SlitmaskDesignTool(b'', False, cf))
         SMDesignHandler.config = cf
         SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
         SMDesignHandler.logEnabled = cf.get('logEnabled', False)       

@@ -29,8 +29,11 @@ function SlitmaskDesignTool() {
 		}
 		self.setStatus("Loading ...");
 
-        var useDSS = E('useDSS').checked; 
-        E('formUseDSS').value = useDSS ? 1:0;
+		var useDSS = E('useDSS');
+		if (useDSS) {			 
+			E('formUseDSS').value = useDSS.checked ? 1 : 0;
+		}
+        //E('formUseDSS').value = 0;
 		var form2 = E('form2');
 		form2.submit();
 	};
@@ -40,6 +43,15 @@ function SlitmaskDesignTool() {
 		self.canvasShow.show('getDSSImage?r=' + Date.now(), 0);
 	};
 
+	self.loadMaskLayout = function () {
+		function callback (data) {
+			self.canvasShow.setMaskLayout (data);
+			return;
+		}
+
+		ajaxCall("getMaskLayout", {'instrument': 'deimos'}, callback);
+	};
+	
 	self.loadTargets = function() {
 		function dig2 (x) {
 			if (x < 10) return '0' + x;
@@ -52,9 +64,9 @@ function SlitmaskDesignTool() {
 			// xPscale in arcsec/pixel
 			if (!data) return;
 			self.dssInfo = data;
-			var platescl = data['platescl']
-			self.xPscale = platescl * data['xpsize'] / 1000;
-			self.yPscale = platescl * data['ypsize'] / 1000;			
+			var platescl = data['platescl'] // arcsec/micron
+			self.xPscale = platescl * data['xpsize'] / 1000; // arcsec/pixel
+			self.yPscale = platescl * data['ypsize'] / 1000; // arcsec/pixel
 			self.setStatus("OK");
 			var cs = self.canvasShow;
 			
@@ -64,12 +76,17 @@ function SlitmaskDesignTool() {
 			cs.eastAngle = data['eastAngle']*1;
 			cs.centerRaDeg = data['centerRADeg']*1;
 			cs.centerDecDeg = data['centerDEC']*1;
+			cs.positionAngle = cs.origPA = data['positionAngle']*1;
+			cs.useDSS = data['useDSS']*1
+			cs.currRaDeg = cs.centerRaDeg;
+			cs.currDecDeg = cs.centerDecDeg;
 			
-			E('centerRAfd').value = cs.centerRaDeg / 15;
-			E('centerDECfd').value = cs.centerDecDeg;
+			E('inputRAfd').value = cs.centerRaDeg / 15;
+			E('inputDECfd').value = cs.centerDecDeg;
 			
-			self.resetDisplay();
-			self.resetOffsets();
+			cs.resetDisplay();
+			cs.resetOffsets();
+			self.redraw ();
 			
 			var now = new Date();
 			E('obsdatefd').value = now.getUTCFullYear() + '-' + dig2(now.getUTCMonth()+1) + '-' + dig2(now.getUTCDate());
@@ -79,10 +96,10 @@ function SlitmaskDesignTool() {
 			// Targets are here. 
 			// Next, get more ROI info.
 
-			var useDSS = E('useDSS').checked ? 1:0;
 			self.targets = data;			
 			self.setStatus("Drawing targets ...");
 			E('minPriority').value = 0;
+		
 			self.canvasShow.setMinPriority(0);
 			self.canvasShow.setTargets(self.targets);
 			ajaxCall("getROIInfo", {
@@ -94,23 +111,28 @@ function SlitmaskDesignTool() {
 
 	
 	self.loadAll = function() {
+		E('showPreview').checked = true;
+		self.loadMaskLayout();
 		self.loadBackgroundImage();
 		self.loadTargets();
+		return false;
 	};
 
 	self.redraw = function() {
 		self.canvasShow.redrawTxImage();
 	};
 
-	self.resetDisplay = function() {
+	self.resetDisplay1 = function() {
 		// Refit and redraw
-		self.setMinPcode ();
+		//self.setMinPcode ();
 		self.canvasShow.resetDisplay();
+		self.redraw();
 	};
 
-	self.resetOffsets = function() {
-		self.setMinPcode ();
+	self.resetOffsets1 = function() {
+		//self.setMinPcode ();
 		self.canvasShow.resetOffsets();
+		self.redraw();
 	};
 	
 	self.setMinPcode = function() {
@@ -137,8 +159,48 @@ function SlitmaskDesignTool() {
 		}
 	};
 	
+	self.recalculateMask = function (evt) {
+		function callback (data) {
+			self.targets = data;
+			self.canvasShow.setMinPriority(0);
+			self.canvasShow.setTargets(data);
+			self.resetOffsets1();
+		}
+		// Send targets that are inside mask to server.
+		// Retrieve selected mask information and display.
+		var cs = self.canvasShow;
+		if (!cs) {
+			alert ("No targets available");
+			return;
+		}
+		cs.centerRaDeg = cs.currRaDeg;
+		cs.centerDecDeg = cs.currDecDeg;
+		cs.positionAngle = cs.currAngleDeg;
+
+		E('showSlitPos').checked = true;
+		var params = {'insideTargets' : cs.insideTargetsIdx,
+				'currRaDeg' : cs.currRaDeg, 'currDecDeg' : cs.currDecDeg,
+				'currAngleDeg': cs.currAngleDeg};
+		ajaxPost ('recalculateMask', params, callback);
+	};
+	
+	self.updateTarget = function (evt) {
+		var idx = self.canvasShow.selectedTargetIdx;
+		var prior = Number(E('targetPrior').value);
+		var selected = Number(E('targetSelect').value);
+		var slitPA = Number(E('targetSlitPA').value);
+		var slitWidth = Number(E('targetSlitWidth').value);
+		var length1 = Number(E('targetLength1').value);
+		var length2 = Number(E('targetLength2').value);
+		
+		var params = {'idx': idx, 'prior' : prior, 'selected' : selected, 'slitPA': slitPA, 'slitWidth' : slitWidth,
+				'len1': length1, 'len2': length2};
+		ajaxPost ('updateTarget', {'values':JSON.stringify(params)}, function(){});
+		self.canvasShow.updateTarget ();
+	};
+	
 	self.statusDiv = E('statusDiv');
-	self.canvasShow = CanvasShow('canvasDiv');
+	self.canvasShow = new CanvasShow('canvasDiv', 'zoomCanvasDiv');
 	self.canvasShow.setMinPriority(E('minPriority').value);
 	self.loadBackgroundImage();
 	
@@ -146,13 +208,21 @@ function SlitmaskDesignTool() {
 	E('showHideParams').onclick = self.showHideParams;
 	E('targetListFrame').onload = self.loadAll;
 	E('loadTargets').onclick = self.loadParams;
-	E('resetDisplay').onclick = self.resetDisplay;
-	E('resetOffsets').onclick = self.resetOffsets;
+	E('resetDisplay').onclick = self.resetDisplay1;
+	E('resetOffsets').onclick = self.resetOffsets1;
 	E('minPriority').onchange = self.setMinPcode;
+	
     E('showAll').onchange = self.setMinPcode;
     E('showSelected').onchange = self.setMinPcode;
     E('showAlignBox').onchange = self.redraw;
     E('showByPriority').onchange = self.redraw;
+    E('showSlitPos').onchange = self.redraw;
+    E('showPreview').onchange = self.redraw;
+    
+    
+    E('recalculateMask').onclick = self.recalculateMask;
+	
+	E('updateTarget').onclick = self.updateTarget;
 
 	return this;
 }

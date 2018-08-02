@@ -15,7 +15,7 @@ import traceback
 import json
 
 from smdtLogger import SMDTLogger
-
+from TargetSelector import TargetSelector
 
 class TargetList:
     '''
@@ -44,6 +44,7 @@ class TargetList:
         self.centerDEC = 0
         self.dssSizeDeg = 0.35  # deg
         self.config = config
+        self.useDSS = useDSS
         if type(fname) == type(io.StringIO()):
             self.targets = self.readRaw (fname)
         else:
@@ -51,10 +52,16 @@ class TargetList:
         self.loadDSSInfo(useDSS)
         
     def loadDSSInfo (self, useDSS=True):
-        self._getDSSInfo(useDSS)
-        self._proj2DSS()
+        self._getDSS(useDSS)
         
-    def _getDSSInfo (self, useDSS=True):
+        if len(self.targets) <= 0:
+            return
+        if useDSS:
+            self._proj2DSS()
+        else:                      
+            self.reCalcCoordinates(self.centerRADeg, self.centerDEC, self.positionAngle)
+        
+    def _getDSS (self, useDSS=True):
         """
         Gets DSS image and info
         """
@@ -67,19 +74,26 @@ class TargetList:
         else:
             raDeg, decDeg = self.centerRADeg, self.centerDEC 
 
-        self.dssFits = dss2.getFITS(raDeg, decDeg, self.dssSizeDeg) if useDSS else None
+        self.dssFits = None
+        
+        if useDSS:
+            SMDTLogger.info ("Load DSS RA %s hr, DEC %s deg", utils.toSexagecimal(raDeg / 15),
+                         utils.toSexagecimal(decDeg))
+            self.dssFits = dss2.getFITS(raDeg, decDeg, self.dssSizeDeg)
+            if self.dssFits == None:
+                SMDTLogger.info ("Failed to load DSS")
+            else:
+                self.dssData = self.dssFits[0].data
+                self.fheader = Dss2Header.DssHeader(self.dssFits[0].header, raDeg, decDeg)    
         
         if self.dssFits == None:
+            # Not useDss or failed to load DSS
             h = int(self.dssSizeDeg * 3600)
             w = h
             self.dssData = np.zeros(shape=(h, w))
             self.fheader = Dss2Header.DssWCSHeader(raDeg, decDeg, w, h)
             SMDTLogger.info("No DSS, use WCS") 
-        else:
-            SMDTLogger.info ("Load DSS RA %s hr, DEC %s deg", utils.toSexagecimal(raDeg / 15),
-                         utils.toSexagecimal(decDeg))
-            self.dssData = self.dssFits[0].data
-            self.fheader = Dss2Header.DssHeader(self.dssFits[0].header, raDeg, decDeg)        
+                    
         
     def _checkPA (self, inParts):
         """
@@ -111,7 +125,7 @@ class TargetList:
         out = []
         cols = 'name', 'raHour', 'decDeg', 'eqx', 'mag', 'band', 'pcode', \
             'sample', 'select', 'slitPA', 'length1', 'length2', 'slitWidth', \
-            'index'
+            'index', 'inMask'
         
         for nr, line in enumerate(fh):
             if not line:
@@ -166,7 +180,7 @@ class TargetList:
                 pass
             target = (name, raHour, decDeg,
                     eqx, mag, band, pcode,
-                    sample, select, slitPA, length1, length2, slitWidth, nr)
+                    sample, select, slitPA, length1, length2, slitWidth, nr, 0)
             out.append(target)        
         df = pd.DataFrame(out, columns=cols)
         if self.centerRADeg == self.centerDEC and self.centerRADeg == 0:
@@ -181,18 +195,18 @@ class TargetList:
         """
         targets = self.targets
         if len(targets) <= 0:
-            targets['xpos'] = []
-            targets['ypos'] = []
+            targets['xarcs'] = []
+            targets['xarcs'] = []
             return
         fheader = self.fheader
         if fheader == None:
             return
         
         xs, ys = fheader.rd2xy(targets.raHour, targets.decDeg)
-        targets['xpos'] = xs
-        targets['ypos'] = ys
+        targets['xarcs'] = xs
+        targets['yarcs'] = ys
         
-    def getDSSInfo (self):
+    def getROIInfo (self):
         """
         Returns a dict with keywords that look like fits headers
         """
@@ -206,47 +220,104 @@ class TargetList:
         out['NAXIS1'] = hdr.naxis1
         out['NAXIS2'] = hdr.naxis2
         
-        north, east = hdr.skyPA()
+        if self.useDSS:
+            north, east = hdr.skyPA()
+            north = north - 180
+            east = east - 180
+        else:
+            north = 0
+            east = 90
+        out['useDSS'] = 1 if self.useDSS else 0
         out['northAngle'] = north
         out['eastAngle'] = east
         out['xpsize'] = hdr.xpsize  # pixel size in micron
         out['ypsize'] = hdr.ypsize  # pixel size in micron
         out['platescl'] = hdr.platescl  # arcsec / mm
-        
+        out['positionAngle'] = self.positionAngle
         return out
 
-    def toJson (self):
-        data = [ list(self.targets[i]) for i in self.targets ]
-        data1 = {'PA' : self.positionAngle } 
-        for i, colName in enumerate(self.targets.columns):
+    def toJson (self, tgs=None):
+        if tgs is None:
+            tgs = self.targets
+        data = [ list(tgs[i]) for i in tgs ]
+        data1 = {} 
+        for i, colName in enumerate(tgs.columns):
             data1[colName] = data[i]        
             
-        return json.dumps(data1)                    
+        return json.dumps(data1)
+    
+    def select (self, idxList):
+        targets = self.targets
+        targets['inMask'] = np.zeros(targets.shape[0])
+        for i in idxList:
+            targets.at[i, 'inMask'] = 1
+        selector = TargetSelector (targets[targets.inMask == 1])
+        return selector.getSelected ()
 
+    def updateTarget (self, jvalues):
+        values = json.loads(jvalues)
+        idx = values['idx']        
+        tgs = self.targets
+        
+        pcode = values['prior']
+        selected = values['selected']
+        slitPA = values['slitPA']
+        slitWidth =  values['slitWidth']       
+        len1 = values['len1']
+        len2 = values['len2'] 
+        
+        tgs.at[idx, 'pcode'] = pcode
+        tgs.at[idx, 'select'] = selected
+        tgs.at[idx, 'slitPA'] = slitPA
+        tgs.at[idx, 'slitWidth'] = slitWidth
+        tgs.at[idx, 'length1'] = len1
+        tgs.at[idx, 'length2'] = len2
+        SMDTLogger.info (f'Updated target {idx}, pcode={pcode}, selected={selected}, slitPA={slitPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}')
+        return 0
+
+    def reCalcCoordinates (self, raDeg, decDeg, posAngleDeg): 
+        """
+        Recalculates xarcs and yarcs for new cneter RA/DEC and positionAngle
+        """        
+        telRaRad, telDecRad = self._fld2telax( raDeg, decDeg, posAngleDeg)
+        self._calcTelTargetCoords(telRaRad, telDecRad,  raDeg, decDeg, posAngleDeg)
+        """
+        try:
+            self._calcSlitBoxCoords (posAngleDeg)
+        except:
+            traceback.print_exc()
+        """
+            
     """
-    Migrated routines from dsimulator by LR
+    Migrated routines from dsimulator by Luca Rizzi
     ==================================    
     """
     
-    def fld2telax (self, fldcenx, fldceny):
+    def _fld2telax (self, raDeg, decDeg, posAngle):
         """
-        this is taken from dsim.x, procedure fld2telax
+        Returns telRaRad and telDecRad.
+        
+        This is taken from dsim.x, procedure fld2telax
         FLD2TELAX:  from field center and rotator PA, calc coords of telescope axis    
         fldcenx = 0
-        fldceny = 0
+        fldceny = 0        
         """
-        r = math.radians(math.hypot(fldcenx, fldceny) / 3600.0)
-        pa_fld = math.atan2(fldceny, fldcenx)
+        cf = self.config
+        fldCenX =  cf.get('fldCenX', 0)
+        fldCenY = cf.get('fldCenY', 0)
+        
+        r = math.radians(math.hypot(fldCenX, fldCenY) / 3600.0)
+        pa_fld = math.atan2(fldCenY, fldCenX)
         cosr = math.cos(r)
         sinr = math.sin(r)
         
         #
-        decRad = math.radians(self.centerDEC)
+        decRad = math.radians(decDeg)
         cosd = math.cos(decRad)  # this is the declination of the center of the field
         sind = math.sin(decRad)  # same
         # pa_fld
         
-        pa_diff = math.radians(self.positionAngle) - pa_fld
+        pa_diff = math.radians(posAngle) - pa_fld
         
         cost = math.cos(pa_diff)  # pa_fld is calculated above as arctan(fldceny/fldcenx)
         sint = math.sin(pa_diff)
@@ -254,18 +325,22 @@ class TargetList:
         sina = sinr * sint / cosd
         cosa = math.sqrt(1.0 - sina * sina)        
         
-        self.telRARad = math.radians(self.centerRADeg) - math.asin(sina)
-        self.telDecRad = math.asin((sind * cosd * cosa - cosr * sinr * cost) / (cosr * cosd * cosa - sinr * sind * cost))
+        return (math.radians(raDeg) - math.asin(sina),
+            math.asin((sind * cosd * cosa - cosr * sinr * cost) / (cosr * cosd * cosa - sinr * sind * cost)))
             
     
-    def calcTelTargetCoords (self, flip, proj_len):   
+    def _calcTelTargetCoords (self, ra0, dec0, raDeg, decDeg, posAngle):   
         """
+        Calculates xarcs and yarcs, position of the targets in focal plane coordinates in arcsec.
+        
         Ported from dsimulator
         telRARad and telDecRad must be calculated via fld2telax().
-        """     
-        ra0 = self.telRARad
-        dec0 = self.telDecRad
-        pa0 = math.radians(self.positionAngle)
+        """
+        cf = self.config
+        offx = cf.get('maskOffsetX', 0)
+        offy = cf.get('maskOffsetY', 0)  
+        
+        pa0 = math.radians(posAngle)
         tt = self.targets
         
         decRad = np.radians(tt.decDeg)
@@ -288,45 +363,12 @@ class TargetList:
         p = np.arctan2(sinp, cosp)
         
         rArcsec = sinr / cosr * math.degrees(1) * 3600
-        deltaPA = pa0 - p
-        tt['xarcs'] = rArcsec * np.cos(deltaPA)
-        tt['yarcs'] = rArcsec * np.sin(deltaPA)        
-        
-    def calcSlitBoxCoords (self):
-        """
-        xarcs and yarcs must be calculated via calcTelTargetCoords
-        """        
-        pa0 = math.radians(self.positionAngle)
-        tt = self.targest
-        
-        slitPA = tt.slitPA.copy()
-        slitPA[np.isnan(slitPA)] = pa0
-        rangle = slitPA - pa0
-        tt['relPA'] = rangle
-        
-        cosRangle = np.cos(rangle)
-        factor = (1.0/np.abs(cosRangle)) if proj_len else np.ones_like(cosRangle)
-            
-        xgeom = np.abs(np.cos(rangle)) * factor
-        ygeom = np.sin(rangle) * factor
+        deltaPA = pa0 - p        
        
-        tt['x1'] = tt.xarcs - tt.length1 * xgeom
-        tt['y1'] = tt.yarcs - tt.length1 * ygeom
-        tt['x2'] = tt.xarcs + tt.length2 * xgeom
-        tt['y2'] = tt.yarcs + tt.length2 * ygeom
-                        
-        buf=[]
-        for i, row in tt.iterrows():
-            if row.x1 > row.x2:
-                buf.append((row.x2, row.x1, row.y2, row.y1))
-            else:
-                buf.append((row.x1, row.x2, row.y1, row.y2))
-        bufT = np.array(buf).T
-        tt.x1 = bufT[0]
-        tt.y1 = bufT[2]
-        tt.x2 = bufT[1]
-        tt.y2 = bufT[3]
+        tt['xarcs'] = rArcsec * np.cos(deltaPA) + offx
+        tt['yarcs'] = rArcsec * np.sin(deltaPA) - offy       
     
+        
 if __name__ == '__main__':
     import sys    
     from smdtLibs.configFile import ConfigFile

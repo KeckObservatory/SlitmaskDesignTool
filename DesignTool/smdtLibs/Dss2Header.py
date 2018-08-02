@@ -54,9 +54,9 @@ class DssWCSHeader:
         self.naxis1 = width
         self.naxis2 = height
         
-        self.xpsize = 15.0295 # pixel size in micron
-        self.ypsize = 15.0    # pixel size in micron 
-        self.platescl = 67.20 # arcsec/mm
+        self.xpsize = 1 # pixel size in micron
+        self.ypsize = 1    # pixel size in micron 
+        self.platescl = 1000 # arcsec/um
         
     
 class DssHeader:
@@ -352,7 +352,7 @@ class DssHeader:
             yout.append(y0-y)
         return xout, yout               
 
-    def skyPAZ (self):
+    def skyPA (self):
         """
         Return Position angles north and east in degree
         """        
@@ -383,7 +383,7 @@ class DssHeader:
         return north, east
 
 
-    def skyPA (self):
+    def skyPAZ (self):
         """
         Return Position angles north and east in degree
         """        
