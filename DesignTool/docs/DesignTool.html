@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="Cache-Control" content="no-cache;must-revalidate">
+<meta charset="UTF-8">
+<title>Slitmask Design Tool</title>
+<link rel='stylesheet' type='text/css' href='smdt.css'>
+<script src='ajaxv2.js'></script>
+<script src='TargetTable.js'></script>
+<script src='inOutChecker.js'></script>
+<script src='zoomCanvas.js?r=1'></script>
+<script src='canvasShow.js?r=1'></script>
+<script src='smdt.js'></script>
+<script>
+	
+</script>
+</head>
+<body onload='SlitmaskDesignTool();'>
+    <table id='headerTable'>
+        <tr>
+            <td><p id='kecklogo'></p>
+                <h2 id='headline'>&nbsp;Slitmask Design Tool Prototype</h2>
+                <ul id='keckmenu'>
+                    <li id='Links'><p>Links</p></li>
+                    <li id='Sofware'><p>Software</p></li>
+                    <li id='Keck'><p>Keck</p></li>
+                </ul>
+    </table>
+
+    <form name='form2' id='form2' method='post' enctype='multipart/form-data' action='sendTargets2Server' target='targetListFrame'>
+        <table id='contentTable'>
+            <tr>
+                <td>
+                <td id='contentCell'>
+                    <table id='targetListName'>
+                        <tr>
+                            <td>Target List:
+                            <td><input type='file' id='targetList' name='targetList' value="mask_ex1.txt"
+                                title="Input file of targets"
+                            >
+                            <td><input type='button' id='loadTargets' name='loadTargets' value='Load targets'>
+                            <td><input type='button' id='showHideParams' value='Show Parameters'>
+                        </tr>
+                    </table>
+                    <div id='paramTableDiv' style='visibility: hidden; display: none'>                       
+                    </div>
+                    <table id='paramButtonTable'>
+                        <tr>
+                            <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp; <input
+                                type='button' id='setSlitsLength' value='Set slits length'
+                            > &nbsp; <input type='button' id='setSlitsWidth' value='Set slit width'>
+                    
+                    </table>
+
+                    <table id='contentPanel'>
+                        <tr>
+                            <td>
+                        
+                        <tr>
+                            <td><table>
+                                    <tr>
+                                        <td>Status: <span id='statusDiv'>&nbsp;</span>
+                                
+                                </table></td>
+                        
+                        <tr>
+                            <td>
+                                <table id='buttonPanel'>
+                                    <tr>
+                                        <td>
+                                            <div id='canvasDiv' tabindex="0">Initializing ...</div>
+                                        
+                                        <td>
+                                            <div id='zoomCanvasDiv'>Initializing ...</div> <br> <input type='button'
+                                            id='resetDisplay' value='Reset Display'
+                                        > &nbsp; <input type='button' id='resetOffsets' value='Reset Offsets'> <br>
+                                            Min. Priority: <input id='minPriority' value='0'> <br> <input
+                                            type='radio' name='showSel' id='showAll' checked
+                                        > Show all targets <input type='radio' name='showSel' id='showSelected'> Show
+                                            selected <input type='radio' name='showSel' id='showByPriority'> Show by
+                                            priority <br> <input type='checkbox' id='showAlignBox'> Show align box <br>
+                                            <input type='checkbox' id='useDSS'> use DSS (needs reload)<br>
+
+                                            <table id='selectionMode'>
+                                                <tr>
+                                                    <td><input type='radio' name='navMode' id='enableNav'> Enable
+                                                        navigation <input type='radio' name='navMode' id='lockNav'> Lock
+                                                        navigation <input type='radio' name='navMode' id='enableSelection'>
+                                                        Enable selection
+                                                
+                                                <tr>
+                                                    <td><input type='radio' name='showViewMode' id='showPreview' checked>
+                                                        Show preview <input type='radio' name='showViewMode' id='showSlitPos'>
+                                                        Show slit pos <br> <input type='button' id='recalculateMask'
+                                                        value='Recalculate mask'
+                                                    >
+
+                                                        <div id='testDiv'></div>
+                                            
+                                            </table>
+                                        </td>
+                                    
+                                    <tr>
+                                        <td><div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB;
+                                            Alignment box; <br> Mouse-Left: pan; Ctrl-Left: rotate view; Mouse-Right: move
+                                            field; Ctrl-Right: rotate field;<br> Alt-Left: scale; Dbl-click: reset <br>
+                                            Moves: h: left; l: right; j: move up; k: down Zoom: &gt;: zoom in; &lt;: zoom out.
+                                
+                                </table>
+                    
+                    </table>
+        
+        </table>
+        <input type='hidden' id='formUseDSS' value='0' name='formUseDSS'>
+    </form>
+    <br>
+    <table id='targetForms'>
+        <tr>
+            <td><div id='targetTableDiv'></div>
+            
+            <td><div id='targetFormDiv'>
+                    <h3>
+                        Selected target: <span id='targetName'>None</span>
+                    </h3>
+                    <table id='targetFormTable'>
+                        <tr>
+                            <th>RA [hrs]:
+                            
+                            <td><span id='targetRA' /></span>
+                            
+                            <th>DEC [deg]:
+                            
+                            <td><span id='targetDEC' /></span>
+                        
+                        <tr>
+                            <th>Prioriry:
+                            
+                            <td><input id='targetPrior' size='7'>
+                            
+                            <th>Select:
+                            
+                            <td><input id='targetSelect' size='7'>
+                        
+                        <tr>
+                            <th>Slit PA:
+                            
+                            <td><input id='targetSlitPA' size='7'>
+                            
+                            <th>Slit Width:
+                            
+                            <td><input id='targetSlitWidth' size='7'>
+                        
+                        <tr>
+                            <th>Length1:
+                            
+                            <td><input id='targetLength1' size='7'></input>
+                            
+                            <th>length2:
+                            
+                            <td><input id='targetLength2' size='7'></input>
+                        
+                        <tr>
+                    
+                    </table>
+                    <input type='button' id='updateTarget' value='Update target'>
+                </div>
+    
+    </table>
+
+
+    <hr>
+    <table id='footerTable'>
+        <tr>
+            <td>Slitmask Design Tool Prototype - (C) 2018 - W. M. Keck Observatory
+    
+    </table>
+    <iframe name='targetListFrame' id='targetListFrame'> allowfullscreen</iframe>
+</body>
+</html>

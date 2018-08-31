@@ -11,7 +11,7 @@ function TargetTable (targets) {
 		['RA', 90, 'raSexa', 0],
 		['DEC', 90, 'decSexa', 0],
 		['Prior', 70, 'pcode', 0],
-		['Sel', 35, 'select', 0],
+		['Sel', 35, 'selected', 0],
 		['In', 35, 'inMask', 0],		
 		['Slit PA', 70, 'slitPA', 0],
 		['Magn', 70, 'mag', 0],
@@ -29,7 +29,7 @@ function TargetTable (targets) {
 		var raHours = targets.raSexa;
 		var decDegs = targets.decSexa;
 		var pcodes = targets.pcode;
-		var selecteds = targets.select;
+		var selecteds = targets.selected;
 		var inMask = targets.inMask;
 		var slitPAs = targets.slitPA;
 		var mags = targets.mag;
@@ -63,8 +63,10 @@ function TargetTable (targets) {
 		for (idx in names) {
 			i = sortedIdx[idx];
 			var tId = "target" + i;
-			var klass = idx % 2 == 0 ? 'evenRow' : 'oddRow';			
-			buf.push ("<tr id='" + tId + "' class='" + klass + "'>");
+			// 
+			// Alternating color is done in CSS with tr:nth-child(even) and tr:nth-child(odd) 			
+			//
+			buf.push ("<tr id='" + tId + "'>");
 			buf.push ("<td width='" + columns[0][1] + "'>" + names[i]);
 			buf.push ("<td width='" + columns[1][1] + "'>" + raHours[i]);
 			buf.push ("<td width='" + columns[2][1] + "'>" + decDegs[i]);
@@ -74,8 +76,8 @@ function TargetTable (targets) {
 			buf.push ("<td width='" + columns[6][1] + "'>" + slitPAs[i]);
 			buf.push ("<td width='" + columns[7][1] + "'>" + mags[i].toFixed(2));
 			buf.push ("<td width='" + columns[8][1] + "'>" + bands[i]);
-			buf.push ("<td width='" + columns[9][1] + "'>" + len1s[i]);
-			buf.push ("<td width='" + columns[10][1] + "'>" + len2s[i]);
+			buf.push ("<td width='" + columns[9][1] + "'>" + len1s[i].toFixed(1));
+			buf.push ("<td width='" + columns[10][1] + "'>" + len2s[i].toFixed(1));
 			buf.push ("<td width='" + columns[11][1] + "'>" + slitWidths[i]);
 			buf.push ("</tr>");
 		}
@@ -106,7 +108,7 @@ function TargetTable (targets) {
 	self.setOnClickCB = function (fn) {
 		// Setup the function to call when a row in the target table is clicked on.
 		var i;
-		for (i in self.targets.index) {
+		for (i in self.targets.orgIndex) {
 			E('target' + i).onclick = fn;
 		}
 	};
@@ -116,9 +118,9 @@ function TargetTable (targets) {
 		// See CSS file.
 		if (idx < 0) return;
 		var tBody = E('targetTableBody');
-		if (tBody && self.targets.index) { 
+		if (tBody && self.targets.orgIndex) { 
 			var nIdx = self.reverseIndices[idx];
-			var scrollY = nIdx * tBody.scrollHeight / self.targets.index.length;
+			var scrollY = nIdx * tBody.scrollHeight / self.targets.orgIndex.length;
 			tBody.scrollTop = scrollY;
 		}
 	};
@@ -139,7 +141,8 @@ function TargetTable (targets) {
 		if (idx < 0) return;
 		// Make sure target/elem exists.
 		var elem = E('target' + idx);
-		if (elem) elem.className = idx % 2 == 0 ? 'evenRow' : 'oddRow';
+		//if (elem) elem.className = idx % 2 == 0 ? 'evenRow' : 'oddRow';
+		if (elem) elem.className = '';
 	};
 	
 	self.sortTable = function (idx) {

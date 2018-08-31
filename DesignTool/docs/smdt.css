@@ -108,21 +108,6 @@ h2 .#headline {
 	background-color: #ffffff;
 }
 
-#paramTable {
-	font-size: 90%;	
-}
-
-#paramTable td {
-	padding-right: 5px;
-	background-color: #eeeeee;
-}
-
-#paramTable th {
-	padding-right: 5px;
-	text-align: right;
-	background-color: #dfdfdf;
-}
-
 #mouseStatus {
 	font-weight: bold;
 }
@@ -158,32 +143,32 @@ h2 .#headline {
 	border: solid 1px #aaaaaa;
 }
 
-#targetTable tbody tr.selectedRow td {
-	padding: 2px 2px 2px 2px;
-	text-align: right;
-	background-color: #ccffee;
-	border: solid 1px #aaaaaa;
-}
-
-#targetTable tbody tr.hiRow td {
-	padding: 2px 2px 2px 2px;
-	text-align: right;
-	background-color: #ffcccc;
-	border: solid 1px #aaaaaa;
-}
-
-#targetTable tbody tr.evenRow td {
+#targetTable tbody tr:nth-child(even) td {
 	padding: 2px 2px 2px 2px;
 	text-align: right;
 	background-color: #eeeecc;
 	border: solid 1px #aaaaaa;
 }
 
-#targetTable tbody tr.oddRow td {
+#targetTable tbody tr:nth-child(odd) td {
 	padding: 2px 2px 2px 2px;
 	text-align: right;
 	background-color: #ffffee;
 	border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.selectedRow td {
+    padding: 2px 2px 2px 2px;
+    text-align: right;
+    background-color: #ccffee;
+    border: solid 1px #aaaaaa;
+}
+
+#targetTable tbody tr.hiRow td {
+    padding: 2px 2px 2px 2px;
+    text-align: right;
+    background-color: #ffcccc;
+    border: solid 1px #aaaaaa;
 }
 
 #targetForms tr td {
@@ -216,4 +201,25 @@ h2 .#headline {
 
 #recalculateMask {
 	font-size: 110%;
+}
+
+#paramTable {
+	font-size: 85%;
+	margin: 5px 5px 2px 5px;
+    border-collapse: collapse;
+}
+
+#paramTable td {
+    border: solid 1px #aaaaaa;
+    margin: 0px;
+    padding: 2px 2px 0px 2px;
+    vertical-align: bottom;
+}
+
+#paramTable tr:nth-child(even) td {
+	background-color: #eeeecc;
+}
+
+#paramTable tr:nth-child(odd) td {
+    background-color: #ffffee;
 }

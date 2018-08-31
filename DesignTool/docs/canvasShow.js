@@ -5,7 +5,7 @@
  * This is derived from imgShow.js. 2018-03-30, skwok.
  * 
  */
-var aborted = 0;
+
 function TxMatrix() {
 	var self = this;
 	self.scaleFactor = 1;
@@ -192,6 +192,8 @@ function CanvasShow(containerName, zoomContainer) {
 	self.positionAngle = 0;
 	self.currAngleDeg = 0;
 
+	self.xPscale = 1;
+	self.yPscale = 1;
 	self.showMinPriority = -999;
 
 	self.scale = 1;
@@ -217,7 +219,7 @@ function CanvasShow(containerName, zoomContainer) {
 		[0.000, 11.850, 3]];
 	
 	self.maskLayout = [];
-		
+	self.reducedMask = [];
 
 	self.contElem = E(containerName);
 	self.zoomElem = E(zoomContainer);
@@ -263,8 +265,26 @@ function CanvasShow(containerName, zoomContainer) {
 		return sign + dd + ':' + mm + cc + ss.toFixed(2);
 	}
 	
+	function toBoolean (s) {
+		// String to boolean
+		s = s.toUpperCase();
+		return (s=='YES') || (s=='1') || (s=='TRUE') || (s=='ON');
+	}
+
+	function norm360 (x) { 
+		while (x > 360) x -= 360;
+		while (x < 0) x += 360;
+		return x;
+	}
+	
+	function norm180 (x) {
+		if (x > 180) return x - 360;
+		if (x < -180) return x + 360;
+		return x;
+	}
+	
 	function degrees(rad) {
-		return rad * 180.0 / Math.PI;
+		return norm180(rad * 180.0 / Math.PI);
 	}
 	
 	function radians(deg) {
@@ -372,7 +392,7 @@ function CanvasShow(containerName, zoomContainer) {
 	self.initialize = function() {
 		/*
 		 * Creates a canvas and puts it in the container. Sets default size to
-		 * 400x400 is not defined. Instantiates a filter object to process the
+		 * 400x400 if not defined. Instantiates a filter object to process the
 		 * image.
 		 */
 		var cv = document.createElement("canvas");
@@ -470,6 +490,7 @@ function CanvasShow(containerName, zoomContainer) {
 		// Updates the current PA, center RA/DEC
 		// and shows them in the parameter form.
         var maskAngleRad = self.maskTx.getRotAngle();
+        var tmatAngleRad = self.tMatrix.getRotAngle();
         
 		var north = self.northAngle;
 		var sx = self.xPscale;
@@ -478,9 +499,8 @@ function CanvasShow(containerName, zoomContainer) {
 		var angRad = radians(self.useDSS ? (0): (90 + self.positionAngle));
 		var rxy = rotate(angRad, -self.skyY*sy, -self.skyX*sx);
 		
-		var currAngle = degrees(self.tMatrix.getRotAngle()) + (self.useDSS ? north : (180 + self.positionAngle));
-		if (currAngle > 180) currAngle = currAngle - 360;
-		if (currAngle < -180) currAngle = 360 + currAngle;
+		var currAngle =  norm180((self.useDSS ? north : (180 + self.positionAngle)) - degrees(maskAngleRad));
+		
 		self.currAngleDeg = currAngle;
 		
 		self.currDecDeg = self.centerDecDeg - rxy[0] / 3600;
@@ -492,12 +512,13 @@ function CanvasShow(containerName, zoomContainer) {
 		self.currRaDeg = self.centerRaDeg  - rxy[1] / 3600 / cosDec;
 		var raHrs = self.currRaDeg / 15;		
 			
-        E('inputRAfd').value = toSexa(raHrs);
-        E('inputDECfd').value = toSexa(decDeg);
-        E('positionAnglefd').value = currAngle.toFixed(3);
-        E('equinoxfd').value = north.toFixed(3);
-        // showMsg ('statusDiv', degrees(maskAngleRad) + " " + north + " scale "
-		// + self.tMatrix.getScale());
+        E('InputRAfd').value = toSexa(raHrs);
+        E('InputDECfd').value = toSexa(decDeg);        
+        E('MaskPAfd').value = currAngle.toFixed(3);
+        
+        showMsg ('statusDiv', "maskAngle=" + degrees(maskAngleRad).toFixed(2) + ", north=" + north + ", scale="
+		+ self.tMatrix.getScale().toFixed(2) 
+		+ ", posAngle=" + self.positionAngle.toFixed(2));
 	};
 	
 	self.drawCompass = function (ctx) {		
@@ -578,14 +599,9 @@ function CanvasShow(containerName, zoomContainer) {
 		var ctx2 = self.filter.tmpCtx2;
 		with (ctx2) {
 			setTransform(1, 0, 0, 1, 0, 0);
+			var maskLayout = self.drawMask(ctx2, self.maskLayout);
 			
-			// setTransform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
-
-			// transform(1, 0, 0, 1, self.maskOffsetX, self.maskOffsetY);
-			var maskLayout = self.drawMask(ctx2);
-			
-			var checker = new InOutChecker (maskLayout);
-			// setTransform(1, 0, 0, 1, 0, 0);
+			var checker = new InOutChecker (self.rotateMaskLayout(self.reducedMask));
 			self.drawTargets(ctx2, checker);			
 		}
 		
@@ -646,7 +662,7 @@ function CanvasShow(containerName, zoomContainer) {
 					if (dist < minDist) {
 						minDist = dist;
 						self.minDist = dist;
-						self.selectedTargetIdx = i;
+						self.selectedTargetIdx = idx;
 					}
 				}
 			}
@@ -666,15 +682,16 @@ function CanvasShow(containerName, zoomContainer) {
 				xOut.push(sx);
 				yOut.push(sy);
 
-				if (inMask[i]) {
-					slitsInMaskIdx.push (i);
-				}
+				
 				if (pri == AlignBox) {
 					if (checker.checkPoint (sx, sy))
 						addTo (alignBoxInIdx, i, x, y);
 					else
 						addTo (alignBoxOutIdx, i, x, y);
 					continue;
+				}
+				if (inMask[i]) {
+					slitsInMaskIdx.push (i);
 				}
 				if (selected[i]) {
 					if (checker.checkPoint (sx, sy)) 
@@ -750,8 +767,16 @@ function CanvasShow(containerName, zoomContainer) {
 			// Note that parameter is an index, not X/Y
 			//
 			var angRad = radians(slitPAs[idx]);
-			var cosa = Math.cos(angRad);
-			var sina = Math.sin(angRad);
+			var cosa = 0, sina = 0;
+			
+			if (projSlitLen) {
+				cosa = Math.cos(angRad);
+				sina = Math.sin(angRad);	
+			}
+			else {
+				cosa = 1;
+				sina = Math.tan (angRad);
+			}					
 			
 			var x = xOut[idx];
 			var y = yOut[idx];
@@ -760,21 +785,25 @@ function CanvasShow(containerName, zoomContainer) {
 			
 			var halfWidth = slitWidths[idx] / 2 / self.yPscale * tmScale;
 			
-			var x1 = x - cosa * l1;
-			var y1 = y - sina * l1;
-			var x2 = x + cosa * l2;
-			var y2 = y + sina * l2;
+			var x1 = x + cosa * l1;
+			var y1 = y + sina * l1;
+			var x2 = x - cosa * l2;
+			var y2 = y - sina * l2;
 			var t;
 			if (x1 > x2) {
 				t = x2; x2 = x1; x1 = t;
-				t = y1; y2 = y1; y1 = t;
+				t = y2; y2 = y1; y1 = t;
 			}
 			with (ctx) {				
 				moveTo (x1, y1-halfWidth);
 				lineTo (x1, y1+halfWidth);
 				lineTo (x2, y2+halfWidth);
 				lineTo (x2, y2-halfWidth);
-				lineTo (x1, y1-halfWidth);				
+				lineTo (x1, y1-halfWidth);	
+				moveTo (x-halfWidth, y);
+				lineTo (x+halfWidth, y);
+				moveTo (x, y-halfWidth);
+				lineTo (x, y+halfWidth);
 			}
 		}
 		
@@ -813,7 +842,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var length1s = targets.length1;
 		var length2s = targets.length2;
 		
-		var selected = targets.select;
+		var selected = targets.selected;
 		var inMask = targets.inMask;
 		var pcode = targets.pcode;
 		var len = xpos.length;		
@@ -832,7 +861,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var i;
 
 		var tmScale = tmax.getScale();
-		var boxSize = tmScale * Math.min(20, Math.max(2, Number(E('boxSizefd').value)));
+		var boxSize = tmScale * Math.max(2, Number(E('AlignBoxSizefd').value));
 		var halfBoxSize = boxSize / 2;
 		var minDist = 1E10;
 				
@@ -846,6 +875,7 @@ function CanvasShow(containerName, zoomContainer) {
         var showSelected = E('showSelected').checked;
         var showByPriority = E('showByPriority').checked;
         var showSlitPos = E('showSlitPos').checked;
+        var projSlitLen = toBoolean (E('ProjSlitLengthfd').value);
         var showPriority = self.showMinPriority;
         
         if (showSlitPos) {
@@ -865,7 +895,6 @@ function CanvasShow(containerName, zoomContainer) {
         ctx.lineWidth = 1;
         ctx.lineCap ='square';
 		
-		//calcSlitDisplayAngle ();
 		classify();
 		
 		self.insideTargetsIdx = new Array().concat (selectedInIdx, showInIdx, alignBoxInIdx);
@@ -934,23 +963,23 @@ function CanvasShow(containerName, zoomContainer) {
 		E('targetDEC').innerHTML = targets.decSexa[targetIdx];
 		
 		E('targetPrior').value = targets.pcode[targetIdx];
-		E('targetSelect').value = targets.select[targetIdx];
+		E('targetSelect').value = targets.selected[targetIdx];
 		E('targetSlitPA').value = targets.slitPA[targetIdx];
 		E('targetSlitWidth').value = targets.slitWidth[targetIdx];
-		E('targetLength1').value = targets.length1[targetIdx];
-		E('targetLength2').value = targets.length2[targetIdx];		
+		E('targetLength1').value = targets.length1[targetIdx].toFixed(2);
+		E('targetLength2').value = targets.length2[targetIdx].toFixed(2);		
 	};
 	
 	self.updateTarget = function () {
 		var idx = self.selectedTargetIdx;
 		if (idx < 0) return;
 		
-		targets.pcode[idx] = E('targetPrior').value;
-		targets.select[idx] = E('targetSelect').value;
-		targets.slitPA[idx] = E('targetSlitPA').value;
-		targets.slitWidth[idx] = E('targetSlitWidth').value;
-		targets.length1[idx] = E('targetLength1').value;
-		targets.length2[idx] = E('targetLength2').value;
+		targets.pcode[idx] = Number(E('targetPrior').value);
+		targets.selected[idx] = Number(E('targetSelect').value);
+		targets.slitPA[idx] = Number(E('targetSlitPA').value);
+		targets.slitWidth[idx] = Number(E('targetSlitWidth').value);
+		targets.length1[idx] = Number(E('targetLength1').value);
+		targets.length2[idx] = Number(E('targetLength2').value);
 		
 		self.reDrawTable();
 		self.targetTable.scrollTo (idx);
@@ -970,46 +999,43 @@ function CanvasShow(containerName, zoomContainer) {
 		self.redrawTxImage();
 	};
 	
-	self.drawMask = function(ctx) {
-		function rotateP (mtx, layout) {
-			var i;
-			var tx = mtx.mat;
-			var a = tx[0][0];
-			var b = tx[0][1];
-			var c = tx[1][0];
-			var d = tx[1][1];
-			var e = tx[0][2];
-			var f = tx[1][2];			
-			var out = Array();
-			for (i in layout) {
-				var row = layout[i];
-				var x = (row[0]-rotX) * sx;
-				var y = (row[1]-rotY) * sy;
-
-				var rx = a * x + c * y + rotX;
-				var ry = b * x + d * y + rotY;
-				
-				var sxy = tmax.w2s(rx, ry);
-				var x0 = sxy[0];
-				var y0 = sxy[1];
-				out.push([x0, y0, row[2]]);
-			}
-			return out;
-		}
-		
+	self.rotateMaskLayout = function (mask) {
 		var sx = 1.0/ self.xPscale;
 		var sy = 1.0/ self.yPscale;
 		var rotX = self.maskOffsetX;
-		var rotY = self.maskOffsetY;		
-		var mtx = self.maskTx;		
+		var rotY = self.maskOffsetY;
 		var tmax = self.tMatrix;
-		var s = tmax.getScale();
-		var lineWidth = 1;
-		// if (s < 1)
-		// lineWidth = 1.0 / s;
+		var tx = self.maskTx.mat;
+		var a = tx[0][0];
+		var b = tx[0][1];
+		var c = tx[1][0];
+		var d = tx[1][1];
+		var e = tx[0][2];
+		var f = tx[1][2];
+		var i;
 		
-		var layout = self.maskLayout.concat (self.centerMarker);
-		var layout1 = rotateP(mtx, layout);
+		var out = Array();
+		for (i in mask) {
+			var row = mask[i];
+			var x = (row[0]-rotX) * sx;
+			var y = (row[1]-rotY) * sy;
+
+			var rx = a * x + c * y + rotX;
+			var ry = b * x + d * y + rotY;
+			
+			var sxy = tmax.w2s(rx, ry);
+			var x0 = sxy[0];
+			var y0 = sxy[1];
+			out.push([x0, y0, row[2]]);
+		}
+		return out;
+	};
+	
+	self.drawMask = function(ctx, mask) {		
+		var lineWidth = 1;
+		
+		var layout = mask.concat (self.centerMarker);
+		var layout1 = self.rotateMaskLayout(layout);
 		self.drawPolylines (ctx, layout1, self.maskColor, lineWidth);
 		return layout1;
 	};
@@ -1171,7 +1197,15 @@ function CanvasShow(containerName, zoomContainer) {
 		tx.rotate(ang, xc, yc);
 	};
 	
-	self.mouseMove = function(evt) {
+	self.mouseMove = function(evt) {		
+		function whichButton (evt) {
+			var bbb = evt.buttons || evt.which || evt.button;		
+			if (bbb === 1) return 1;
+			if (bbb === 2) return 2;
+			if (bbb === 4) return 4;
+			return 0;		
+		}
+		
 		function contrasting() {
 			// Contrast/Brightness
 			var f = (mx - ePos.x) / xc;
@@ -1199,7 +1233,7 @@ function CanvasShow(containerName, zoomContainer) {
 			return;
 		}
         if (!E('enableNav').checked)
-            return;
+            return false;
 
 		var tx = self.tMatrix;
 		var cv = self._Canvas;
@@ -1208,19 +1242,41 @@ function CanvasShow(containerName, zoomContainer) {
 		var scale = tx.getScale();
 		
 		var newAngle = Math.atan2(my - yc - ePos.y, mx - xc - ePos.x);
+		var button = whichButton (evt);
 		
-		// shiftKey, ctrlKey, altKey
-		if (evt.shiftKey) {
-			self.rotateMask (-newAngle+self.baseAngle);
-			// self.rotateAll(newAngle-self.baseAngle);
-			self.rotateAround (newAngle-self.baseAngle);
-		} else if (evt.ctrlKey) {
-			self.rotateAll(newAngle-self.baseAngle);
-		} else if (evt.altKey) {
-			contrasting();
-		} else {
-			self.panSky(dx, dy);
+		if (button == 1) {
+			if (evt.ctrlKey) {
+				self.rotateAll(newAngle-self.baseAngle);
+			}
+			else {
+				self.panAll(dx, dy);
+			}
+		} else if (button == 2) {
+			if (evt.ctrlKey) {
+				self.rotateMask (-newAngle+self.baseAngle);
+				self.rotateAround (newAngle-self.baseAngle);
+			} else {
+				self.panSky (dx, dy);			
+			}			
 		}
+		// shiftKey, ctrlKey, altKey
+		var dothis = false;
+		if (dothis) {
+			if (evt.shiftKey) {
+				self.rotateMask (-newAngle+self.baseAngle); 
+				// self.rotateAll(newAngle-self.baseAngle);
+				self.rotateAround (newAngle-self.baseAngle); 		 
+			}
+			else if (evt.ctrlKey) {
+				self.rotateAll(newAngle-self.baseAngle); 
+			} 
+			else if (evt.altKey) {
+				contrasting(); 
+			} else { // self.panSky(dx, dy);
+				self.panAll(dx, dy); 
+			}
+		}
+	
 		self.redrawTxImage();
 		self.lastmx = mx;
 		self.lastmy = my;
@@ -1254,7 +1310,7 @@ function CanvasShow(containerName, zoomContainer) {
             return;
         var activeElem = document.activeElement;
         if (self.contElem != activeElem)
-        	return;
+        	return true;
         evt.preventDefault();
 		var k = evt.key;
 		switch (k) {
@@ -1284,8 +1340,16 @@ function CanvasShow(containerName, zoomContainer) {
 			break;
 		}
 		self.redrawTxImage();
+		return false;
 	};
 
+	self.captureContext = function (evt) {
+		var activeElem = document.activeElement;
+		if (self.contElem != activeElem) return true;
+		
+		return false;
+	};
+	
 	self.setMinPriority = function(mprio) {
 		self.showMinPriority = Number(mprio);
 	};
@@ -1373,8 +1437,9 @@ function CanvasShow(containerName, zoomContainer) {
 		self.reDrawTable ();
 	};
 	
-	self.setMaskLayout = function (layout) {
+	self.setMaskLayout = function (layout, reduced) {
 		self.maskLayout = layout;
+		self.reducedMask = reduced;
 		self.findMaskMinMax();
 	};
 	
@@ -1387,6 +1452,7 @@ function CanvasShow(containerName, zoomContainer) {
 	self.contElem.ondblclick = self.doubleClick;
 	self.contElem.onwheel = self.mouseWheel;
 	window.onkeypress = self.keypressed;
-
+	document.oncontextmenu = self.captureContext;
+	
 	return this;
 }

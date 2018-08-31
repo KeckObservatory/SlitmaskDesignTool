@@ -1,10 +1,11 @@
 import sys
-
+import json
 
 class ConfigFile:
 
-    def __init__(self, fileName):
+    def __init__(self, fileName, split=False):
         self.fileName = fileName
+        self.split = split
         self.properties = {}
         self.readConfigFile(fileName)
 
@@ -24,6 +25,9 @@ class ConfigFile:
                 return value
 
     def readConfigFile (self, fname):
+        def clean(s):
+            return s.strip().replace('"', '').replace("'", "")
+        
         with open(fname, 'r') as fh:
             props = {}
             for line in fh:
@@ -31,7 +35,10 @@ class ConfigFile:
                 if len(parts) > 1:
                     key, val = parts
                     key = key.strip()
-                    val = val.strip().replace('"', '').replace("'", "")
+                    if self.split:
+                        val = [clean(s) for s in val.split(',')]
+                    else:
+                        val = clean(val)                    
                     props[key] = self.getType (val)
             self.properties = props
             return
@@ -42,7 +49,6 @@ class ConfigFile:
             return self.properties[key]
         else:
             return defValue
-
 
 if __name__ == "__main__":
     ccf = ConfigFile (sys.argv[1])

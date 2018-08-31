@@ -21,7 +21,11 @@ function SlitmaskDesignTool() {
 		self.statusDiv.innerHTML = msg;
 	}
 
-	self.loadParams = function() {
+	self.sendTargets2Server = function() {
+		// The browser loads the targets and sends them to the server.
+		// The server responds with "OK", which sent to the frame 'targetListFrame'.
+		// That then triggers the onload event and loadAll() is invoked.
+		
 		var filename = E('targetList');
 		if (!filename.value) {
 			self.setStatus('Please select target list file to load');
@@ -39,17 +43,41 @@ function SlitmaskDesignTool() {
 	};
 
 	self.loadBackgroundImage = function() {
-		// This is the DSS image
+		// This is the DSS image if requested
+		// or a blank image, if no DSS.
+		// The URL 'getDssImage' returns an image that is pushed to a <img>."
 		self.canvasShow.show('getDSSImage?r=' + Date.now(), 0);
 	};
 
 	self.loadMaskLayout = function () {
 		function callback (data) {
-			self.canvasShow.setMaskLayout (data);
+			self.canvasShow.setMaskLayout (data.mask, data.reducedMask);
 			return;
 		}
 
 		ajaxCall("getMaskLayout", {'instrument': 'deimos'}, callback);
+	};
+	
+	self.buildParamTable = function (params) {
+		// params
+		var buf = Array();
+		var row, i;
+		var value, unit, label, descText;
+		var txt;
+		buf.push ('<table id="paramTable">');
+		for (i in params) {
+			row = params[i];
+			value = row[0];
+			unit = row[1];
+			label = row[2];
+			descText = row[3];
+			txt = '<tr><td>' +
+				label + ':<td><input id="' + i + 'fd" value="' + value + '">' +
+				'<td>' + descText;
+			buf.push(txt);
+		}
+		buf.push('</table>');
+		E('paramTableDiv').innerHTML = buf.join('');		
 	};
 	
 	self.loadTargets = function() {
@@ -57,59 +85,61 @@ function SlitmaskDesignTool() {
 			if (x < 10) return '0' + x;
 			return x;
 		}
-		function displayCB(data) {
-			// Chained callback
-			// dssPlatescale in arcsec/micron
-			// xpsize in micron/pixel
-			// xPscale in arcsec/pixel
-			if (!data) return;
-			self.dssInfo = data;
-			var platescl = data['platescl'] // arcsec/micron
-			self.xPscale = platescl * data['xpsize'] / 1000; // arcsec/pixel
-			self.yPscale = platescl * data['ypsize'] / 1000; // arcsec/pixel
-			self.setStatus("OK");
-			var cs = self.canvasShow;
-			
-			cs.xPscale = self.xPscale;
-			cs.yPscale = self.yPscale;
-			cs.northAngle = data['northAngle']*1;
-			cs.eastAngle = data['eastAngle']*1;
-			cs.centerRaDeg = data['centerRADeg']*1;
-			cs.centerDecDeg = data['centerDEC']*1;
-			cs.positionAngle = cs.origPA = data['positionAngle']*1;
-			cs.useDSS = data['useDSS']*1
-			cs.currRaDeg = cs.centerRaDeg;
-			cs.currDecDeg = cs.centerDecDeg;
-			
-			E('inputRAfd').value = cs.centerRaDeg / 15;
-			E('inputDECfd').value = cs.centerDecDeg;
-			
-			cs.resetDisplay();
-			cs.resetOffsets();
-			self.redraw ();
-			
-			var now = new Date();
-			E('obsdatefd').value = now.getUTCFullYear() + '-' + dig2(now.getUTCMonth()+1) + '-' + dig2(now.getUTCDate());
-		}
 
 		function callback(data) {
-			// Targets are here. 
-			// Next, get more ROI info.
-
-			self.targets = data;			
+			if (!data) return;
+			
+			self.targets = data.targets;
+			self.dssInfo = data.info;
+			
 			self.setStatus("Drawing targets ...");
 			E('minPriority').value = 0;
 		
 			self.canvasShow.setMinPriority(0);
 			self.canvasShow.setTargets(self.targets);
-			ajaxCall("getROIInfo", {
-				'sid' : 0,
-			}, displayCB);
+
+			// Chained callback
+			// dssPlatescale in arcsec/micron
+			// xpsize in micron/pixel
+			// xPscale in arcsec/pixel
+			var info = data.info;
+			var platescl = info['platescl'] // arcsec/micron
+			self.xPscale = platescl * info['xpsize'] / 1000; // arcsec/pixel
+			self.yPscale = platescl * info['ypsize'] / 1000; // arcsec/pixel
+			self.setStatus("OK");
+			var cs = self.canvasShow;
+			
+			cs.xPscale = self.xPscale;
+			cs.yPscale = self.yPscale;
+			cs.northAngle = info['northAngle']*1;
+			cs.eastAngle = info['eastAngle']*1;
+			cs.centerRaDeg = info['centerRADeg']*1;
+			cs.centerDecDeg = info['centerDEC']*1;
+			cs.positionAngle = cs.origPA = info['positionAngle']*1;
+			cs.useDSS = info['useDSS']*1
+			cs.currRaDeg = cs.centerRaDeg;
+			cs.currDecDeg = cs.centerDecDeg;
+			
+			//E('inputRAfd').value = toSexagecimal(cs.centerRaDeg / 15);
+			//E('inputDECfd').value = toSexagecimal(cs.centerDecDeg);
+			
+			cs.resetDisplay();
+			cs.resetOffsets();
+			self.redraw ();
+			
+			//var now = new Date();
+			//E('obsdatefd').value = now.getUTCFullYear() + '-' + dig2(now.getUTCMonth()+1) + '-' + dig2(now.getUTCDate());			
 		}
-		ajaxCall("getTargets", {}, callback);
+		ajaxCall("getTargetsAndInfo", {}, callback);
+	};
+	
+	self.loadConfigParams = function() {
+		function callback (data) {
+			self.buildParamTable (data.params);
+		}
+		ajaxCall('getConfigParams', {}, callback);
 	};
 
-	
 	self.loadAll = function() {
 		E('showPreview').checked = true;
 		self.loadMaskLayout();
@@ -143,7 +173,7 @@ function SlitmaskDesignTool() {
 
 	self.showHideParams = function (evt) {
 		var curr = this.value;
-		var elm = E('paramTable');
+		var elm = E('paramTableDiv');
 		if (curr == 'Show Parameters') {
 			this.value = 'Hide Parameters';
 			with (elm.style) {
@@ -157,6 +187,63 @@ function SlitmaskDesignTool() {
 				display = 'none';
 			}
 		}
+	};	
+
+	self.setSlitsPA = function (evt) {
+		var pa = Number(E('SlitPAfd').value);
+		var tgs = self.canvasShow.targets;
+		var ntgs = tgs.length1.length;
+		var i;
+		for (i = 0; i < ntgs; ++i) {
+			tgs.slitPA[i] = pa;
+		}
+		self.canvasShow.reDrawTable();
+		self.redraw();
+		
+		var colName = 'slitPA';
+		var value = pa;
+		var params = {'colName': colName, 'value': value };
+		ajaxPost ('setColumnValue', params, function(){});
+	};
+	
+	self.setSlitsLength = function (evt) {
+		var halfLen = 0.5 * Number(E('MinSlitLengthfd').value);
+		var tgs = self.canvasShow.targets;
+		var ntgs = tgs.length1.length;
+		var i;
+		for (i = 0; i < ntgs; ++i) {
+			tgs.length1[i] = halfLen;
+			tgs.length2[i] = halfLen;
+		}
+		self.canvasShow.reDrawTable();
+		self.redraw();
+
+		var colName = 'length1';
+		var value = halfLen;
+		var params = {'colName': colName, 'value': value };
+		ajaxPost ('setColumnValue', params, function(){});
+		
+		colName = 'length2';
+		value = halfLen;
+		params = {'colName': colName, 'value': value };
+		ajaxPost ('setColumnValue', params, function(){});		
+	};
+	
+	self.setSlitsWidth = function (evt) {
+		var width = Number(E('SlitWidthfd').value);
+		var tgs = self.canvasShow.targets;
+		var ntgs = tgs.length1.length;
+		var i;
+		for (i = 0; i < ntgs; ++i) {
+			tgs.slitWidth[i] = width;
+		}
+		self.canvasShow.reDrawTable();
+		self.redraw();
+		
+		var colName = 'slitWidth';
+		var value = pa;
+		var params = {'colName': colName, 'value': value };
+		ajaxPost ('setColumnValue', params, function(){});		
 	};
 	
 	self.recalculateMask = function (evt) {
@@ -176,11 +263,18 @@ function SlitmaskDesignTool() {
 		cs.centerRaDeg = cs.currRaDeg;
 		cs.centerDecDeg = cs.currDecDeg;
 		cs.positionAngle = cs.currAngleDeg;
+		
+		var minSepAs = E('MinSlitSeparationfd').value;
+		var minSlitLengthAs = E('MinSlitLengthfd').value;
+		var boxSizeAs = E('AlignBoxSizefd').value;
 
 		E('showSlitPos').checked = true;
 		var params = {'insideTargets' : cs.insideTargetsIdx,
 				'currRaDeg' : cs.currRaDeg, 'currDecDeg' : cs.currDecDeg,
-				'currAngleDeg': cs.currAngleDeg};
+				'currAngleDeg': cs.currAngleDeg,
+				'minSepAs': minSepAs,
+				'minSlitLengthAs': minSlitLengthAs,
+				'boxSize' : boxSizeAs};
 		ajaxPost ('recalculateMask', params, callback);
 	};
 	
@@ -202,12 +296,13 @@ function SlitmaskDesignTool() {
 	self.statusDiv = E('statusDiv');
 	self.canvasShow = new CanvasShow('canvasDiv', 'zoomCanvasDiv');
 	self.canvasShow.setMinPriority(E('minPriority').value);
+	self.loadConfigParams();
 	self.loadBackgroundImage();
 	
 	E('enableSelection').checked = true;
 	E('showHideParams').onclick = self.showHideParams;
 	E('targetListFrame').onload = self.loadAll;
-	E('loadTargets').onclick = self.loadParams;
+	E('loadTargets').onclick = self.sendTargets2Server;
 	E('resetDisplay').onclick = self.resetDisplay1;
 	E('resetOffsets').onclick = self.resetOffsets1;
 	E('minPriority').onchange = self.setMinPcode;
@@ -219,6 +314,9 @@ function SlitmaskDesignTool() {
     E('showSlitPos').onchange = self.redraw;
     E('showPreview').onchange = self.redraw;
     
+    E('setSlitsPA').onclick = self.setSlitsPA;
+    E('setSlitsLength').onclick = self.setSlitsLength;    
+    E('setSlitsWidth').onclick = self.setSlitsWidth;    
     
     E('recalculateMask').onclick = self.recalculateMask;
 	

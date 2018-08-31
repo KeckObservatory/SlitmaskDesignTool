@@ -1,6 +1,14 @@
 '''
 Created on Mar 20, 2018
 
+The request sequence is:
+- Browser sendTargets2Server via form submit ('loadParams')
+- Server responds OK
+- Browser onload calls loadAll(), which includes loadMaskLayout, loadBackgroundImage, loadTargets()
+- Server loadMaskLayout -> getMaskLayout returns mask and reducedMask layouts
+- server lackBackgroundImage -> loads DSS image into canvas background
+- Server loadTargets -> getTargetsAndInfo loads target list and info, such as center RA/DEC, sky PA and scales
+
 @author: skwok
 '''
 
@@ -14,6 +22,7 @@ from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThr
 from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
+#from anaconda_navigator.config import value
 
 GlobalData = {}
 
@@ -35,7 +44,7 @@ class SMDesignHandler (EasyHTTPHandler):
         return json.dumps(qstr), self.PlainTextType
     
     @utils.tryEx
-    def loadParams (self, req, qstr):
+    def sendTargets2Server (self, req, qstr):
         """
         Respond to the form action
         """        
@@ -44,6 +53,12 @@ class SMDesignHandler (EasyHTTPHandler):
         _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
         return 'OK', self.PlainTextType
     
+    @utils.tryEx 
+    def getConfigParams (self, req, qstr):
+        sm = _getData('smdt')
+        paramData = self.config.get('params')
+        return json.dumps({'params': paramData.properties}), self.PlainTextType
+        
     @utils.tryEx   
     def getTargets (self, req, qstr):
         """
@@ -51,6 +66,7 @@ class SMDesignHandler (EasyHTTPHandler):
         """
         sm = _getData('smdt')
         return sm.targetList.toJson(), self.PlainTextType       
+    
     
     @utils.tryEx 
     def getDSSImage (self, req, qstr):
@@ -62,6 +78,17 @@ class SMDesignHandler (EasyHTTPHandler):
         sm = _getData('smdt')        
         out = sm.getROIInfo() 
         return json.dumps(out), self.PlainTextType
+    
+    @utils.tryEx 
+    def getTargetsAndInfo (self, req, qstr):        
+        """
+        Returns the targets that were loaded via loadParams()
+        """
+        sm = _getData('smdt')
+        #targets = sm.targetList.toJson()             
+        #roi = sm.getROIInfo()
+        #return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
+        return sm.targetList.toJsonWithInfo(), self.PlainTextType 
     
     @utils.tryEx
     def getMaskLayout (self, req, qstr):        
@@ -76,13 +103,25 @@ class SMDesignHandler (EasyHTTPHandler):
         currRaDeg = self.floatVal(qstr, 'currRaDeg', 0)
         currDecDeg = self.floatVal(qstr, 'currDecDeg', 0)
         currAngleDeg = self.floatVal(qstr, 'currAngleDeg', 0)
+        minSep = self.floatVal(qstr, 'minSepAs', 0.5)
+        minSlitLength = self.floatVal (qstr, "minSlitLengthAs", 8)
+        boxSize = self.floatVal (qstr, "boxSize", 4)
         parts = vals.split(',')
         if len(parts):
             targetIdx = [int(x) for x in vals.split(',')]        
-            out = sm.recalculateMask (targetIdx, currRaDeg, currDecDeg, currAngleDeg)
-            return sm.targetList.toJson(out), self.PlainTextType
+            sm.recalculateMask (targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
+            return sm.targetList.toJson(), self.PlainTextType
         return sm.targetList.toJson(), self.PlainTextType
     
+    @utils.tryEx 
+    def setColumnValue (self, req, qstr):
+        sm = _getData('smdt')
+        value = self.getDefValue(qstr, 'value', '')
+        colName = self.getDefValue(qstr, 'colName', '')
+        if colName != '':
+            sm.targetList.targets[colName] = value
+        return  "[]", self.PlainTextType
+        
     @utils.tryEx 
     def updateTarget (self, req, qstr):
         sm = _getData('smdt')
@@ -118,29 +157,34 @@ class SWDesignServer:
             print ("Failed to start HTTP Server", e)
     
 
+def readConfig (confName):
+    print ("Using config file ", confName)
+    cf = ConfigFile(confName)
+    pf = ConfigFile(cf.get('paramFile'), split=True)
+    cf.properties['params'] = pf
+    return cf
+    
 if __name__ == "__main__":
-    """
-    Param1: port number
-    """
-
     def printUsage():
         print("\nUsage: %s configFile" % sys.argv[0])        
         os._exit(1)
         
     try:
-        defConfigName = 'smdt.cfg'
+        configName = 'smdt.cfg'
         smd = SWDesignServer() 
         if len(sys.argv) > 1:
             fn = sys.argv[1]
             if os.path.isfile(fn):
-                defConfigName = fn
-        print ("Using config file ", defConfigName)
-        cf = ConfigFile(defConfigName)        
+                configName = fn
+        
+        cf = readConfig (configName)
+        
         _setData('smdt', SlitmaskDesignTool(b'', False, cf))
         SMDesignHandler.config = cf
         SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
+        SMDesignHandler.defaultFile = cf.get('defaultFile', 'index.html')
         SMDesignHandler.logEnabled = cf.get('logEnabled', False)       
-        smd.start(cf.get('port', 50080))
+        smd.start(cf.get('serverPort', 50080))
         
     except Exception as e:
         print(e, file=sys.stderr)

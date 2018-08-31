@@ -30,7 +30,7 @@ class TargetList:
         
         Optional:
         sample: 1,2,3
-        select: 0
+        selected: 0
         slitPA: PA of the slit
         length1: 4
         length2: 4
@@ -124,9 +124,9 @@ class TargetList:
                   
         out = []
         cols = 'name', 'raHour', 'decDeg', 'eqx', 'mag', 'band', 'pcode', \
-            'sample', 'select', 'slitPA', 'length1', 'length2', 'slitWidth', \
-            'index', 'inMask'
-        
+            'sample', 'selected', 'slitPA', 'length1', 'length2', 'slitWidth', \
+            'orgIndex'
+        cnt = 0
         for nr, line in enumerate(fh):
             if not line:
                 continue
@@ -147,7 +147,7 @@ class TargetList:
             if self._checkPA (parts):
                 continue
             
-            sample, select, slitPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
+            sample, selected, slitPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
             mag, band, pcode = 99, 'I', 99
             
             try:
@@ -168,7 +168,7 @@ class TargetList:
                 band = template[4].upper()
                 pcode = int(template[5])
                 sample = int(template[6])
-                select = int(template[7])
+                selected = int(template[7])
                 slitPA = toFloat(template[8])
                 length1 = float(template[9])
                 length2 = float(template[10])
@@ -180,9 +180,12 @@ class TargetList:
                 pass
             target = (name, raHour, decDeg,
                     eqx, mag, band, pcode,
-                    sample, select, slitPA, length1, length2, slitWidth, nr, 0)
-            out.append(target)        
+                    sample, selected, slitPA, length1, length2, slitWidth, cnt)
+            out.append(target) 
+            cnt += 1       
         df = pd.DataFrame(out, columns=cols)
+        df['inMask'] = np.zeros_like(df.selected)
+        
         if self.centerRADeg == self.centerDEC and self.centerRADeg == 0:
             self.centerRADeg = df.raHour.median() * 15
             self.centerDEC = df.decDeg.median() 
@@ -236,9 +239,8 @@ class TargetList:
         out['positionAngle'] = self.positionAngle
         return out
 
-    def toJson (self, tgs=None):
-        if tgs is None:
-            tgs = self.targets
+    def toJson (self):
+        tgs = self.targets                    
         data = [ list(tgs[i]) for i in tgs ]
         data1 = {} 
         for i, colName in enumerate(tgs.columns):
@@ -246,28 +248,47 @@ class TargetList:
             
         return json.dumps(data1)
     
-    def select (self, idxList):
+    def toJsonWithInfo (self):
+        tgs = self.targets                    
+        data = [ list(tgs[i]) for i in tgs ]
+        data1 = {} 
+        for i, colName in enumerate(tgs.columns):
+            data1[colName] = data[i]
+        
+        data2 = {'info': self.getROIInfo(), 'targets' : data1}
+        return json.dumps(data2)
+    
+    def setColum (self, colName, value):
+        self.targets[colName] = value
+    
+    def select (self, idxList, minX, maxX, minSlitLength, minSep, boxSize):
         targets = self.targets
         targets['inMask'] = np.zeros(targets.shape[0])
-        for i in idxList:
-            targets.at[i, 'inMask'] = 1
-        selector = TargetSelector (targets[targets.inMask == 1])
-        return selector.getSelected ()
+        mIdx = targets.columns.get_loc('inMask')
+        
+        selector = TargetSelector (targets.iloc[idxList], minX, maxX, minSlitLength, minSep, boxSize)
+        selIdx = selector.performSelection()
+        orgIdx = selector.targets.iloc[selIdx].orgIndex
+        targets.iloc[orgIdx, [mIdx]] = 1       
+        
+        for i, stg in selector.targets.iterrows():
+            targets.at[stg.orgIndex, 'length1'] = stg.length1
+            targets.at[stg.orgIndex, 'length2'] = stg.length2        
 
     def updateTarget (self, jvalues):
         values = json.loads(jvalues)
         idx = values['idx']        
         tgs = self.targets
         
-        pcode = values['prior']
-        selected = values['selected']
-        slitPA = values['slitPA']
-        slitWidth =  values['slitWidth']       
-        len1 = values['len1']
-        len2 = values['len2'] 
+        pcode = int(values['prior'])
+        selected = int(values['selected'])
+        slitPA = float(values['slitPA'])
+        slitWidth =  float(values['slitWidth'])       
+        len1 = float(values['len1'])
+        len2 = float(values['len2']) 
         
         tgs.at[idx, 'pcode'] = pcode
-        tgs.at[idx, 'select'] = selected
+        tgs.at[idx, 'selected'] = selected
         tgs.at[idx, 'slitPA'] = slitPA
         tgs.at[idx, 'slitWidth'] = slitWidth
         tgs.at[idx, 'length1'] = len1
@@ -277,7 +298,8 @@ class TargetList:
 
     def reCalcCoordinates (self, raDeg, decDeg, posAngleDeg): 
         """
-        Recalculates xarcs and yarcs for new cneter RA/DEC and positionAngle
+        Recalculates xarcs and yarcs for new center RA/DEC and positionAngle
+        Results saved in xarcs, yarcs
         """        
         telRaRad, telDecRad = self._fld2telax( raDeg, decDeg, posAngleDeg)
         self._calcTelTargetCoords(telRaRad, telDecRad,  raDeg, decDeg, posAngleDeg)
