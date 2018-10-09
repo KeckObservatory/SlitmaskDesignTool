@@ -105,11 +105,20 @@ h2 .#headline {
 	width: 2px;
 	height: 2px;
 	border: solid 1px black;
-	background-color: #ffffff;
+	background-color: #ffffff;	
+}
+
+#targetListName tr td {
+    vertical-align: middle;
 }
 
 #mouseStatus {
 	font-weight: bold;
+}
+
+#saveMDF {
+	background-color: #ffaaaa;
+	font-size: 120%;
 }
 
 #targetTableDiv {

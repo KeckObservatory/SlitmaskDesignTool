@@ -1,5 +1,6 @@
 function ZoomCanvas(container) {
 	var self = this;
+	self._Canvas = null;
 	
 	function toggleSmoothing(ctx, onoff) {
 		ctx.imageSmoothingEnabled = onoff;
@@ -11,6 +12,7 @@ function ZoomCanvas(container) {
 	
 	self.initialize = function () {
 		var cv = document.createElement("canvas");
+		if (!container) return;
 		if (cv.getContext) {
 			self._Canvas = cv;
 			cv.tabIndex = 99998;
@@ -44,6 +46,7 @@ function ZoomCanvas(container) {
 		// and draws it on the destination context, tmpCanvas.
 		//
 		var cv = self._Canvas;
+		if (!cv) return;
 		var factor = 4;
 		var w = Math.floor(cv.width/factor);
 		var h = Math.floor(cv.height/factor);
