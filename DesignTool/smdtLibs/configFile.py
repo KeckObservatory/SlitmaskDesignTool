@@ -4,6 +4,10 @@ import json
 class ConfigFile:
 
     def __init__(self, fileName, split=False):
+        """
+        Format of config file is keyword = value, one per line
+        split=True if, fields are comma separated values; False, if single value.
+        """
         self.fileName = fileName
         self.split = split
         self.properties = {}

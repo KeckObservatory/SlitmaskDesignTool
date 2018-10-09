@@ -17,12 +17,15 @@ import json
 import sys
 import os
 
+from urllib.parse import quote
+
 from smdtLibs import utils
 from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
 from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
-#from anaconda_navigator.config import value
+from MaskDesignFile import MaskDesignFile
+from Demos.BackupRead_BackupWrite import buf
 
 GlobalData = {}
 
@@ -32,9 +35,11 @@ def _getData(_id):
     if not d:
         d = SlitmaskDesignTool(b'', 0, None)
     return d
+
     
 def _setData(_id, smdata):
     GlobalData[_id] = smdata
+
 
 class SMDesignHandler (EasyHTTPHandler):    
     PNGImage = "image/png"
@@ -67,7 +72,6 @@ class SMDesignHandler (EasyHTTPHandler):
         sm = _getData('smdt')
         return sm.targetList.toJson(), self.PlainTextType       
     
-    
     @utils.tryEx 
     def getDSSImage (self, req, qstr):
         sm = _getData('smdt')  
@@ -85,9 +89,9 @@ class SMDesignHandler (EasyHTTPHandler):
         Returns the targets that were loaded via loadParams()
         """
         sm = _getData('smdt')
-        #targets = sm.targetList.toJson()             
-        #roi = sm.getROIInfo()
-        #return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
+        # targets = sm.targetList.toJson()             
+        # roi = sm.getROIInfo()
+        # return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
         return sm.targetList.toJsonWithInfo(), self.PlainTextType 
     
     @utils.tryEx
@@ -128,7 +132,26 @@ class SMDesignHandler (EasyHTTPHandler):
         
         sm.targetList.updateTarget(self.getDefValue(qstr, 'values', ''))
         return "[]", self.PlainTextType
-    
+
+    def saveMaskDesignFile (self, req, qstr):
+        sm = _getData('smdt')
+       
+        try:
+            mdFile = self.getDefValue(qstr, 'mdFile', 'mask.fits')
+            mdf = MaskDesignFile (sm.targetList)
+            buf = mdf.asBytes()
+        except Exception as e:
+            self.send_error (500, repr(e))
+            return None, 'application/fits'        
+        
+        self.send_response (200, 'OK')
+        self.send_header ('Content-type', 'application/fits')
+        self.send_header ('Content-Disposition', 'attachment; filename='+mdFile)
+        self.end_headers()
+        self.wfile.write(buf)
+        self.wfile.flush()            
+        return None, 'application/fits'
+        
     @infoLog
     def quit (self, req, qstr):        
         SMDTLogger.info ("%s", "Terminated")
@@ -137,6 +160,7 @@ class SMDesignHandler (EasyHTTPHandler):
 
     def log_message (self, msg, *args):
         SMDTLogger.info (msg, *args)
+
     
 class SWDesignServer:
 
@@ -163,8 +187,10 @@ def readConfig (confName):
     pf = ConfigFile(cf.get('paramFile'), split=True)
     cf.properties['params'] = pf
     return cf
+
     
 if __name__ == "__main__":
+
     def printUsage():
         print("\nUsage: %s configFile" % sys.argv[0])        
         os._exit(1)

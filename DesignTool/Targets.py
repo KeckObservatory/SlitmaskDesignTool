@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import traceback
 import json
+import datetime
 
 from smdtLogger import SMDTLogger
 from TargetSelector import TargetSelector
@@ -50,6 +51,10 @@ class TargetList:
         else:
             self.targets = self.readFromFile(fname) 
         self.loadDSSInfo(useDSS)
+        self.__updateDate()
+        
+    def __updateDate (self):        
+        self.createDate = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
         
     def loadDSSInfo (self, useDSS=True):
         self._getDSS(useDSS)
@@ -303,6 +308,7 @@ class TargetList:
         """        
         telRaRad, telDecRad = self._fld2telax( raDeg, decDeg, posAngleDeg)
         self._calcTelTargetCoords(telRaRad, telDecRad,  raDeg, decDeg, posAngleDeg)
+        self.__updateDate()
         """
         try:
             self._calcSlitBoxCoords (posAngleDeg)
