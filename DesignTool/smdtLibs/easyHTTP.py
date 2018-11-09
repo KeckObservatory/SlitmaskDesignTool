@@ -78,7 +78,8 @@ class EasyHTTPHandler (http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         parts = urlparse (self.path)
         length = int(self.headers['content-length'])
-        ctype, pdict = cgi.parse_header(self.headers['content-type'])
+        ctype, pdict = cgi.parse_header(self.headers['content-type'])   
+        pdict['CONTENT-LENGTH'] = length     
         boundary = pdict.get('boundary')
 
         if boundary:
