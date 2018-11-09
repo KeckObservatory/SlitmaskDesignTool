@@ -25,7 +25,6 @@ from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
 from MaskDesignFile import MaskDesignFile
-from Demos.BackupRead_BackupWrite import buf
 
 GlobalData = {}
 
