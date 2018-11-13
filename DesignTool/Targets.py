@@ -18,6 +18,22 @@ import datetime
 from smdtLogger import SMDTLogger
 from TargetSelector import TargetSelector
 
+if sys.version_info.minor < 7:
+    class MyJsonEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, np.int64):
+                return int(obj)
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            else:
+                return super(MyEncoder, self).default(obj)
+else:
+    MyJsonEncoder = json.JSONEncoder
+
 class TargetList:
     '''
     Columns of the input file:
@@ -251,7 +267,7 @@ class TargetList:
         for i, colName in enumerate(tgs.columns):
             data1[colName] = data[i]        
             
-        return json.dumps(data1)
+        return json.dumps(data1, cls=MyJsonEncoder)
     
     def toJsonWithInfo (self):
         tgs = self.targets                    
@@ -261,7 +277,7 @@ class TargetList:
             data1[colName] = data[i]
         
         data2 = {'info': self.getROIInfo(), 'targets' : data1}
-        return json.dumps(data2)
+        return json.dumps(data2, cls=MyJsonEncoder)
     
     def setColum (self, colName, value):
         self.targets[colName] = value
@@ -411,4 +427,4 @@ if __name__ == '__main__':
 
     print (tglist.targets.slitPA)
     
-    #print ("tglist.json", tglist.toJson())
+    print ("tglist.json", tglist.toJson())
