@@ -731,16 +731,13 @@ function CanvasShow(containerName, zoomContainer) {
 						addTo (alignBoxOutIdx, i, x, y);
 					continue;
 				}
+				
 				if (inMask[i]) {
+					// currently selected (via algorithm)
+					// show when when showing splits
 					slitsInMaskIdx.push (i);
 				}
-				if (selected[i]) {
-					if (checker.checkPoint (sx, sy)) 
-						addTo (selectedInIdx, i, x, y);
-					else
-						addTo (selectedOutIdx, i, x, y);
-					continue;
-				}
+				
 				if (pri >= showPriority) {
 					if (selected[i]) {
 						if (checker.checkPoint (sx, sy)) 
@@ -755,6 +752,15 @@ function CanvasShow(containerName, zoomContainer) {
 							addTo (showOutIdx, i, x, y);
 						}
 					}
+					continue;
+				}
+
+				if (selected[i]) {
+					// selected via selected flag
+					if (checker.checkPoint (sx, sy)) 
+						addTo (selectedInIdx, i, x, y);
+					else
+						addTo (selectedOutIdx, i, x, y);
 					continue;
 				}
 			}
@@ -807,7 +813,8 @@ function CanvasShow(containerName, zoomContainer) {
 				Math.cos(maskBaseAngleRad), 0, 1);
 			
 			// Angle relative to screen
-			var slitAngle = radians (self.slitBaseAngleDeg- Number(slitPAs[idx]));
+			var slitAngle = radians(Number (slitPAs[idx]));
+			var slitAngleOnScreen = radians (self.slitBaseAngleDeg) - slitAngle;
 			
 			var x = xOut[idx];
 			var y = yOut[idx];
@@ -817,14 +824,14 @@ function CanvasShow(containerName, zoomContainer) {
 			var slitWidth = slitWidths[idx];			
 			var halfWidth = slitWidth / 2 / self.yAsPerPixel * tmaxScale;
 
-			var cosa = Math.cos(slitAngle);
-			var sina = Math.sin(slitAngle);
+			var cosa = Math.cos(slitAngleOnScreen);
+			var sina = Math.sin(slitAngleOnScreen);
 			
             // maskX,maskY = vector perpendicular to mask
 			var maskX = maskXY[0] * halfWidth;
 			var maskY = maskXY[1] * halfWidth;
 			
-			var cosaMask = Math.abs(Math.cos(self.slitRel2Mask));
+			var cosaMask = Math.abs(Math.cos(self.slitRel2Mask-slitAngle));
 			
 			if (projSlitLen) {				
 				if (cosaMask < 0.3)
@@ -999,14 +1006,15 @@ function CanvasShow(containerName, zoomContainer) {
         var showPriority = self.showMinPriority;
         
         if (showSlitPos) {
-        	showPriority = -1;
+        	showPriority = 0;
         	showByPriority = 0;
         	showSelected = 1;
         	showAlignBox = 1;
         	
         } else {
+        	// Preview, show only positions
 	        if (showAll) {
-	        	showPriority = -1;
+	        	showPriority = 0;
 	        	showByPriority = 1;
 	        	showSelected = 1;
 	        }
@@ -1120,6 +1128,9 @@ function CanvasShow(containerName, zoomContainer) {
 	};
 	
 	self.rotateMaskLayout = function (mask) {
+		// Rotates mask layout for drawing.
+		// Applies rotation directly to the vertices of the mask.
+		// Returns the rotated coordinates of the mask for drawing.
 		var sx = 1.0/ self.xAsPerPixel;
 		var sy = 1.0/ self.yAsPerPixel;
 		var rotX = self.maskOffsetX;
