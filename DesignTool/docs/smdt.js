@@ -52,7 +52,7 @@ function SlitmaskDesignTool() {
 
 	self.loadMaskLayout = function () {
 		function callback (data) {
-			self.canvasShow.setMaskLayout (data.mask, data.reducedMask);
+			self.canvasShow.setMaskLayout (data.mask, data.guiderFOV, data.badColumns);
 			return;
 		}
 
@@ -144,7 +144,7 @@ function SlitmaskDesignTool() {
 	self.loadAll = function() {
 		E('showPreview').checked = true;
 		// self.loadMaskLayout();
-		// self.loadBackgroundImage();
+		self.loadBackgroundImage();
 		self.loadTargets();
 		return false;
 	};
@@ -332,7 +332,6 @@ function SlitmaskDesignTool() {
     self.loadMaskLayout();
 	self.loadBackgroundImage();
 
-	E('enableSelection').checked = true;
 	E('showHideParams').onclick = self.showHideParams;
 	E('targetListFrame').onload = self.loadAll;
 	E('loadTargets').onclick = self.sendTargets2Server;

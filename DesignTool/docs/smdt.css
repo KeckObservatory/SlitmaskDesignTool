@@ -63,13 +63,13 @@ h2 .#headline {
 	font-size: 70%;
 }
 
+#buttonPanel {
+	width: 100%;
+}
+
 #buttonPanel tr td {
 	align-content: center;
 	vertical-align: top;
-}
-
-#contentTable {
-	//background-color: #eeeedd;
 }
 
 #contentTable tr td {
@@ -82,21 +82,14 @@ h2 .#headline {
 }
 
 #contentCell {
-	width: 100%;
+	width: 100%;	
 }
 
 #canvasDiv {
-	width: 800px;
-	height: 500px;
+	width: 100%;
+	height: 100%;
 	border: solid 1px white;
 	background-color: black;
-}
-
-#zoomCanvasDiv {
-	width: 200px;
-	height:200px;
-	border: solid 1px black;
-	background-color: black;	
 }
 
 #targetListFrame {

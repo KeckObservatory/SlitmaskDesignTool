@@ -36,6 +36,9 @@ else:
 
 class TargetList:
     '''
+    If line contains 'PA=nnnn' then the format is
+        name RA DEC Eqn PA=nnnnn
+        
     Columns of the input file:
         name: 16 chars, no white space
         ra: right ascension in hour
@@ -127,6 +130,7 @@ class TargetList:
             self.positionAngle = float(parts0[1])
             self.centerRADeg = utils.sexg2Float(inParts[0]) * 15
             self.centerDEC = utils.sexg2Float(inParts[1])
+            #print ("Here", self.centerRADeg, self.centerDEC);
             return True
         else:
             return False
@@ -155,6 +159,7 @@ class TargetList:
             p1, p2, p3 = line.partition('#')
             parts = p1.split()
             if len(parts) == 0:
+                # line empty
                 continue
             name = parts[0]
             parts = parts[1:]
@@ -421,6 +426,7 @@ if __name__ == '__main__':
     cf = ConfigFile(defConfigName)
     tglist = TargetList(sys.argv[1], useDSS=False, config=cf)
     print ("PA=", tglist.positionAngle, "RA=", tglist.centerRADeg, "DEC=", tglist.centerDEC)
+    print ("Center RA", utils.toSexagecimal(tglist.centerRADeg / 15), " DEC", utils.toSexagecimal(tglist.centerDEC));
     print ("nr targets", len(tglist.targets))
     for t in tglist.targets:
         print (t)

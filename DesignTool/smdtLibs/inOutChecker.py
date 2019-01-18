@@ -1,6 +1,13 @@
 """
 In/Out checker, python version
 
+Example:
+
+chk = InOutchecker (mask)
+pnt = x, y
+if chk.checkPoint (x, y):
+    print ("inside")
+
 Date: 2018-08-03
 Author: Shui Hung Kwok
 
@@ -69,7 +76,7 @@ class InOutChecker :
 
     def checkPoint (self, x, y):
         """
-        Checkes if the given point (x,y) is inside the mask
+        Checks if the given point (x,y) is inside the mask
         First, finds the segments at the y position, where int(y) is used.
         Then, the point is inside the mask if x in inside one of the segments. 
         """

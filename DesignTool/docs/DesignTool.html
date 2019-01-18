@@ -8,7 +8,6 @@
 <script src='ajaxv2.js'></script>
 <script src='TargetTable.js'></script>
 <script src='inOutChecker.js'></script>
-<script src='zoomCanvas.js?r=1'></script>
 <script src='canvasShow.js?r=1'></script>
 <script src='smdt.js'></script>
 <script>
@@ -43,83 +42,88 @@
                             <td><input type='button' id='saveMDF' value='Save Mask Design File'>
                         </tr>
                     </table>
-                    <div id='paramTableDiv' style='visibility: hidden; display: none'>                       
-                    </div>
+                    <div id='paramTableDiv' style='visibility: hidden; display: none'></div>
                     <table id='paramButtonTable'>
                         <tr>
                             <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp; <input
                                 type='button' id='setSlitsLength' value='Set slits length'
                             > &nbsp; <input type='button' id='setSlitsWidth' value='Set slit width'>
-                    
                     </table>
 
                     <table id='contentPanel'>
                         <tr>
                             <td>
-                        
                         <tr>
                             <td><table>
                                     <tr>
                                         <td>Status: <span id='statusDiv'>&nbsp;</span>
-                                
                                 </table></td>
-                        
                         <tr>
                             <td>
                                 <table id='buttonPanel'>
                                     <tr>
-                                        <td>
-                                            <div id='canvasDiv' tabindex="0">Initializing ...</div>
-                                        
-                                        <td>
-                                            <div id='Removed_zoomCanvasDiv'></div> <br> 
-                                            <input type='button'
-                                            id='resetDisplay' value='Reset Display'
-                                        > &nbsp; <input type='button' id='resetOffsets' value='Reset Offsets'> <br>
-                                            Min. Priority: <input id='minPriority' value='0'> <br> <input
-                                            type='radio' name='showSel' id='showAll' checked
-                                        > Show all targets <input type='radio' name='showSel' id='showSelected'> Show
-                                            selected <input type='radio' name='showSel' id='showByPriority'> Show by
-                                            priority <br> <input type='checkbox' id='showAlignBox'> Show align box <br>
-                                            <input type='checkbox' id='useDSS'> use DSS (needs reload)<br>
-
-                                            <table id='selectionMode'>
+                                        <td><table>
                                                 <tr>
-                                                    <td><input type='radio' name='navMode' id='enableNav'> Enable
-                                                        navigation <input type='radio' name='navMode' id='lockNav'> Lock
-                                                        navigation <input type='radio' name='navMode' id='enableSelection'>
-                                                        Enable selection
-                                                
-                                                <tr>
-                                                    <td><input type='radio' name='showViewMode' id='showPreview' checked>
-                                                        Show preview <input type='radio' name='showViewMode' id='showSlitPos'>
-                                                        Show slit pos <br> <input type='button' id='recalculateMask'
-                                                        value='Recalculate mask'
+                                                    <td>Pan: <input type='radio' name='mouseAction' id='panAll' checked>
+                                                    <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky'>
+                                                    <td>Rotate: <input type='radio' name='mouseAction' id='rotateAll'>
+                                                    <td>Rotate Sky: <input type='radio' name='mouseAction' id='rotateSky'>
+                                                    <td>Enable selection: <input type='radio' name='mouseAction'
+                                                        id='enableSelection'
                                                     >
-
-                                                        <div id='testDiv'></div>
-                                            
+                                                    <td><input type='button' id='resetDisplay' value='Reset Display'>
+                                                        &nbsp; <input type='button' id='resetOffsets' value='Reset Offsets'>
                                             </table>
-                                        </td>
-                                    
                                     <tr>
-                                        <td><div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB;
-                                            Alignment box; <br> Mouse-Left: pan; Ctrl-Left: rotate view; Mouse-Right: move
-                                            field; Ctrl-Right: rotate field;<br> Alt-Left: scale; Dbl-click: reset <br>
-                                            Moves: h: left; l: right; j: move up; k: down Zoom: &gt;: zoom in; &lt;: zoom out.
-                                
+                                        <td>
+                                            <table>
+                                                <tr>
+                                                    <td>Show all targets: <input type='radio' name='showSel' id='showAll'
+                                                        checked
+                                                    >
+                                                    <td>Show selected : <input type='radio' name='showSel' id='showSelected'>
+                                                    <td>Show by priority :<input type='radio' name='showSel'
+                                                        id='showByPriority'
+                                                    >
+                                                    <td>Min. Priority: <input id='minPriority' value='0'>
+                                                    
+                                                    <td>Show align box: <input type='checkbox' id='showAlignBox'>
+                                                    <td>Show preview :<input type='radio' name='showViewMode'
+                                                        id='showPreview' checked
+                                                    >
+                                                    <td>Show slit pos:<input type='radio' name='showViewMode'
+                                                        id='showSlitPos'
+                                                    >
+                                                    <td><input type='button' id='recalculateMask' value='Recalculate mask'>
+                                            </table>
+                                    <tr>
+                                        <td><table>
+                                                <tr>
+                                                    <td>Show Guider FOV: <input type='checkbox' id='showGuiderFOV'>
+                                                    <td>Show bad columns: <input type='checkbox' id='showBadColumns'>
+                                                    <td>DSS: <input type='checkbox' id='useDSS'>
+                                                    
+                                            </table>
+                                    <tr>
+                                        <td>
+                                            <div id='testDiv'></div>
+                                    <tr>
+                                        <td style='display:contents'>
+                                            <div id='canvasDiv' tabindex='0'>Initializing ...</div>
                                 </table>
-                    
+                        <tr>
+                            <td><div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB; Alignment
+                                box; <br>
+                                Keys: h: left; &nbsp;l: right; &nbsp;j: move up; &nbsp;k: down Zoom: &nbsp;&gt;: zoom in; &nbsp;&lt;: zoom out.
                     </table>
-        
         </table>
+
         <input type='hidden' id='formUseDSS' value='0' name='formUseDSS'>
     </form>
     <br>
     <table id='targetForms'>
         <tr>
             <td><div id='targetTableDiv'></div>
-            
             <td><div id='targetFormDiv'>
                     <h3>
                         Selected target: <span id='targetName'>None</span>
@@ -127,46 +131,28 @@
                     <table id='targetFormTable'>
                         <tr>
                             <th>RA [hrs]:
-                            
                             <td><span id='targetRA' /></span>
-                            
                             <th>DEC [deg]:
-                            
                             <td><span id='targetDEC' /></span>
-                        
                         <tr>
                             <th>Prioriry:
-                            
                             <td><input id='targetPrior' size='7'>
-                            
                             <th>Select:
-                            
                             <td><input id='targetSelect' size='7'>
-                        
                         <tr>
                             <th>Slit PA:
-                            
                             <td><input id='targetSlitPA' size='7'>
-                            
                             <th>Slit Width:
-                            
                             <td><input id='targetSlitWidth' size='7'>
-                        
                         <tr>
                             <th>Length1:
-                            
                             <td><input id='targetLength1' size='7'></input>
-                            
                             <th>length2:
-                            
                             <td><input id='targetLength2' size='7'></input>
-                        
                         <tr>
-                    
                     </table>
                     <input type='button' id='updateTarget' value='Update target'>
                 </div>
-    
     </table>
 
 
@@ -174,7 +160,6 @@
     <table id='footerTable'>
         <tr>
             <td>Slitmask Design Tool Prototype - (C) 2018 - W. M. Keck Observatory
-    
     </table>
     <iframe name='targetListFrame' id='targetListFrame'> allowfullscreen</iframe>
 </body>

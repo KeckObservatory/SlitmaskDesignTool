@@ -328,8 +328,8 @@ class DssHeader:
             oby = oby + delty
             iters = iters + 1
         
-        x = (self.ppo3 - obx*1000.0)/self.xpsize - self.xpoff - 0.5
-        y = (self.ppo6 + oby*1000.0)/self.ypsize - self.ypoff - 0.5
+        x = (self.ppo3 - obx*1000.0)/self.xpsize - self.xpoff
+        y = (self.ppo6 + oby*1000.0)/self.ypsize - self.ypoff
         return x, y 
     
 
@@ -346,6 +346,7 @@ class DssHeader:
         xout, yout = [], []
         frd2xy = self._rd2xy
         x0, y0 = frd2xy(self.centerRaDeg, self.centerDecDeg)
+        x0, y0 = x0 - 1, y0 - 1
         for ra, dec in zip(raHourList, decDegList):
             x, y = frd2xy(ra*15, dec)
             xout.append(x-x0)
