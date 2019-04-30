@@ -70,7 +70,7 @@ class SlitmaskDesignTool:
         targets.centerRADeg = raDeg
         targets.centerDEC = decDeg
         targets.positionAngle = paDeg
-        mask = MaskLayouts[self.config.get('Instrument')]
+        mask = MaskLayouts[self.config.get('Instrument').lower()]
         minX, maxX = np.min(mask, axis=0)[0], np.max(mask, axis=0)[0]
         
         # Updates targets coordinates for the new center raDeg and decDeg
