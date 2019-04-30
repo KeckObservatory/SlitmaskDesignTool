@@ -468,8 +468,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var y = cv.height / 2;
 
 		self.tMatrix.reset(0);
-		// self.rotateSkyAngle(Math.PI);
-		self.tMatrix.setRotAngle(Math.PI);
+		self.tMatrix.setRotAngle(0);
 		self.tMatrix.scale(scale);
 		self.tMatrix.translate(x, y);
 	};
@@ -531,7 +530,8 @@ function CanvasShow(containerName, zoomContainer) {
 					+ self.tMatrix.getScale().toFixed(2) 
 					+ ", posAngle=" + self.positionAngle.toFixed(2) + " slitBase=" + self.slitBaseAngleDeg.toFixed(2) + " tx=" + degrees(tmatAngleRad).toFixed(2)
 					+ ", compass=" + self.compassNorthDeg.toFixed(2) 
-					+ ", slitRel2Mask=" + self.slitRel2MaskDeg.toFixed(2));
+					+ ", slitRel2Mask=" + self.slitRel2MaskDeg.toFixed(2)
+					+ " tMatrixRot=" + degrees(tmatAngleRad).toFixed(2));
 		}
 	};
 
