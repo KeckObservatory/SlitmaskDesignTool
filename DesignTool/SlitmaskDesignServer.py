@@ -16,6 +16,7 @@ import socket
 import json
 import sys
 import os
+import argparse
 
 from urllib.parse import quote
 
@@ -166,10 +167,14 @@ class SWDesignServer:
     def __init__(self):
         pass
 
-    def start(self, port=50080):
+    def start(self, port=50080, host='Auto'):
+        if host=="Auto":
+            hostname=socket.gethostname()
+        else:
+            hostname=host
         try:
             httpd = EasyHTTPServerThreaded (("", port), SMDesignHandler)
-            hostname = socket.gethostname()
+            #hostname = socket.gethostname()
             print ("HTTPD started %s %d" % (socket.gethostbyaddr(socket.gethostbyname(hostname)), port))
             try:
                 httpd.serve_forever()
@@ -190,27 +195,21 @@ def readConfig (confName):
     
 if __name__ == "__main__":
 
-    def printUsage():
-        print("\nUsage: %s configFile" % sys.argv[0])        
-        os._exit(1)
+    parser = argparse.ArgumentParser(description="Slitmask design tool server")
+    parser.add_argument('-c', dest="config_file", help='Configuration file', default='smdt.cfg', required=False)
+    parser.add_argument('-host', dest="host", help='Manually specify host name', required=False, default="Auto")
+
+    args = parser.parse_args()
+
+    configName = args.config_file
+    smd = SWDesignServer()
+    cf = readConfig (configName)
         
-    try:
-        configName = 'smdt.cfg'
-        smd = SWDesignServer() 
-        if len(sys.argv) > 1:
-            fn = sys.argv[1]
-            if os.path.isfile(fn):
-                configName = fn
+    _setData('smdt', SlitmaskDesignTool(b'', False, cf))
+    SMDesignHandler.config = cf
+    SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
+    SMDesignHandler.defaultFile = cf.get('defaultFile', 'index.html')
+    SMDesignHandler.logEnabled = cf.get('logEnabled', False)
+    host = args.host
+    smd.start(cf.get('serverPort', 50080), host)
         
-        cf = readConfig (configName)
-        
-        _setData('smdt', SlitmaskDesignTool(b'', False, cf))
-        SMDesignHandler.config = cf
-        SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
-        SMDesignHandler.defaultFile = cf.get('defaultFile', 'index.html')
-        SMDesignHandler.logEnabled = cf.get('logEnabled', False)       
-        smd.start(cf.get('serverPort', 50080))
-        
-    except Exception as e:
-        print(e, file=sys.stderr)
-        printUsage()

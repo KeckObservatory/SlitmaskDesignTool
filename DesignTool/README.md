@@ -11,6 +11,14 @@ To run the server:
 Either set the current directory must be this directory or 
 set PYTHONPATH to include this directory.
 
+If you have a configuration file different from smdr.cfg, it can be specified on the 
+command line as -c
+
+If there are issue with automatically determining the host name (Error 8), you can 
+specify the host on the command line:
+
+   * python3 SlitmaskDesignServer.py -host 127.0.0.1
+
 The file smdt.cfg defines the configuration parameters, including the port number for the server.
 
 
