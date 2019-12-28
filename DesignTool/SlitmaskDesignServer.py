@@ -29,6 +29,8 @@ from MaskDesignFile import MaskDesignFile
 
 GlobalData = {}
 
+from flask import Flask
+from flask import render_template, request
 
 def _getData(_id):
     d = GlobalData.get(_id)
@@ -39,6 +41,15 @@ def _getData(_id):
     
 def _setData(_id, smdata):
     GlobalData[_id] = smdata
+
+class SMDesign():
+    PNGImage = "image/png"
+
+    def __init__(self):
+        self.sm = _getData('smdt')
+        self.config = None
+
+
 
 
 class SMDesignHandler (EasyHTTPHandler):    
@@ -192,6 +203,49 @@ def readConfig (confName):
     cf.properties['params'] = pf
     return cf
 
+# Flask conversion
+app = Flask(__name__)
+
+@app.route('/')
+def welcome():
+    return render_template('DesignTool.html')
+
+@app.route('/getConfigParams', methods=['GET'])
+def getConfigParams ():
+    args = request.args
+    sm = _getData('smdt')
+    paramData = smd.config.get('params')
+    return json.dumps({'params': paramData.properties}) #, self.PlainTextType
+
+@app.route('/getMaskLayout', methods=['GET'])
+def getMaskLayout ():
+    sm = _getData('smdt')
+    inst = request.args['instrument']
+    return json.dumps(sm.getMaskLayout(inst)) #, self.PlainTextType
+
+@app.route('/getDSSImage', methods=['GET'])
+def getDSSImage ():
+    sm = _getData('smdt')
+    return sm.drawDSSImage(), smd.PNGImage
+
+@app.route('/sendTargets2Server', methods=['POST', 'GET', 'PUT'])
+def sendTargets2Server():
+    """
+    Respond to the form action
+    """
+    print(request)
+    print("REQUEST DATA: ", list(request.data))
+    print(request.form)
+    for key in request.form.keys():
+        print(key)
+    #content = request.args['targetList'][0]
+    #useDSS = request.args['formUseDSS']
+    #_setData('smdt', SlitmaskDesignTool(content, useDSS, smd.config))
+    return 'OK'
+
+@app.route('/hello')
+def hello():
+    return "hello"
     
 if __name__ == "__main__":
 
@@ -202,14 +256,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     configName = args.config_file
-    smd = SWDesignServer()
+    #smd = SWDesignServer()
     cf = readConfig (configName)
-        
+
     _setData('smdt', SlitmaskDesignTool(b'', False, cf))
-    SMDesignHandler.config = cf
-    SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
-    SMDesignHandler.defaultFile = cf.get('defaultFile', 'index.html')
-    SMDesignHandler.logEnabled = cf.get('logEnabled', False)
+    #SMDesignHandler.config = cf
+    #SMDesignHandler.DocRoot = cf.get('docRoot', 'docs')
+    #SMDesignHandler.defaultFile = cf.get('defaultFile', 'index.html')
+    #SMDesignHandler.logEnabled = cf.get('logEnabled', False)
     host = args.host
-    smd.start(cf.get('serverPort', 50080), host)
+    #smd.start(cf.get('serverPort', 50080), host)
+
+    smd = SMDesign()
+    smd.config = cf
+
+    app.run(debug=True)
         
