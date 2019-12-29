@@ -58,116 +58,6 @@ class SMDesignHandler (EasyHTTPHandler):
 
     def echo (self, req, qstr):
         return json.dumps(qstr), self.PlainTextType
-    
-    @utils.tryEx
-    def sendTargets2Server (self, req, qstr):
-        """
-        Respond to the form action
-        """        
-        content = qstr['targetList'][0]    
-        useDSS = self.intVal(qstr, 'formUseDSS', 0) 
-        _setData('smdt', SlitmaskDesignTool(content, useDSS, self.config))
-        return 'OK', self.PlainTextType
-    
-    @utils.tryEx 
-    def getConfigParams (self, req, qstr):
-        sm = _getData('smdt')
-        paramData = self.config.get('params')
-        return json.dumps({'params': paramData.properties}), self.PlainTextType
-        
-    @utils.tryEx   
-    def getTargets (self, req, qstr):
-        """
-        Returns the targets that were loaded via loadParams()
-        """
-        sm = _getData('smdt')
-        return sm.targetList.toJson(), self.PlainTextType       
-    
-    @utils.tryEx 
-    def getDSSImage (self, req, qstr):
-        sm = _getData('smdt')  
-        return sm.drawDSSImage(), self.PNGImage
-    
-    @utils.tryEx 
-    def getROIInfo (self, req, qstr):
-        sm = _getData('smdt')        
-        out = sm.getROIInfo() 
-        return json.dumps(out), self.PlainTextType
-    
-    @utils.tryEx 
-    def getTargetsAndInfo (self, req, qstr):        
-        """
-        Returns the targets that were loaded via loadParams()
-        """
-        sm = _getData('smdt')
-        # targets = sm.targetList.toJson()             
-        # roi = sm.getROIInfo()
-        # return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
-        return sm.targetList.toJsonWithInfo(), self.PlainTextType 
-    
-    @utils.tryEx
-    def getMaskLayout (self, req, qstr):        
-        sm = _getData('smdt')        
-        inst = self.getDefValue (qstr, 'instrument', 'deimos')
-        return json.dumps(sm.getMaskLayout(inst)), self.PlainTextType
-    
-    @utils.tryEx 
-    def recalculateMask (self, req, qstr):
-        sm = _getData('smdt')
-        vals = self.getDefValue(qstr, 'insideTargets', '')
-        currRaDeg = self.floatVal(qstr, 'currRaDeg', 0)
-        currDecDeg = self.floatVal(qstr, 'currDecDeg', 0)
-        currAngleDeg = self.floatVal(qstr, 'currAngleDeg', 0)
-        minSep = self.floatVal(qstr, 'minSepAs', 0.5)
-        minSlitLength = self.floatVal (qstr, "minSlitLengthAs", 8)
-        boxSize = self.floatVal (qstr, "boxSize", 4)
-        parts = vals.split(',')
-        if len(parts):
-            targetIdx = [int(x) for x in vals.split(',')]        
-            sm.recalculateMask (targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
-            return sm.targetList.toJson(), self.PlainTextType
-        return sm.targetList.toJson(), self.PlainTextType
-    
-    @utils.tryEx 
-    def setColumnValue (self, req, qstr):
-        sm = _getData('smdt')
-        value = self.getDefValue(qstr, 'value', '')
-        colName = self.getDefValue(qstr, 'colName', '')
-        if colName != '':
-            sm.targetList.targets[colName] = value
-        return  "[]", self.PlainTextType
-        
-    @utils.tryEx 
-    def updateTarget (self, req, qstr):
-        sm = _getData('smdt')
-        
-        sm.targetList.updateTarget(self.getDefValue(qstr, 'values', ''))
-        return "[]", self.PlainTextType
-
-    def saveMaskDesignFile (self, req, qstr):
-        sm = _getData('smdt')
-       
-        try:
-            mdFile = self.getDefValue(qstr, 'mdFile', 'mask.fits')
-            mdf = MaskDesignFile (sm.targetList)
-            buf = mdf.asBytes()
-        except Exception as e:
-            self.send_error (500, repr(e))
-            return None, 'application/fits'        
-        
-        self.send_response (200, 'OK')
-        self.send_header ('Content-type', 'application/fits')
-        self.send_header ('Content-Disposition', 'attachment; filename='+mdFile)
-        self.end_headers()
-        self.wfile.write(buf)
-        self.wfile.flush()            
-        return None, 'application/fits'
-        
-    @infoLog
-    def quit (self, req, qstr):        
-        SMDTLogger.info ("%s", "Terminated")
-        os._exit(1)
-        return self.response('[]', self.PlainTextType)
 
     def log_message (self, msg, *args):
         SMDTLogger.info (msg, *args)
@@ -248,6 +138,99 @@ def getTargetsAndInfo():
     #roi = sm.getROIInfo()
     #return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
     return sm.targetList.toJsonWithInfo()
+
+@app.route('/getTargets', methods=['GET'])
+def getTargets():
+    """
+    Returns the targets that were loaded via loadParams()
+    """
+    sm = _getData('smdt')
+    return sm.targetList.toJson()
+
+@app.route('/getROIInfo', methods=['GET'])
+def getROIInfo():
+    sm = _getData('smdt')
+    out = sm.getROIInfo()
+    return json.dumps(out)
+
+def getDefValue(params, key, default):
+    try:
+        return params[key]
+    except:
+        return default
+
+def floatVal(params, key, default):
+    try:
+        return float(params[key])
+    except:
+        return float(default)
+    
+
+@app.route('/recalculateMask', methods=['POST'])
+def recalculateMask():
+    sm = _getData('smdt')
+    args = request.form
+    #print(request.data)
+    #print(request.args)
+    #print(request.form)
+    #print(request.values)
+    #print(request.json)
+
+    vals = getDefValue(args, 'insideTargets', '')
+    currRaDeg = floatVal(args, 'currRaDeg', 0)
+    currDecDeg = floatVal(args, 'currDecDeg', 0)
+    currAngleDeg = floatVal(args, 'currAngleDeg', 0)
+    minSep = floatVal(args, 'minSepAs', 0.5)
+    minSlitLength = floatVal(args, "minSlitLengthAs", 8)
+    boxSize = floatVal(args, "boxSize", 4)
+    parts = vals.split(',')
+    if len(parts):
+        targetIdx = [int(x) for x in vals.split(',')]
+        sm.recalculateMask(targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
+        return sm.targetList.toJson()
+    return sm.targetList.toJson()
+
+@app.route('/setColumnValue', methods=['POST'])
+def setColumnValue():
+    sm = _getData('smdt')
+    value = getDefValue(request.form, 'value', '')
+    colName = getDefValue(request.form, 'colName', '')
+    if colName != '':
+        sm.targetList.targets[colName] = value
+    return "[]"
+
+
+@app.route('/updateTarget', methods=['POST'])
+def updateTarget():
+    sm = _getData('smdt')
+
+    sm.targetList.updateTarget(getDefValue(request.form, 'values', ''))
+    return "[]"
+
+@app.route('/saveMaskDesignFile', methods=['POST'])
+def saveMaskDesignFile():
+    """
+    THIS IS NOT COMPLETE OR CORRECT
+    :return:
+    """
+    sm = _getData('smdt')
+
+    try:
+        mdFile = getDefValue(request.form, 'mdFile', 'mask.fits')
+        mdf = MaskDesignFile(sm.targetList)
+        buf = mdf.asBytes()
+    except Exception as e:
+        self.send_error(500, repr(e))
+        return None, 'application/fits'
+
+    self.send_response(200, 'OK')
+    self.send_header('Content-type', 'application/fits')
+    self.send_header('Content-Disposition', 'attachment; filename=' + mdFile)
+    self.end_headers()
+    self.wfile.write(buf)
+    self.wfile.flush()
+    return None, 'application/fits'
+
 
 
 if __name__ == "__main__":
