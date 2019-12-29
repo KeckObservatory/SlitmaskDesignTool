@@ -233,20 +233,23 @@ def sendTargets2Server():
     """
     Respond to the form action
     """
-    print(request)
-    print("REQUEST DATA: ", list(request.data))
-    print(request.form)
-    for key in request.form.keys():
-        print(key)
-    #content = request.args['targetList'][0]
-    #useDSS = request.args['formUseDSS']
-    #_setData('smdt', SlitmaskDesignTool(content, useDSS, smd.config))
+    content = request.files['targetList'].read()
+    useDSS = request.values['formUseDSS']
+    _setData('smdt', SlitmaskDesignTool(content, useDSS, smd.config))
     return 'OK'
 
-@app.route('/hello')
-def hello():
-    return "hello"
-    
+@app.route('/getTargetsAndInfo', methods=['GET'])
+def getTargetsAndInfo():
+    """
+    Returns the targets that were loaded via loadParams()
+    """
+    sm = _getData('smdt')
+    #targets = sm.targetList.toJson()
+    #roi = sm.getROIInfo()
+    #return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
+    return sm.targetList.toJsonWithInfo()
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Slitmask design tool server")
