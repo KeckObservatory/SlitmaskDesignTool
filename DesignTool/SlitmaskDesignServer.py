@@ -26,11 +26,15 @@ from smdtLibs.configFile import ConfigFile
 from SlitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
 from MaskDesignFile import MaskDesignFile
+import logging
 
 GlobalData = {}
 
 from flask import Flask
-from flask import render_template, request
+from flask import render_template, request, make_response
+#from flask.logging import default_handler
+
+
 
 def _getData(_id):
     d = GlobalData.get(_id)
@@ -49,18 +53,22 @@ class SMDesign():
         self.sm = _getData('smdt')
         self.config = None
 
+    def log_message (self, msg, **args):
+        SMDTLogger.info(msg, *args)
 
 
 
-class SMDesignHandler (EasyHTTPHandler):    
-    PNGImage = "image/png"
-    config = None
 
-    def echo (self, req, qstr):
-        return json.dumps(qstr), self.PlainTextType
 
-    def log_message (self, msg, *args):
-        SMDTLogger.info (msg, *args)
+#class SMDesignHandler (EasyHTTPHandler):
+#    PNGImage = "image/png"
+#    config = None
+
+#    def echo (self, req, qstr):
+#        return json.dumps(qstr), self.PlainTextType
+
+#    def log_message (self, msg, *args):
+#        SMDTLogger.info (msg, *args)
 
     
 class SWDesignServer:
@@ -112,6 +120,10 @@ def intVal(params, key, default):
 
 
 # Flask conversion
+#root = logging.getLogger()
+#root.addHandler(default_handler)
+#root.addHandler()
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -123,9 +135,9 @@ def getConfigParams ():
     args = request.args
     sm = _getData('smdt')
     paramData = smd.config.get('params')
-    print("Returning the following parameters:")
-    for property in paramData.properties:
-        print(paramData.properties[property])
+    #print("Returning the following parameters:")
+    #for property in paramData.properties:
+    #    print(paramData.properties[property])
     return json.dumps({'params': paramData.properties}) #, self.PlainTextType
 
 @app.route('/getMaskLayout', methods=['GET'])
@@ -215,7 +227,7 @@ def updateTarget():
     sm.targetList.updateTarget(getDefValue(request.form, 'values', ''))
     return "[]"
 
-@app.route('/saveMaskDesignFile', methods=['POST'])
+@app.route('/saveMaskDesignFile', methods=['GET', 'POST'])
 def saveMaskDesignFile():
     """
     THIS IS NOT COMPLETE OR CORRECT
@@ -228,16 +240,15 @@ def saveMaskDesignFile():
         mdf = MaskDesignFile(sm.targetList)
         buf = mdf.asBytes()
     except Exception as e:
-        self.send_error(500, repr(e))
+        #self.send_error(500, repr(e))
         return None, 'application/fits'
 
-    self.send_response(200, 'OK')
-    self.send_header('Content-type', 'application/fits')
-    self.send_header('Content-Disposition', 'attachment; filename=' + mdFile)
-    self.end_headers()
-    self.wfile.write(buf)
-    self.wfile.flush()
-    return None, 'application/fits'
+    response = make_response(buf)
+    response.headers.set('Content-Type', 'application/fits')
+    response.headers.set(
+        'Content-Disposition', 'attachment', filename=mdFile)
+    return response
+
 
 
 
@@ -262,6 +273,7 @@ if __name__ == "__main__":
     #smd.start(cf.get('serverPort', 50080), host)
 
     smd = SMDesign()
+    smd.logger = app.logger
     smd.config = cf
 
     app.run(debug=True)
