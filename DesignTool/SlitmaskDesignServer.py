@@ -93,6 +93,24 @@ def readConfig (confName):
     cf.properties['params'] = pf
     return cf
 
+
+
+def getDefValue(params, key, default):
+    try:
+        return params[key]
+    except:
+        return default
+
+def floatVal(params, key, default):
+    try:
+        return float(params[key])
+    except:
+        return float(default)
+
+def intVal(params, key, default):
+    return int(floatVal(params,key,default))
+
+
 # Flask conversion
 app = Flask(__name__)
 
@@ -105,6 +123,9 @@ def getConfigParams ():
     args = request.args
     sm = _getData('smdt')
     paramData = smd.config.get('params')
+    print("Returning the following parameters:")
+    for property in paramData.properties:
+        print(paramData.properties[property])
     return json.dumps({'params': paramData.properties}) #, self.PlainTextType
 
 @app.route('/getMaskLayout', methods=['GET'])
@@ -124,7 +145,7 @@ def sendTargets2Server():
     Respond to the form action
     """
     content = request.files['targetList'].read()
-    useDSS = request.values['formUseDSS']
+    useDSS = intVal(request.form, 'formUseDSS', 0)
     _setData('smdt', SlitmaskDesignTool(content, useDSS, smd.config))
     return 'OK'
 
@@ -134,9 +155,6 @@ def getTargetsAndInfo():
     Returns the targets that were loaded via loadParams()
     """
     sm = _getData('smdt')
-    #targets = sm.targetList.toJson()
-    #roi = sm.getROIInfo()
-    #return "{'info':" + json.dumps(roi) + ',' + "'targets':" + targets + "}", self.PlainTextType
     return sm.targetList.toJsonWithInfo()
 
 @app.route('/getTargets', methods=['GET'])
@@ -153,17 +171,7 @@ def getROIInfo():
     out = sm.getROIInfo()
     return json.dumps(out)
 
-def getDefValue(params, key, default):
-    try:
-        return params[key]
-    except:
-        return default
 
-def floatVal(params, key, default):
-    try:
-        return float(params[key])
-    except:
-        return float(default)
     
 
 @app.route('/recalculateMask', methods=['POST'])
