@@ -33,10 +33,11 @@ smdt = Blueprint('smdt', __name__)
 def welcome():
     if 'username' in session:
         print("You are already logged in as %s" % escape(session['username']))
+        return render_template('DesignTool.html')
     else:
         print("No user is logged in")
-        return redirect(url_for('login'))
-    return render_template('DesignTool.html')
+        return redirect(url_for('smdt.login'))
+
 
 
 @smdt.route('/login', methods=['GET', 'POST'])
@@ -44,7 +45,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         session['username'] = username
-        return redirect(url_for('welcome'))
+        return redirect(url_for('smdt.welcome'))
     return '''
     <form method='POST'>
     Enter your name: <input type='text' name='username'>
