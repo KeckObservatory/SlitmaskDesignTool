@@ -141,7 +141,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         session['username'] = username
-        return "Logged in as %s" % escape(username)
+        return redirect(url_for('welcome'))
     return '''
     <form method='POST'>
     Enter your name: <input type='text' name='username'>
