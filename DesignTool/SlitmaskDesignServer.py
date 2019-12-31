@@ -30,7 +30,7 @@ import logging
 
 GlobalData = {}
 
-from flask import Flask
+from flask import Flask, session, escape, redirect, url_for
 from flask import render_template, request, make_response
 #from flask.logging import default_handler
 
@@ -125,10 +125,33 @@ def intVal(params, key, default):
 #root.addHandler()
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'Your Secret Key'
 
 @app.route('/')
 def welcome():
+    if 'username' in session:
+        print("You are already logged in as %s" % escape(session['username']))
+    else:
+        print("No user is logged in")
+        return (redirect(url_for('login')))
     return render_template('DesignTool.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        session['username'] = username
+        return "Logged in as %s" % escape(username)
+    return '''
+    <form method='POST'>
+    Enter your name: <input type='text' name='username'>
+    <input type='submit' value='Login'>
+    </form>'''
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return (redirect(url_for('welcome')))
 
 @app.route('/getConfigParams', methods=['GET'])
 def getConfigParams ():
@@ -248,7 +271,6 @@ def saveMaskDesignFile():
     response.headers.set(
         'Content-Disposition', 'attachment', filename=mdFile)
     return response
-
 
 
 
