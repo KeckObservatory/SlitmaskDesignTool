@@ -1,14 +1,15 @@
-'''
+"""
 Created on Mar 23, 2018
 
 @author: skwok
-'''
+"""
 
 import io
 import numpy as np
 
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import smdtLibs.Dss2Client as Dss2Client
@@ -21,9 +22,8 @@ import traceback
 
 
 class SlitmaskDesignTool:
-
     def __init__(self, tlistRaw, useDSS, config):
-        tlist = io.StringIO(tlistRaw.decode('UTF-8'))
+        tlist = io.StringIO(tlistRaw.decode("UTF-8"))
         self.setTargetList(tlist, useDSS, config)
         self.config = config
 
@@ -37,8 +37,7 @@ class SlitmaskDesignTool:
         """
         outData = io.BytesIO()
         # print(self.targetList.dssData.shape)
-        plt.imsave(outData, self.targetList.dssData,
-                   origin='lower', format='png', cmap='gray')
+        plt.imsave(outData, self.targetList.dssData, origin="lower", format="png", cmap="gray")
         outData.seek(0)
         return outData.read()
 
@@ -48,16 +47,15 @@ class SlitmaskDesignTool:
         """
         return self.targetList.getROIInfo()
 
-    def getMaskLayout(self, instrument='deimos'):
+    def getMaskLayout(self, instrument="deimos"):
         """
         Gets the mask layout, which is defined in maskLayout.py as a python data structure for convenience.
         """
         try:
-            mask = MaskLayouts[instrument] # a list of (x,y,flag), polygon vertices
-            guiderFOV = GuiderFOVs[instrument] # list of (x, y, w, h, ang), boxes
-            badColumns = BadColumns[instrument] # list of lines, as polygons
-            return {'mask': mask, 'guiderFOV': guiderFOV, 
-                    'badColumns' : badColumns}
+            mask = MaskLayouts[instrument]  # a list of (x,y,flag), polygon vertices
+            guiderFOV = GuiderFOVs[instrument]  # list of (x, y, w, h, ang), boxes
+            badColumns = BadColumns[instrument]  # list of lines, as polygons
+            return {"mask": mask, "guiderFOV": guiderFOV, "badColumns": badColumns}
         except Exception as e:
             traceback.print_exc()
             return ((0, 0, 0),)
@@ -70,9 +68,9 @@ class SlitmaskDesignTool:
         targets.centerRADeg = raDeg
         targets.centerDEC = decDeg
         targets.positionAngle = paDeg
-        mask = MaskLayouts[self.config.get('Instrument').lower()]
+        mask = MaskLayouts[self.config.get("Instrument").lower()]
         minX, maxX = np.min(mask, axis=0)[0], np.max(mask, axis=0)[0]
-        
+
         # Updates targets coordinates for the new center raDeg and decDeg
         targets.reCalcCoordinates(raDeg, decDeg, paDeg)
         targets.select(targetIdx, minX, maxX, minSlitLength, minSep, boxSize)
