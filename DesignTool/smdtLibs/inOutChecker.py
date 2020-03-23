@@ -14,7 +14,8 @@ Author: Shui Hung Kwok
 """
 import math
 
-class InOutChecker :
+
+class InOutChecker:
     def __init__(self, mask):
         """
         mask defines a set of polygons specified as a list of points. 
@@ -22,9 +23,9 @@ class InOutChecker :
         where flag is 0 (move), 1 (goto), 2 (back to first point).
         """
         self.mask = mask
-        self.ymin, self.ymax, self.edges = self._buildEdges (mask)
+        self.ymin, self.ymax, self.edges = self._buildEdges(mask)
 
-    def _buildEdges (self, mask):
+    def _buildEdges(self, mask):
         """
         Builds a list of segments from ymin to ymax.
         For each y, a list of segments define what is inside.
@@ -32,7 +33,7 @@ class InOutChecker :
         """
         x0, y0 = 0, 0
         x1, y1, x2, y2 = 0, 0, 0, 0
-        ys = [int(t[1]) for t in mask ]
+        ys = [int(t[1]) for t in mask]
         ymin, ymax = min(ys), max(ys)
         edges = {}
         for x, y, flag in mask:
@@ -44,8 +45,8 @@ class InOutChecker :
             elif flag == 1:
                 x1, y1 = x2, y2
                 x2, y2 = x, y
-            elif flag == 2:    
-                x1, y1 = x2, y2        
+            elif flag == 2:
+                x1, y1 = x2, y2
                 x1, y1 = x0, y0
 
             if y1 > y2:
@@ -56,8 +57,8 @@ class InOutChecker :
             y1i, y2i = int(yy1), int(yy2)
             if y1i == y2i:
                 continue
-            #print (y1i, y2i)
-            m = (xx2-xx1)/(yy2-yy1)
+            # print (y1i, y2i)
+            m = (xx2 - xx1) / (yy2 - yy1)
             b = -m * yy1 + xx1
             for yidx in range(y1i, y2i):
                 xpos = m * yidx + b
@@ -70,11 +71,11 @@ class InOutChecker :
             try:
                 edges[y].sort()
             except Exception as e:
-                print ("Exception in sort ", y, e)
+                print("Exception in sort ", y, e)
                 pass
         return ymin, ymax, edges
 
-    def checkPoint (self, x, y):
+    def checkPoint(self, x, y):
         """
         Checks if the given point (x,y) is inside the mask
         First, finds the segments at the y position, where int(y) is used.
@@ -87,10 +88,10 @@ class InOutChecker :
             row = self.edges[yi]
 
             for idx in range(0, len(row), 2):
-                x0, x1 = row[idx:idx+2]
+                x0, x1 = row[idx : idx + 2]
                 if x0 < x < x1:
                     return True
         except Exception as e:
-            print ("Check point exception", e)
+            print("Check point exception", e)
             pass
         return False

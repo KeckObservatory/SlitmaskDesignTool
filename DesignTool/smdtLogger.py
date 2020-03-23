@@ -2,11 +2,11 @@ import logging
 import logging.config
 
 
-logging.config.fileConfig('logger.conf')
-SMDTLogger = logging.getLogger('SMDTLogger')
+logging.config.fileConfig("logger.conf")
+SMDTLogger = logging.getLogger("SMDTLogger")
 
 
-def infoLog (f):
+def infoLog(f):
     """
     Decorator for debugging.
     For example:
@@ -16,7 +16,9 @@ def infoLog (f):
         pass
         
     """
-    def ff (*args, **kargs):
-        SMDTLogger.info('Calling {} with {}, {}'.format(f.__name__, args, kargs))
+
+    def ff(*args, **kargs):
+        SMDTLogger.info("Calling {} with {}, {}".format(f.__name__, args, kargs))
         return f(*args, **kargs)
+
     return ff

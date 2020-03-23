@@ -1,32 +1,42 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta name="Cache-Control" content="no-cache;must-revalidate">
-<meta charset="UTF-8">
-<title>Slitmask Design Tool</title>
-<link rel='stylesheet' type='text/css' href='smdt.css'>
-<script src='ajaxv2.js'></script>
-<script src='TargetTable.js'></script>
-<script src='inOutChecker.js'></script>
-<script src='canvasShow.js?r=1'></script>
-<script src='smdt.js'></script>
-<script>
-	
-</script>
+    <meta name="Cache-Control" content="no-cache;must-revalidate">
+    <meta charset="UTF-8">
+    <title>Slitmask Design Tool</title>
+    <link rel='stylesheet' type='text/css' href='smdt.css'>
+    <script src='ajaxv2.js?r=2'></script>
+    <script src='TargetTable.js?r=2'></script>
+    <script src='inOutChecker.js?r=2'></script>
+    <script src='canvasShow.js?r=2'></script>
+    <script src='smdt.js?r=2'></script>
+    <script>
+
+    </script>
 </head>
+
 <body onload='SlitmaskDesignTool();'>
     <table id='headerTable'>
         <tr>
-            <td><p id='kecklogo'></p>
+            <td>
+                <p id='kecklogo'></p>
                 <h2 id='headline'>&nbsp;Slitmask Design Tool Prototype</h2>
                 <ul id='keckmenu'>
-                    <li id='Links'><p>Links</p></li>
-                    <li id='Sofware'><p>Software</p></li>
-                    <li id='Keck'><p>Keck</p></li>
+                    <li id='Links'>
+                        <p>Links</p>
+                    </li>
+                    <li id='Sofware'>
+                        <p>Software</p>
+                    </li>
+                    <li id='Keck'>
+                        <p>Keck</p>
+                    </li>
                 </ul>
     </table>
 
-    <form name='form2' id='form2' method='post' enctype='multipart/form-data' action='sendTargets2Server' target='targetListFrame'>
+    <form name='form2' id='form2' method='post' enctype='multipart/form-data' action='sendTargets2Server'
+        target='targetListFrame'>
         <table id='contentTable'>
             <tr>
                 <td>
@@ -35,8 +45,7 @@
                         <tr>
                             <td>Target List:
                             <td><input type='file' id='targetList' name='targetList' value="mask_ex1.txt"
-                                title="Input file of targets"
-                            >
+                                    title="Input file of targets">
                             <td><input type='button' id='loadTargets' name='loadTargets' value='Load targets'>
                             <td><input type='button' id='showHideParams' value='Show Parameters'>
                             <td><input type='button' id='saveMDF' value='Save Mask Design File'>
@@ -46,63 +55,66 @@
                     <table id='paramButtonTable'>
                         <tr>
                             <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp; <input
-                                type='button' id='setSlitsLength' value='Set slits length'
-                            > &nbsp; <input type='button' id='setSlitsWidth' value='Set slit width'>
+                                    type='button' id='setSlitsLength' value='Set slits length'> &nbsp; <input
+                                    type='button' id='setSlitsWidth' value='Set slit width'>
                     </table>
 
                     <table id='contentPanel'>
                         <tr>
                             <td>
                         <tr>
-                            <td><table>
+                            <td>
+                                <table>
                                     <tr>
                                         <td>Status: <span id='statusDiv'>&nbsp;</span>
-                                </table></td>
+                                </table>
+                            </td>
                         <tr>
                             <td>
                                 <table id='buttonPanel'>
                                     <tr>
-                                        <td><table>
+                                        <td>
+                                            <table>
                                                 <tr>
                                                     <td>Pan: <input type='radio' name='mouseAction' id='panAll' checked>
                                                     <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky'>
                                                     <td>Rotate: <input type='radio' name='mouseAction' id='rotateAll'>
-                                                    <td>Rotate Sky: <input type='radio' name='mouseAction' id='rotateSky'>
+                                                    <td>Rotate Sky: <input type='radio' name='mouseAction'
+                                                            id='rotateSky'>
                                                     <td>Enable selection: <input type='radio' name='mouseAction'
-                                                        id='enableSelection'
-                                                    >
+                                                            id='enableSelection'>
                                                     <td><input type='button' id='resetDisplay' value='Reset Display'>
-                                                        &nbsp; <input type='button' id='resetOffsets' value='Reset Offsets'>
+                                                        &nbsp; <input type='button' id='resetOffsets'
+                                                            value='Reset Offsets'>
                                             </table>
                                     <tr>
                                         <td>
                                             <table>
                                                 <tr>
-                                                    <td>Show all targets: <input type='radio' name='showSel' id='showAll'
-                                                        checked
-                                                    >
-                                                    <td>Show selected : <input type='radio' name='showSel' id='showSelected'>
+                                                    <td>Show all targets: <input type='radio' name='showSel'
+                                                            id='showAll' checked>
+                                                    <td>Show selected : <input type='radio' name='showSel'
+                                                            id='showSelected'>
                                                     <td>Show by priority :<input type='radio' name='showSel'
-                                                        id='showByPriority'
-                                                    >
+                                                            id='showByPriority'>
                                                     <td>Min. Priority: <input id='minPriority' value='0'>
-                                                    
+
                                                     <td>Show align box: <input type='checkbox' id='showAlignBox'>
                                                     <td>Show preview :<input type='radio' name='showViewMode'
-                                                        id='showPreview' checked
-                                                    >
+                                                            id='showPreview' checked>
                                                     <td>Show slit pos:<input type='radio' name='showViewMode'
-                                                        id='showSlitPos'
-                                                    >
-                                                    <td><input type='button' id='recalculateMask' value='Recalculate mask'>
+                                                            id='showSlitPos'>
+                                                    <td><input type='button' id='recalculateMask'
+                                                            value='Recalculate mask'>
                                             </table>
                                     <tr>
-                                        <td><table>
+                                        <td>
+                                            <table>
                                                 <tr>
                                                     <td>Show Guider FOV: <input type='checkbox' id='showGuiderFOV'>
                                                     <td>Show bad columns: <input type='checkbox' id='showBadColumns'>
                                                     <td>DSS: <input type='checkbox' id='useDSS'>
-                                                    
+
                                             </table>
                                     <tr>
                                         <td>
@@ -112,9 +124,12 @@
                                             <div id='canvasDiv' tabindex='0'>Initializing ...</div>
                                 </table>
                         <tr>
-                            <td><div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB; Alignment
+                            <td>
+                                <div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB;
+                                Alignment
                                 box; <br>
-                                Keys: h: left; &nbsp;l: right; &nbsp;j: move up; &nbsp;k: down Zoom: &nbsp;&gt;: zoom in; &nbsp;&lt;: zoom out.
+                                Keys: h: left; &nbsp;l: right; &nbsp;j: move up; &nbsp;k: down Zoom: &nbsp;&gt;: zoom
+                                in; &nbsp;&lt;: zoom out.
                     </table>
         </table>
 
@@ -123,8 +138,10 @@
     <br>
     <table id='targetForms'>
         <tr>
-            <td><div id='targetTableDiv'></div>
-            <td><div id='targetFormDiv'>
+            <td>
+                <div id='targetTableDiv'></div>
+            <td>
+                <div id='targetFormDiv'>
                     <h3>
                         Selected target: <span id='targetName'>None</span>
                     </h3>
@@ -163,4 +180,5 @@
     </table>
     <iframe name='targetListFrame' id='targetListFrame'> allowfullscreen</iframe>
 </body>
+
 </html>
