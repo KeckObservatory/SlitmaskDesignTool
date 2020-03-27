@@ -167,13 +167,23 @@ class SWDesignServer:
         pass
 
     def start(self, port=50080, host="Auto"):
+
         if host == "Auto":
-            hostname = socket.gethostname()
+            try:
+                hostname = socket.gethostname()
+            except:
+                hostname = "localhost"
         else:
             hostname = host
+
+        try:
+            hostip = socket.gethostbyaddr(socket.gethostbyname(hostname))
+        except:
+            hostip = ""
+
         try:
             httpd = EasyHTTPServerThreaded(("", port), SMDesignHandler)
-            print("HTTPD started %s %d" % (socket.gethostbyaddr(socket.gethostbyname(hostname)), port))
+            print("HTTPD started {} ({}), port {}".format(hostname, hostip, port))
             try:
                 httpd.serve_forever()
                 httpd.shutdown()
