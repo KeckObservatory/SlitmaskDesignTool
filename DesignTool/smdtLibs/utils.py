@@ -4,6 +4,7 @@ Created on Mar 20, 2018
 @author: skwok
 """
 import math
+import webbrowser
 import traceback
 
 
@@ -98,3 +99,7 @@ def julianDay(y, m, d):
     jd = int(365.25 * (y + 4716)) + int(30.6001 * (m + 1)) + d + B - 1524.5
     return jd
     # JulianDay
+
+
+def launchBrowser(host, portnr, path):
+    webbrowser.open(f"http://{host}:{portnr}/{path}", new=1)

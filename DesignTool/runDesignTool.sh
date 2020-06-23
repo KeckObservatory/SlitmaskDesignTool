@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PYTHONHOME="/local/skwok/anaconda3/"
+PYTHONHOME="/local/anaconda3/"
 PYTHON="${PYTHONHOME}/bin/python"
 
 export PYTHONHOME 

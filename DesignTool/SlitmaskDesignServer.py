@@ -2,11 +2,14 @@
 Created on Mar 20, 2018
 
 The request sequence is:
-- Browser sendTargets2Server via form submit ('loadParams')
+- Browser starts with loadConfigParams -> getConfigParams
+- Browser calls loadMaskLayout -> getMaskLayout returns mask and reducedMask layouts
+- Browser calls loadBackgroundImage -> loads DSS image into canvas background
+
+- Browser loads the targetlist via sendTargets2Server via form submit ('loadTargets')
 - Server responds OK
+
 - Browser onload calls loadAll(), which includes loadMaskLayout, loadBackgroundImage, loadTargets()
-- Server loadMaskLayout -> getMaskLayout returns mask and reducedMask layouts
-- server lackBackgroundImage -> loads DSS image into canvas background
 - Server loadTargets -> getTargetsAndInfo loads target list and info, such as center RA/DEC, sky PA and scales
 
 @author: skwok
@@ -19,6 +22,7 @@ import os
 import argparse
 
 from urllib.parse import quote
+from threading import Thread
 
 from smdtLibs import utils
 from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
@@ -163,12 +167,9 @@ class SMDesignHandler(EasyHTTPHandler):
 
 
 class SWDesignServer:
-    def __init__(self):
-        pass
-
-    def start(self, port=50080, host="Auto"):
-
-        if host == "Auto":
+    def __init__(self, host=None, portNr=50080):
+        self.portNr = portNr
+        if host is None:
             try:
                 hostname = socket.gethostname()
             except:
@@ -176,21 +177,29 @@ class SWDesignServer:
         else:
             hostname = host
 
+        self.host = hostname
         try:
-            hostip = socket.gethostbyaddr(socket.gethostbyname(hostname))
+            self.hostip = socket.gethostbyaddr(socket.gethostbyname(hostname))
         except:
-            hostip = ""
+            self.hostip = ""
 
+    def _start(self):
         try:
-            httpd = EasyHTTPServerThreaded(("", port), SMDesignHandler)
-            print("HTTPD started {} ({}), port {}".format(hostname, hostip, port))
+            httpd = EasyHTTPServerThreaded(("", self.portNr), SMDesignHandler)
+            print("HTTPD started {} ({}), port {}".format(self.host, self.hostip, self.portNr))
             try:
                 httpd.serve_forever()
                 httpd.shutdown()
+            except KeyboardException:
+                pass
             except:
                 print("HTTPD Terminated")
         except Exception as e:
             print("Failed to start HTTP Server", e)
+
+    def start(self):
+        thr = Thread(target=self._start)
+        thr.start()
 
 
 def readConfig(confName):
@@ -204,19 +213,23 @@ def readConfig(confName):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Slitmask design tool server")
-    parser.add_argument("-c", dest="config_file", help="Configuration file", default="smdt.cfg", required=False)
-    parser.add_argument("-host", dest="host", help="Manually specify host name", required=False, default="Auto")
+    parser.add_argument("-c", "--config", dest="config_file", help="Configuration file", default="smdt.cfg", required=False)
+    parser.add_argument("-H", "--host", dest="host", help="Manually specify host name", required=False, default=None)
+    parser.add_argument("-b", "--browser", dest="browser", help="Start browser", action="store_true")
 
     args = parser.parse_args()
 
-    configName = args.config_file
-    smd = SWDesignServer()
-    cf = readConfig(configName)
+    cf = readConfig(args.config_file)
 
     _setData("smdt", SlitmaskDesignTool(b"", False, cf))
     SMDesignHandler.config = cf
     SMDesignHandler.DocRoot = cf.get("docRoot", "docs")
     SMDesignHandler.defaultFile = cf.get("defaultFile", "index.html")
     SMDesignHandler.logEnabled = cf.get("logEnabled", False)
-    host = args.host
-    smd.start(cf.get("serverPort", 50080), host)
+
+    port = cf.get("serverPort", 50080)
+    smd = SWDesignServer(args.host, port)
+    smd.start()
+
+    if args.browser:
+        utils.launchBrowser(host=smd.host, portnr=port, path=SMDesignHandler.defaultFile)
