@@ -101,5 +101,9 @@ def julianDay(y, m, d):
     # JulianDay
 
 
+def transpose(arr):
+    return list(map(list, zip(*arr)))
+
+
 def launchBrowser(host, portnr, path):
     webbrowser.open(f"http://{host}:{portnr}/{path}", new=1)

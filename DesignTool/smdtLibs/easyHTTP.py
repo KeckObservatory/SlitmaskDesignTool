@@ -58,17 +58,26 @@ class EasyHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Expires", "Feb  1 17:17:37 HST 2016")
                 self.send_header("Cache-Control", "no-cache, must-revalidate")
                 self.send_header("Cache-Control", "no-store")
-                self.send_header("Content-Type", contype)
+                self.send_header("Connection", "close")
+                self.send_header("Content-type", contype)
+                """
+                l = sys.getsizeof(out)
+                if l > 0:
+                    self.send_header ("Content-length", l)
+                """
                 self.end_headers()
                 self.wfile.write(out)
+                self.wfile.flush()
             else:
+                # print ("server", qs)
                 self.serveFile(req, qs)
                 return
         except FileNotFoundError:
             traceback.print_exc()
             self.send_error(HTTPStatus.NOT_FOUND)
         except BrokenPipeError:
-            traceback.print_exc()
+            # traceback.print_exc()
+            self.log_message("Broken pipe")
             return
         except Exception as e:
             traceback.print_exc()
@@ -94,6 +103,10 @@ class EasyHTTPHandler(http.server.SimpleHTTPRequestHandler):
             qs = parse_qs(bytes.decode(self.rfile.read(length), "UTF-8"))
         req = parts.path[1:]
         self.handleRequest(req, qs)
+
+    def address_string(self):
+        host, port = self.client_address[:2]
+        return host
 
     def translate_path(self, p):
         return p

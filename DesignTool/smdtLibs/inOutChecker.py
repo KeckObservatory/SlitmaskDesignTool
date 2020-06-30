@@ -3,7 +3,7 @@ In/Out checker, python version
 
 Example:
 
-chk = InOutchecker (mask)
+chk = InOutChecker (mask)
 pnt = x, y
 if chk.checkPoint (x, y):
     print ("inside")

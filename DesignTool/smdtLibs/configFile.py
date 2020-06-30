@@ -1,61 +1,106 @@
 import sys
 import json
+import os
+from configparser import ConfigParser
+import pkg_resources
 
 
-class ConfigFile:
-    def __init__(self, fileName, split=False):
+class ConfigFile(ConfigParser):
+    def __init__(self, fileName, **kwargs):
         """
         Format of config file is keyword = value, one per line
         split=True if, fields are comma separated values; False, if single value.
         """
+        super(ConfigFile, self).__init__(kwargs)
         self.fileName = fileName
-        self.split = split
+        self.default_secion = kwargs.get("default_section", "DEFAULT")
+        self.split = kwargs.get("split", False)
         self.properties = {}
-        self.readConfigFile(fileName)
+        if fileName is not None:
+            self.read(fileName)
 
-    def getType(self, value):
+    def _getType(self, value):
+        if not isinstance(value, str):
+            return value
+
+        value = value.strip()
+
+        valueIC = value.lower()
+        if valueIC == "true":
+            return True
+        if valueIC == "false":
+            return False
+        if valueIC == "none":
+            return None
+
+        try:
+            return eval(value)
+        except Exception:
+            pass
+
         try:
             i = int(value)
             return i
         except:
-            try:
-                f = float(value)
-                return f
-            except:
-                if value == "True":
-                    return True
-                if value == "False":
-                    return False
-                return value
+            pass
 
-    def readConfigFile(self, fname):
-        def clean(s):
-            return s.strip().replace('"', "").replace("'", "")
+        try:
+            f = float(value)
+            return f
+        except:
+            pass
 
-        with open(fname, "r") as fh:
-            props = {}
-            for line in fh:
-                parts = line.strip().split("=")
-                if len(parts) > 1:
-                    key, val = parts
-                    key = key.strip()
-                    if self.split:
-                        val = [clean(s) for s in val.split(",")]
-                    else:
-                        val = clean(val)
-                    props[key] = self.getType(val)
-            self.properties = props
-            return
-        raise Exception("Failed to read configuration file " + fname)
+        return value
 
-    def get(self, key, defValue=""):
-        if key in self.properties:
-            return self.properties[key]
+    def _getPath(self, path):
+        if path is None:
+            return None
+
+        if os.path.isfile(path):
+            return path
         else:
+            fullpath = pkg_resources.resource_filename(__name__, path)
+            if os.path.isfile(fullpath):
+                return fullpath
+
+        return None
+
+    def read(self, cgfile):
+        def digestItems(sec, known):
+            values = self.items(sec)
+            secValues = {}
+            for k, v in values:
+                if k in known:
+                    continue
+                secValues[k] = self._getType(v)
+            return secValues
+
+        path = self._getPath(cgfile)
+        if path is None:
+            raise Exception(f"Config file {cgfile} not found")
+        super().read(path)
+
+        self.properties.update(digestItems(self.default_section, {}))
+        sections = self.sections()
+
+        for sec in sections:
+            self.properties[sec] = digestItems(sec, self.properties)
+
+    def __getattr__(self, key):
+        val = self.properties.get(key.lower())
+        if val is not None:
+            return val
+
+        if key in self.sections():
+            return dict(self.items(key))
+
+        return None
+
+    def getValue(self, key, defValue=None):
+        if key is None:
             return defValue
+        val = self.properties.get(key.lower())
+        if val is None:
+            return defValue
+        return val
 
-
-if __name__ == "__main__":
-    ccf = ConfigFile(sys.argv[1])
-    for k, v in ccf.properties.items():
-        print(k, v)
