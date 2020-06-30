@@ -2,3 +2,6 @@ __pycache__
 *.log
 .DS_Store
 .idea
+x.deimos.e
+.gitignore
+.ipynb_checkpoints

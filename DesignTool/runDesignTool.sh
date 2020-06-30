@@ -7,7 +7,7 @@ export PYTHONHOME
 
 checkIfRunning()
 {
-	pgrep -fl "SlitmaskDesignServer.py $*"
+	pgrep -fl "slitmaskDesignServer.py $*"
 }
 
 start()
@@ -16,9 +16,9 @@ start()
 	if [ "x$RES" = "x" ]
 	then
 		echo "Starting .." $*
-		$PYTHON  SlitmaskDesignServer.py $*
+		$PYTHON  slitmaskDesignServer.py $*
 	else
-		echo "SlitmaskDesignServer.py $* already running"
+		echo "slitmaskDesignServer.py $* already running"
 	fi
 }
 
@@ -29,7 +29,7 @@ stop()
 	then
 		echo "Nothing to stop"
 	else
-		pkill -f "SlitmaskDesignServer.py $*"
+		pkill -f "slitmaskDesignServer.py $*"
 	fi
 }
 
@@ -38,10 +38,10 @@ status()
 	RES=`checkIfRunning $*`
 	if [ "x$RES" = "x" ]
 	then
-		echo "SlitmaskDesignServer.py not running"
+		echo "slitmaskDesignServer.py not running"
 		echo $RES
 	else
-		pgrep -fl "SlitmaskDesignServer.py $*"
+		pgrep -fl "slitmaskDesignServer.py $*"
 	fi
 }
 
