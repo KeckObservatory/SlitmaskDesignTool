@@ -190,7 +190,7 @@ function SlitmaskDesignTool() {
 	};
 
 	self.setSlitsPA = function (evt) {
-		var pa = Number(E('SlitPAfd').value);
+		var pa = Number(E('slitpafd').value);
 		var tgs = self.canvasShow.targets;
 		var ntgs = tgs.length1.length;
 		var i;
@@ -207,7 +207,7 @@ function SlitmaskDesignTool() {
 	};
 
 	self.setSlitsLength = function (evt) {
-		var halfLen = 0.5 * Number(E('MinSlitLengthfd').value);
+		var halfLen = 0.5 * Number(E('minslitlengthfd').value);
 		var tgs = self.canvasShow.targets;
 		var ntgs = tgs.length1.length;
 		var i;
@@ -230,7 +230,7 @@ function SlitmaskDesignTool() {
 	};
 
 	self.setSlitsWidth = function (evt) {
-		var width = Number(E('SlitWidthfd').value);
+		var width = Number(E('slitwidthfd').value);
 		var tgs = self.canvasShow.targets;
 		var ntgs = tgs.length1.length;
 		var i;
@@ -258,9 +258,9 @@ function SlitmaskDesignTool() {
 		cs.centerDecDeg = cs.currDecDeg;
 		cs.positionAngle = cs.currPosAngleDeg;
 
-		var minSepAs = E('MinSlitSeparationfd').value;
-		var minSlitLengthAs = E('MinSlitLengthfd').value;
-		var boxSizeAs = E('AlignBoxSizefd').value;
+		var minSepAs = E('minslitseparationfd').value;
+		var minSlitLengthAs = E('minalitlengthfd').value;
+		var boxSizeAs = E('alignboxsizefd').value;
 
 		E('showSlitPos').checked = true;
 		var params = {
@@ -306,7 +306,7 @@ function SlitmaskDesignTool() {
 			if (done < 10) {
 				if (flag != 0) {
 					done = 10;
-					var mdFile = E('OutputFitsfd').value;
+					var mdFile = E('outputfitsfd').value;
 					window.open('saveMaskDesignFile?mdFile=' + mdFile);
 				}
 				else {

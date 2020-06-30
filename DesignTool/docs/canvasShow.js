@@ -26,14 +26,14 @@ function TxMatrix() {
 		return x;
 	}
 
-	self.translate = function(tx, ty) {
+	self.translate = function (tx, ty) {
 		with (self) {
 			mat[0][2] += tx;
 			mat[1][2] += ty;
 		}
 	};
 
-	self.rotate = function(angRad, xc, yc) {
+	self.rotate = function (angRad, xc, yc) {
 		with (self) {
 			angRad = normRad(angRad);
 			var sina = Math.sin(angRad);
@@ -60,11 +60,11 @@ function TxMatrix() {
 		}
 	};
 
-	self.getScale = function() {
+	self.getScale = function () {
 		with (self) {
 			var ca2 = (mat[0][0] * mat[1][1]);
 			var sa2 = (mat[0][1] * mat[1][0]);
-			return Math.sqrt(Math.abs(ca2-sa2));
+			return Math.sqrt(Math.abs(ca2 - sa2));
 		}
 	};
 
@@ -82,13 +82,13 @@ function TxMatrix() {
 	self.getRotAngle = function () {
 		// Returns angle in radians
 		with (self) {
-			var ca = (mat[0][0] + mat[1][1])/2;
-			var sa = (mat[0][1] - mat[1][0])/2;
+			var ca = (mat[0][0] + mat[1][1]) / 2;
+			var sa = (mat[0][1] - mat[1][0]) / 2;
 			return Math.atan2(sa, ca);
 		}
 	};
 
-	self.scale = function(s) {
+	self.scale = function (s) {
 		with (self) {
 			mat[0][0] *= s;
 			mat[0][1] *= s;
@@ -97,7 +97,7 @@ function TxMatrix() {
 		}
 	};
 
-	self.scaleCenter = function(s, xc, yc) {
+	self.scaleCenter = function (s, xc, yc) {
 		// Scale such that the pixel in the center of the canvas stays there.
 		with (self) {
 			scale(s);
@@ -109,22 +109,22 @@ function TxMatrix() {
 	// Returns arguments for Ctx.transform()
 	// First 4 values represents 2x2 rotation/scale matrix
 	// Last 2 values are translation.
-	self.getTx = function(flipY) {
+	self.getTx = function (flipY) {
 		with (self) {
 			var r0 = mat[0];
 			var r1 = mat[1];
 			if (flipY)
-				return [ r0[0], r0[1], -r1[0], -r1[1], r0[2], r1[2] ];
+				return [r0[0], r0[1], -r1[0], -r1[1], r0[2], r1[2]];
 			else
-				return [ r0[0], r0[1], r1[0], r1[1], r0[2], r1[2] ];
+				return [r0[0], r0[1], r1[0], r1[1], r0[2], r1[2]];
 		}
 	};
 
-	self.reset = function(height) {
-		self.mat = [ [ 1, 0, 0 ], [ 0, 1, height ], [ 0, 0, 1 ] ];
+	self.reset = function (height) {
+		self.mat = [[1, 0, 0], [0, 1, height], [0, 0, 1]];
 	};
 
-	self.rotatePnt = function (x, y, flipY=0) {
+	self.rotatePnt = function (x, y, flipY = 0) {
 		var tx = self.getTx(flipY);
 		var x1 = x * tx[0] - y * tx[1];
 		var y1 = -x * tx[2] + y * tx[3];
@@ -133,7 +133,7 @@ function TxMatrix() {
 	};
 
 	// World to screen coordinates
-	self.w2s = function (x, y, flipY=0) {
+	self.w2s = function (x, y, flipY = 0) {
 		var tx = self.getTx(flipY);
 		var x1 = x * tx[0] - y * tx[1] + tx[4];
 		var y1 = -x * tx[2] + y * tx[3] + tx[5];
@@ -142,7 +142,7 @@ function TxMatrix() {
 	};
 
 	// Screen to world coordinates
-	self.s2w = function (x, y, flipY=0) {
+	self.s2w = function (x, y, flipY = 0) {
 		// inverse transform
 		var tx = self.getTx(flipY);
 		var det = tx[0] * tx[3] - tx[1] * tx[2];
@@ -151,20 +151,20 @@ function TxMatrix() {
 		var x2 = (x1 * tx[3] - y1 * tx[2]) / det;
 		var y2 = (-x1 * tx[1] + y1 * tx[0]) / det;
 
-		return [x2, y2];		
+		return [x2, y2];
 	};
 
 	self.toString = function () {
-		var angDeg = self.getRotAngle() / Math.PI * 180.0; 
+		var angDeg = self.getRotAngle() / Math.PI * 180.0;
 		var tx = self.getTx(0);
 		var out = "<table><tr>" +
-		"<td>" + tx[0].toFixed(2) + "<td>" + tx[1].toFixed(2) + 
-		"<td>Angle:" + angDeg.toFixed(2) +
-		"<tr>" +
-		"<td>" + tx[2].toFixed(2) + "<td>" + tx[3].toFixed(2) +
-		"<tr>" +
-		"<td>" + tx[4].toFixed(2) + "<td>" + tx[5].toFixed(2) +		
-		"</table>";
+			"<td>" + tx[0].toFixed(2) + "<td>" + tx[1].toFixed(2) +
+			"<td>Angle:" + angDeg.toFixed(2) +
+			"<tr>" +
+			"<td>" + tx[2].toFixed(2) + "<td>" + tx[3].toFixed(2) +
+			"<tr>" +
+			"<td>" + tx[4].toFixed(2) + "<td>" + tx[5].toFixed(2) +
+			"</table>";
 		return out;
 	};
 
@@ -200,7 +200,7 @@ function CanvasShow(containerName, zoomContainer) {
 	self.positionAngle = 0;
 	self.currPosAngleDeg = 0;
 
-	self.xAsPerPixel = 1; 
+	self.xAsPerPixel = 1;
 	self.yAsPerPixel = 1;
 	self.showMinPriority = -999;
 
@@ -245,7 +245,7 @@ function CanvasShow(containerName, zoomContainer) {
 		return x;
 	}
 
-	function showMsg (dname, msg) {
+	function showMsg(dname, msg) {
 		E(dname).innerHTML = msg;
 	}
 
@@ -254,13 +254,14 @@ function CanvasShow(containerName, zoomContainer) {
 		ctx.mozImageSmoothingEnabled = onoff;
 		ctx.webkitImageSmoothingEnabled = onoff;
 		ctx.msImageSmoothingEnabled = onoff;
-	}	
+	}
 
-	function toSexa (inDeg) {
+	function toSexa(inDeg) {
 		var val = inDeg;
 		var sign = ' ';
-		if (val < 0) { sign = '-';
-		val = -val;
+		if (val < 0) {
+			sign = '-';
+			val = -val;
 		}
 		var dd = Math.floor(val);
 		val = (val - dd) * 60;
@@ -275,19 +276,19 @@ function CanvasShow(containerName, zoomContainer) {
 		return sign + dd + ':' + mm + cc + ss.toFixed(2);
 	}
 
-	function toBoolean (s) {
+	function toBoolean(s) {
 		// String to boolean
 		s = s.toUpperCase();
-		return (s=='YES') || (s=='1') || (s=='TRUE') || (s=='ON');
+		return (s == 'YES') || (s == '1') || (s == 'TRUE') || (s == 'ON');
 	}
 
-	function norm360 (x) { 
+	function norm360(x) {
 		while (x > 360) x -= 360;
 		while (x < 0) x += 360;
 		return x;
 	}
 
-	function norm180 (x) {
+	function norm180(x) {
 		if (x > 180) return x - 360;
 		if (x < -180) return x + 360;
 		return x;
@@ -301,13 +302,13 @@ function CanvasShow(containerName, zoomContainer) {
 		return deg * Math.PI / 180.0;
 	}
 
-	function rotate (angRad, x, y) {
+	function rotate(angRad, x, y) {
 		var sa = Math.sin(angRad);
 		var ca = Math.cos(angRad);
-		return rotateSaCa (sa, ca, x, y);
+		return rotateSaCa(sa, ca, x, y);
 	}
 
-	function rotateSaCa (sa, ca, x, y) {
+	function rotateSaCa(sa, ca, x, y) {
 		var x1 = x * ca - y * sa;
 		var y1 = x * sa + y * ca;
 		return [x1, y1];
@@ -337,7 +338,7 @@ function CanvasShow(containerName, zoomContainer) {
 		toggleSmoothing(self.tmpCtx, false);
 		toggleSmoothing(self.tmpCtx2, false);
 
-		self.applyScaleOffset = function(data, scale, offset) {
+		self.applyScaleOffset = function (data, scale, offset) {
 			/*
 			 * This is for contrast and brightness control. Scales and offsets
 			 * the pixel values.
@@ -360,7 +361,7 @@ function CanvasShow(containerName, zoomContainer) {
 			}
 		};
 
-		self.setParams = function(scale, offset) {
+		self.setParams = function (scale, offset) {
 			/*
 			 * Sets the contrast (scale) and brightness (offset) parameters.
 			 */
@@ -373,7 +374,7 @@ function CanvasShow(containerName, zoomContainer) {
 			self.tmpCtx.drawImage(img, offx, offy);
 
 			var imgData = self.tmpCtx.getImageData(0, 0, self.tmpCanvas.width,
-					self.tmpCanvas.height);
+				self.tmpCanvas.height);
 
 			// Applies contrast
 			self.applyScaleOffset(imgData.data, self.scale, self.offset);
@@ -385,8 +386,8 @@ function CanvasShow(containerName, zoomContainer) {
 		self.drawToOutputPart2 = function () {
 			// When updates are completed, copy ctx2 to output
 			var imgData = self.tmpCtx2.getImageData(0, 0, self.tmpCanvas.width,
-					self.tmpCanvas.height);
-			self.outCtx.putImageData(imgData, 0, 0);			
+				self.tmpCanvas.height);
+			self.outCtx.putImageData(imgData, 0, 0);
 		};
 		return this;
 	} /* End of Filter */
@@ -401,7 +402,7 @@ function CanvasShow(containerName, zoomContainer) {
 		self.redrawTxImage();
 	};
 
-	self.initialize = function() {
+	self.initialize = function () {
 		/*
 		 * Creates a canvas and puts it in the container. Sets default size to
 		 * 400x400 if not defined. Instantiates a filter object to process the
@@ -413,9 +414,9 @@ function CanvasShow(containerName, zoomContainer) {
 			self._Canvas = cv;
 			cv.tabIndex = 99999;
 			cont.tabIndex = 99999;
-			var w = Math.max (1000, cont.clientWidth);
-			cv.width  = w;
-			cv.height = Math.max (500, w/3);
+			var w = Math.max(1000, cont.clientWidth);
+			cv.width = w;
+			cv.height = Math.max(500, w / 3);
 			if (cv.width == 0 || cv.height == 0) {
 				cv.width = cv.height = 400;
 			}
@@ -454,7 +455,7 @@ function CanvasShow(containerName, zoomContainer) {
 		self.maskMinMax = [minx, miny, maxx, maxy];
 	};
 
-	self.fitMask = function () {		
+	self.fitMask = function () {
 		var mmm = self.maskMinMax;
 		var xrange = mmm[2] - mmm[0];
 		var yrange = mmm[3] - mmm[1];
@@ -462,7 +463,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var cv = self._Canvas;
 		var sw = cv.width / xrange;
 		var sh = cv.height / yrange;
-		var scale = Math.min(sw, sh) * 0.9;		
+		var scale = Math.min(sw, sh) * 0.9;
 
 		var x = cv.width / 2;
 		var y = cv.height / 2;
@@ -473,7 +474,7 @@ function CanvasShow(containerName, zoomContainer) {
 		self.tMatrix.translate(x, y);
 	};
 
-	self.fitImage = function() {
+	self.fitImage = function () {
 		// Calculates the scale factor to fit the image in canvas
 		var cv = self._Canvas;
 		var img = self.img;
@@ -509,39 +510,39 @@ function CanvasShow(containerName, zoomContainer) {
 		var sx = self.xAsPerPixel;
 		var sy = self.yAsPerPixel;
 
-		var angRad = radians(self.useDSS ? (0): (90 + self.positionAngle));
-		var rxy = rotate(angRad, -self.skyY*sy, -self.skyX*sx);		
+		var angRad = radians(self.useDSS ? (0) : (90 + self.positionAngle));
+		var rxy = rotate(angRad, -self.skyY * sy, -self.skyX * sx);
 
 		self.currDecDeg = self.centerDecDeg - rxy[0] / 3600;
-		var decDeg = self.currDecDeg;		
+		var decDeg = self.currDecDeg;
 
-		var cosDec = Math.cos (radians(decDeg));
-		cosDec = Math.max (cosDec, 1E-4);
+		var cosDec = Math.cos(radians(decDeg));
+		cosDec = Math.max(cosDec, 1E-4);
 
-		self.currRaDeg = self.centerRaDeg  - rxy[1] / 3600 / cosDec;
-		var raHrs = self.currRaDeg / 15;		
+		self.currRaDeg = self.centerRaDeg - rxy[1] / 3600 / cosDec;
+		var raHrs = self.currRaDeg / 15;
 
-		if (E('InputRAfd')) {
-			E('InputRAfd').value = toSexa(raHrs);
-			E('InputDECfd').value = toSexa(decDeg);        
-			E('MaskPAfd').value = self.currPosAngleDeg.toFixed(3);
+		if (E('inputrafd')) {
+			E('inputrafd').value = toSexa(raHrs);
+			E('inputdecfd').value = toSexa(decDeg);
+			E('maskpafd').value = self.currPosAngleDeg.toFixed(3);
 
-			showMsg ('statusDiv', "maskBase=" + self.maskBaseAngleDeg.toFixed(2) + ", north=" + north + ", scale="
-					+ self.tMatrix.getScale().toFixed(2) 
-					+ ", posAngle=" + self.positionAngle.toFixed(2) + " slitBase=" + self.slitBaseAngleDeg.toFixed(2) + " tx=" + degrees(tmatAngleRad).toFixed(2)
-					+ ", compass=" + self.compassNorthDeg.toFixed(2) 
-					+ ", slitRel2Mask=" + self.slitRel2MaskDeg.toFixed(2)
-					+ " tMatrixRot=" + degrees(tmatAngleRad).toFixed(2));
+			showMsg('statusDiv', "maskBase=" + self.maskBaseAngleDeg.toFixed(2) + ", north=" + north + ", scale="
+				+ self.tMatrix.getScale().toFixed(2)
+				+ ", posAngle=" + self.positionAngle.toFixed(2) + " slitBase=" + self.slitBaseAngleDeg.toFixed(2) + " tx=" + degrees(tmatAngleRad).toFixed(2)
+				+ ", compass=" + self.compassNorthDeg.toFixed(2)
+				+ ", slitRel2Mask=" + self.slitRel2MaskDeg.toFixed(2)
+				+ " tMatrixRot=" + degrees(tmatAngleRad).toFixed(2));
 		}
 	};
 
-	self.drawCompass = function (ctx) {		
+	self.drawCompass = function (ctx) {
 
-		function arrow (ctx, x0, y0, x1, y1, size) {
+		function arrow(ctx, x0, y0, x1, y1, size) {
 			var dx = x1 - x0;
 			var dy = y1 - y0;
 
-			var len = Math.sqrt(dx*dx + dy*dy);
+			var len = Math.sqrt(dx * dx + dy * dy);
 			var dx0 = dx / len;
 			var dy0 = dy / len;
 			var pdx = -dy0;
@@ -549,13 +550,13 @@ function CanvasShow(containerName, zoomContainer) {
 
 			var px0 = x1 - dx0 * size;
 			var py0 = y1 - dy0 * size;
-			var size2 = size/2;
+			var size2 = size / 2;
 
-			ctx.moveTo (x0, y0);
-			ctx.lineTo (x1, y1);
-			ctx.lineTo (px0 + pdx*size2, py0 + pdy*size2);
-			ctx.lineTo (px0 - pdx*size2, py0 - pdy*size2);
-			ctx.lineTo (x1, y1);
+			ctx.moveTo(x0, y0);
+			ctx.lineTo(x1, y1);
+			ctx.lineTo(px0 + pdx * size2, py0 + pdy * size2);
+			ctx.lineTo(px0 - pdx * size2, py0 - pdy * size2);
+			ctx.lineTo(x1, y1);
 		}
 
 		var color = '#ffff00';
@@ -569,26 +570,26 @@ function CanvasShow(containerName, zoomContainer) {
 		var y0 = 70;
 		var len = 50;
 
-		var north = rotateSaCa (sa, ca, 0, -len);
-		var northText = rotateSaCa (sa, ca, 0, -len-10);
-		var east = rotateSaCa (sa, ca, -len, 0);
-		var eastText = rotateSaCa (sa, ca, -len-10, 0); 
+		var north = rotateSaCa(sa, ca, 0, -len);
+		var northText = rotateSaCa(sa, ca, 0, -len - 10);
+		var east = rotateSaCa(sa, ca, -len, 0);
+		var eastText = rotateSaCa(sa, ca, -len - 10, 0);
 
 		with (ctx) {
-			setTransform (1, 0, 0, 1, 0, 0);			
-			strokeStyle = color;	
+			setTransform(1, 0, 0, 1, 0, 0);
+			strokeStyle = color;
 			lineWidth = 1;
 
-			beginPath();	
-			arrow (ctx, x0, y0, x0+north[0], y0+north[1], 8);			
-			arrow (ctx, x0, y0, x0+east[0], y0+east[1], 8);
+			beginPath();
+			arrow(ctx, x0, y0, x0 + north[0], y0 + north[1], 8);
+			arrow(ctx, x0, y0, x0 + east[0], y0 + east[1], 8);
 
 			stroke();
 
-			strokeText ('N', x0+northText[0], y0+northText[1]);
-			strokeText ('E', x0+eastText[0], y0+eastText[1]);
+			strokeText('N', x0 + northText[0], y0 + northText[1]);
+			strokeText('E', x0 + eastText[0], y0 + eastText[1]);
 		}
-	};	
+	};
 
 	self.calculateAngles = function () {
 		// positionAngle is telescope PA
@@ -598,9 +599,9 @@ function CanvasShow(containerName, zoomContainer) {
 		var maskAngle = self.maskTx.getRotAngle();
 		var north = self.northAngle;
 
-		self.currPosAngleDeg =  norm180((self.useDSS ? north : (180 + self.positionAngle)) - degrees(maskAngle));		
+		self.currPosAngleDeg = norm180((self.useDSS ? north : (180 + self.positionAngle)) - degrees(maskAngle));
 		// compass North in screen angle
-		self.compassNorthDeg = degrees(tmAngle) + (self.useDSS ? 0 : 90 + self.positionAngle);	
+		self.compassNorthDeg = degrees(tmAngle) + (self.useDSS ? 0 : 90 + self.positionAngle);
 		// not used
 		// slit angle in screen angle
 		self.slitBaseAngleDeg = self.compassNorthDeg + 90;
@@ -621,42 +622,42 @@ function CanvasShow(containerName, zoomContainer) {
 		var tp = tx.getTx(self.flipY);
 		var scaleF = tx.getScale();
 
-		var iwidth = self.img.width/2;
-		var iheight = self.img.height/2;		
+		var iwidth = self.img.width / 2;
+		var iheight = self.img.height / 2;
 
 		self.calculateAngles();
 
 		with (self._Ctx) {
 			setTransform(1, 0, 0, 1, 0, 0);
-			clearRect(0, 0, cv.width, cv.height);			
+			clearRect(0, 0, cv.width, cv.height);
 			transform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
 		}
 
 		// Draws the background images, applies contrast and copies result to
 		// tmpCtx2
-		self.filter.drawToOutputPart1 (self.img, self.skyX - iwidth, self.skyY - iheight);
+		self.filter.drawToOutputPart1(self.img, self.skyX - iwidth, self.skyY - iheight);
 
 		// Draw this after drawing the DSS/background image
 		// because contrast filter is applied to the DSS/background image.
 		var ctx2 = self.filter.tmpCtx2;
 		with (ctx2) {
 			setTransform(1, 0, 0, 1, 0, 0);
-			self.drawGuiderFOV (ctx2, self.guiderFOV);
+			self.drawGuiderFOV(ctx2, self.guiderFOV);
 			self.drawBadColumns(ctx2, self.badColumns);
 			var maskLayout = self.drawMask(ctx2, self.maskLayout);
 
-			var checker = new InOutChecker (maskLayout); //self.rotateMaskLayout(self.maskLayout));
+			var checker = new InOutChecker(maskLayout); //self.rotateMaskLayout(self.maskLayout));
 			self.drawTargets(ctx2, checker);
-			self.drawCompass(ctx2);			
+			self.drawCompass(ctx2);
 		}
 		// Copies result to destCtx
-		self.filter.drawToOutputPart2 ();
+		self.filter.drawToOutputPart2();
 
 		self.showPositionInfo();
 	};
 
-	self.redrawTxImage = function() {
-		window.requestAnimationFrame (self.reallyDrawTxImage);
+	self.redrawTxImage = function () {
+		window.requestAnimationFrame(self.reallyDrawTxImage);
 	};
 
 	self.drawPolylines = function (ctx, lines, color, lw) {
@@ -692,12 +693,12 @@ function CanvasShow(containerName, zoomContainer) {
 	//
 	// Draws targets according to options
 	//
-	self.drawTargets = function(ctx, checker) {	
+	self.drawTargets = function (ctx, checker) {
 
 		// This function is called once per target.
 		// It adds the target to the given list.
-		function addTo (list, idx, x, y) {
-			list.push (idx);
+		function addTo(list, idx, x, y) {
+			list.push(idx);
 			if (self.findIt) {
 				// Check if target is near to where the mouse was clicked.
 				var dx = Math.abs(self.searchX - x);
@@ -714,47 +715,47 @@ function CanvasShow(containerName, zoomContainer) {
 			}
 		}
 
-		function classify () {
+		function classify() {
 			// Depending on if target is inside/outside, or selected, push it to
 			// a different list to be displayed later.
 			for (i = 0; i < len; ++i) {
 				var x = xpos[i] + skyx;
 				var y = ypos[i] + skyy;
-				var sxy = tmax.w2s (x, y);
+				var sxy = tmax.w2s(x, y);
 				var sx = sxy[0];
 				var sy = sxy[1];
 
-				var pri = pcode[i];	
+				var pri = pcode[i];
 				xOut.push(sx);
 				yOut.push(sy);
 
 
 				if (pri == AlignBox) {
-					if (checker.checkPoint (sx, sy))
-						addTo (alignBoxInIdx, i, x, y);
+					if (checker.checkPoint(sx, sy))
+						addTo(alignBoxInIdx, i, x, y);
 					else
-						addTo (alignBoxOutIdx, i, x, y);
+						addTo(alignBoxOutIdx, i, x, y);
 					continue;
 				}
 
 				if (inMask[i]) {
 					// currently selected (via algorithm)
 					// show when when showing splits
-					slitsInMaskIdx.push (i);
+					slitsInMaskIdx.push(i);
 				}
 
 				if (pri >= showPriority) {
 					if (selected[i]) {
-						if (checker.checkPoint (sx, sy)) 
-							addTo (selectedInIdx, i, x, y);
+						if (checker.checkPoint(sx, sy))
+							addTo(selectedInIdx, i, x, y);
 						else
-							addTo (selectedOutIdx, i, x, y);
+							addTo(selectedOutIdx, i, x, y);
 					} else {
-						if (checker.checkPoint (sx, sy)) {
-							addTo (showInIdx, i, x, y);
+						if (checker.checkPoint(sx, sy)) {
+							addTo(showInIdx, i, x, y);
 						}
 						else {
-							addTo (showOutIdx, i, x, y);
+							addTo(showOutIdx, i, x, y);
 						}
 					}
 					continue;
@@ -762,55 +763,55 @@ function CanvasShow(containerName, zoomContainer) {
 
 				if (selected[i]) {
 					// selected via selected flag
-					if (checker.checkPoint (sx, sy)) 
-						addTo (selectedInIdx, i, x, y);
+					if (checker.checkPoint(sx, sy))
+						addTo(selectedInIdx, i, x, y);
 					else
-						addTo (selectedOutIdx, i, x, y);
+						addTo(selectedOutIdx, i, x, y);
 					continue;
 				}
 			}
 		}
 
-		function drawAlignBox (x, y, bsize) {
+		function drawAlignBox(x, y, bsize) {
 			// alignemtn box
 			with (ctx) {
-				moveTo (x-halfBoxSize, y-halfBoxSize);
-				lineTo (x-halfBoxSize, y+halfBoxSize);
-				lineTo (x+halfBoxSize, y+halfBoxSize);
-				lineTo (x+halfBoxSize, y-halfBoxSize);
-				lineTo (x-halfBoxSize, y-halfBoxSize);				
+				moveTo(x - halfBoxSize, y - halfBoxSize);
+				lineTo(x - halfBoxSize, y + halfBoxSize);
+				lineTo(x + halfBoxSize, y + halfBoxSize);
+				lineTo(x + halfBoxSize, y - halfBoxSize);
+				lineTo(x - halfBoxSize, y - halfBoxSize);
 			}
 		}
 
-		function drawTarget (x, y, bSize) {
+		function drawTarget(x, y, bSize) {
 			with (ctx) {
 				moveTo(x + bSize, y);
-				arc (x, y, bSize, 0, 2*Math.PI);
+				arc(x, y, bSize, 0, 2 * Math.PI);
 			}
 		}
 
-		function drawSelTarget (x, y, bSize) {
+		function drawSelTarget(x, y, bSize) {
 			with (ctx) {
 				moveTo(x + bSize, y);
-				arc (x, y, bSize, 0, 2*Math.PI);
+				arc(x, y, bSize, 0, 2 * Math.PI);
 
 				moveTo(x + bSize + 3, y);
-				arc (x, y, bSize + 3, 0, 2*Math.PI);
-			}			
+				arc(x, y, bSize + 3, 0, 2 * Math.PI);
+			}
 		}
 
-		function drawClickedOn (x, y, bSize) {			
+		function drawClickedOn(x, y, bSize) {
 			with (ctx) {
-				moveTo (x + bSize + 4, y);
-				arc (x, y, bSize + 4, 0, 2*Math.PI);
+				moveTo(x + bSize + 4, y);
+				arc(x, y, bSize + 4, 0, 2 * Math.PI);
 				moveTo(x, y - bSize);
-				lineTo(x, y + bSize);				
+				lineTo(x, y + bSize);
 				moveTo(x - bSize, y);
 				lineTo(x + bSize, y);
 			}
 		}
 
-		function drawSlit (idx) {
+		function drawSlit(idx) {
 			/*-
 			 * Position of the star is at x/y, already transformed to screen coordinates 
 			 * Lengths to left and right are l1/l2, in screen coordinates
@@ -818,21 +819,21 @@ function CanvasShow(containerName, zoomContainer) {
 			 */
 
 			// Mask Angle relative to screen
-			var maskBaseAngleRad = radians (self.maskBaseAngleDeg);
+			var maskBaseAngleRad = radians(self.maskBaseAngleDeg);
 			var maskXY = rotateSaCa(
-					Math.sin(maskBaseAngleRad), 
-					Math.cos(maskBaseAngleRad), 0, 1);
+				Math.sin(maskBaseAngleRad),
+				Math.cos(maskBaseAngleRad), 0, 1);
 
 			// Angle relative to screen
-			var slitAngle = radians(Number (slitPAs[idx]));
-			var slitAngleOnScreen = radians (self.slitBaseAngleDeg) - slitAngle;
+			var slitAngle = radians(Number(slitPAs[idx]));
+			var slitAngleOnScreen = radians(self.slitBaseAngleDeg) - slitAngle;
 
 			var x = xOut[idx];
 			var y = yOut[idx];
 			var l1 = length1s[idx] / self.xAsPerPixel * tmScale;
 			var l2 = length2s[idx] / self.xAsPerPixel * tmScale;
 
-			var slitWidth = slitWidths[idx];			
+			var slitWidth = slitWidths[idx];
 			var halfWidth = slitWidth / 2 / self.yAsPerPixel * tmScale;
 
 			var cosa = Math.cos(slitAngleOnScreen);
@@ -842,9 +843,9 @@ function CanvasShow(containerName, zoomContainer) {
 			var maskX = maskXY[0] * halfWidth;
 			var maskY = maskXY[1] * halfWidth;
 
-			var cosaMask = Math.abs(Math.cos(self.slitRel2Mask-slitAngle));
+			var cosaMask = Math.abs(Math.cos(self.slitRel2Mask - slitAngle));
 
-			if (projSlitLen) {				
+			if (projSlitLen) {
 				if (cosaMask < 0.3)
 					cosaMask = 0.3;
 				l1 /= cosaMask;
@@ -870,21 +871,21 @@ function CanvasShow(containerName, zoomContainer) {
 				 * just one line moveTo (x11, y11); lineTo (x12, y12);
 				 */
 
-				moveTo (x11 + maskX, y11 + maskY);
-				lineTo (x11 - maskX, y11 - maskY);
-				lineTo (x12 - maskX, y12 - maskY);
-				lineTo (x12 + maskX, y12 + maskY);
-				lineTo (x11 + maskX, y11 + maskY);
+				moveTo(x11 + maskX, y11 + maskY);
+				lineTo(x11 - maskX, y11 - maskY);
+				lineTo(x12 - maskX, y12 - maskY);
+				lineTo(x12 + maskX, y12 + maskY);
+				lineTo(x11 + maskX, y11 + maskY);
 
 				// Draw a cross that is aligned with the mask
-				moveTo (x-maskX, y-maskY);
-				lineTo (x+maskX, y+maskY);
-				moveTo (x+maskY, y-maskX);
-				lineTo (x-maskY, y+maskX);
+				moveTo(x - maskX, y - maskY);
+				lineTo(x + maskX, y + maskY);
+				moveTo(x + maskY, y - maskX);
+				lineTo(x - maskY, y + maskX);
 			}
 		} // end drawSlit
 
-		function XdrawSlit (idx) {
+		function XdrawSlit(idx) {
 			// Draws a slit
 			// Note that parameter is an index, not X/Y
 			//
@@ -893,19 +894,19 @@ function CanvasShow(containerName, zoomContainer) {
 
 			if (projSlitLen) {
 				cosa = Math.cos(angRad);
-				sina = Math.sin(angRad);	
+				sina = Math.sin(angRad);
 			}
 			else {
 				cosa = 1;
-				sina = Math.tan (angRad);
-			}					
+				sina = Math.tan(angRad);
+			}
 
 			var x = xOut[idx];
 			var y = yOut[idx];
 			var l1 = length1s[idx] / self.xAsPerPixel;
 			var l2 = length2s[idx] / self.xAsPerPixel;
 
-			var slitWidth = slitWidths[idx];			
+			var slitWidth = slitWidths[idx];
 			var halfWidth = slitWidth / 2 / self.yAsPerPixel;
 
 			var perp = tmax.rotatePnt(0, 1);
@@ -934,19 +935,19 @@ function CanvasShow(containerName, zoomContainer) {
 			 * y21 = t; }
 			 */
 			with (ctx) {
-				moveTo (x11, y11);
-				lineTo (x12, y12);
-				lineTo (x22, y22);
-				lineTo (x21, y21);
-				lineTo (x11, y11);				
-				moveTo (x-halfWidth, y);
-				lineTo (x+halfWidth, y);
-				moveTo (x, y-halfWidth);
-				lineTo (x, y+halfWidth);
+				moveTo(x11, y11);
+				lineTo(x12, y12);
+				lineTo(x22, y22);
+				lineTo(x21, y21);
+				lineTo(x11, y11);
+				moveTo(x - halfWidth, y);
+				lineTo(x + halfWidth, y);
+				moveTo(x, y - halfWidth);
+				lineTo(x, y + halfWidth);
 			}
 		} // end XdrawSlit
 
-		function drawListIdx (tlist, color, fnc) {
+		function drawListIdx(tlist, color, fnc) {
 			var idx;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
@@ -956,12 +957,12 @@ function CanvasShow(containerName, zoomContainer) {
 			ctx.stroke();
 		}
 
-		function drawList (tlist, color, fnc) {
+		function drawList(tlist, color, fnc) {
 			var idx;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
 			for (idx in tlist) {
-				var i = tlist[idx];				
+				var i = tlist[idx];
 				var x = xOut[i];
 				var y = yOut[i];
 				fnc(x, y, Math.max(3, targetSizeScale / magn[i]));
@@ -973,8 +974,8 @@ function CanvasShow(containerName, zoomContainer) {
 		if (!targets)
 			return;
 
-		var tmax = self.tMatrix;		
-		var xpos = targets.xarcs; 
+		var tmax = self.tMatrix;
+		var xpos = targets.xarcs;
 		var ypos = targets.yarcs;
 		var slitPAs = targets.slitPA;
 		var slitWidths = targets.slitWidth;
@@ -984,7 +985,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var selected = targets.selected;
 		var inMask = targets.inMask;
 		var pcode = targets.pcode;
-		var len = xpos.length;		
+		var len = xpos.length;
 
 		var selectedInIdx = [];
 		var selectedOutIdx = []
@@ -1002,10 +1003,10 @@ function CanvasShow(containerName, zoomContainer) {
 
 		var tmScale = tmax.getScale();
 		var targetSizeScale = tmScale * 50;
-		
-		var boxSize = tmScale * Math.max(2, Number(E('AlignBoxSizefd').value));
+
+		var boxSize = tmScale * Math.max(2, Number(E('alignboxsizefd').value));
 		var halfBoxSize = boxSize / 2;
-		var minDist = 1E10;		
+		var minDist = 1E10;
 
 		var skyx = self.skyX;
 		var skyy = self.skyY;
@@ -1014,7 +1015,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var showSelected = E('showSelected').checked;
 		var showByPriority = E('showByPriority').checked;
 		var showSlitPos = E('showSlitPos').checked;
-		var projSlitLen = toBoolean (E('ProjSlitLengthfd').value);
+		var projSlitLen = toBoolean(E('projslitlengthfd').value);
 		var showPriority = self.showMinPriority;
 
 		if (showSlitPos) {
@@ -1030,28 +1031,28 @@ function CanvasShow(containerName, zoomContainer) {
 				showByPriority = 1;
 				showSelected = 1;
 			}
-		}        
+		}
 
 		ctx.lineWidth = 1;
-		ctx.lineCap ='square';
+		ctx.lineCap = 'square';
 
 		classify();
 
-		self.insideTargetsIdx = new Array().concat (selectedInIdx, showInIdx, alignBoxInIdx);
+		self.insideTargetsIdx = new Array().concat(selectedInIdx, showInIdx, alignBoxInIdx);
 
 		if (showAlignBox) {
-			drawList (alignBoxInIdx, '#99ff99', drawAlignBox);
-			drawList (alignBoxOutIdx, '#ff0000', drawAlignBox);
+			drawList(alignBoxInIdx, '#99ff99', drawAlignBox);
+			drawList(alignBoxOutIdx, '#ff0000', drawAlignBox);
 		}
 
 		if (showSelected || showByPriority) {
-			drawList (selectedInIdx, '#99ff99', drawSelTarget);		
-			drawList (selectedOutIdx, '#ff0000', drawSelTarget);
+			drawList(selectedInIdx, '#99ff99', drawSelTarget);
+			drawList(selectedOutIdx, '#ff0000', drawSelTarget);
 		}
 
 		if (showByPriority) {
-			drawList (showInIdx, '#99ff99', drawTarget);
-			drawList (showOutIdx, '#ff0000', drawTarget);
+			drawList(showInIdx, '#99ff99', drawTarget);
+			drawList(showOutIdx, '#ff0000', drawTarget);
 		}
 
 		if (self.selectedTargetIdx >= 0) {
@@ -1059,9 +1060,9 @@ function CanvasShow(containerName, zoomContainer) {
 		}
 
 		if (showSlitPos) {
-			drawListIdx (slitsInMaskIdx, '#22ffaa', drawSlit);
+			drawListIdx(slitsInMaskIdx, '#22ffaa', drawSlit);
 		}
-	};	
+	};
 
 	self.selectTarget = function (mx, my) {
 		// Selecte target with mouse
@@ -1069,27 +1070,27 @@ function CanvasShow(containerName, zoomContainer) {
 		var skyy = self.skyY;
 		var tmat = self.tMatrix;
 		var scale = tmat.getScale();
-		var xy = tmat.s2w (mx, my, 0);
+		var xy = tmat.s2w(mx, my, 0);
 
 		self.searchX = xy[0];
 		self.searchY = xy[1];
 		self.thold = Math.min(7 / scale, 7);
 
 		var sIdx = self.selectedTargetIdx;
-		if (sIdx >=0) {
-			self.targetTable.markNormal (sIdx); 
+		if (sIdx >= 0) {
+			self.targetTable.markNormal(sIdx);
 		}
 		self.selectedTargetIdx = -1;
-		self.findIt = 1;	
+		self.findIt = 1;
 		self.reallyDrawTxImage();
 		self.findIt = 0;
 
 		var i, row;
 		var found = self.selectedTargetIdx;
 		if (found >= 0) {
-			self.showTargetForm (found);
-			self.targetTable.scrollTo (found);
-			self.targetTable.highLight (found);
+			self.showTargetForm(found);
+			self.targetTable.scrollTo(found);
+			self.targetTable.highLight(found);
 		}
 	};
 
@@ -1107,7 +1108,7 @@ function CanvasShow(containerName, zoomContainer) {
 		E('targetSlitPA').value = targets.slitPA[targetIdx];
 		E('targetSlitWidth').value = targets.slitWidth[targetIdx];
 		E('targetLength1').value = targets.length1[targetIdx].toFixed(2);
-		E('targetLength2').value = targets.length2[targetIdx].toFixed(2);		
+		E('targetLength2').value = targets.length2[targetIdx].toFixed(2);
 	};
 
 	self.updateTarget = function () {
@@ -1122,9 +1123,9 @@ function CanvasShow(containerName, zoomContainer) {
 		targets.length2[idx] = Number(E('targetLength2').value);
 
 		self.reDrawTable();
-		self.targetTable.scrollTo (idx);
-		self.targetTable.highLight (idx);
-		self.reallyDrawTxImage();		
+		self.targetTable.scrollTo(idx);
+		self.targetTable.highLight(idx);
+		self.reallyDrawTxImage();
 	};
 
 	self.clickedRow = function (evt) {
@@ -1132,10 +1133,10 @@ function CanvasShow(containerName, zoomContainer) {
 		var tId = this.id;
 		var idx = Number(tId.replace('target', ''));
 
-		self.targetTable.markNormal (oldIdx);
-		self.targetTable.highLight (idx);
+		self.targetTable.markNormal(oldIdx);
+		self.targetTable.highLight(idx);
 		self.selectedTargetIdx = idx;
-		self.showTargetForm (idx);
+		self.showTargetForm(idx);
 		self.redrawTxImage();
 	};
 
@@ -1143,8 +1144,8 @@ function CanvasShow(containerName, zoomContainer) {
 		// Rotates mask layout for drawing.
 		// Applies rotation directly to the vertices of the mask.
 		// Returns the rotated coordinates of the mask for drawing.
-		var sx = 1.0/ self.xAsPerPixel;
-		var sy = 1.0/ self.yAsPerPixel;
+		var sx = 1.0 / self.xAsPerPixel;
+		var sy = 1.0 / self.yAsPerPixel;
 		var rotX = self.maskOffsetX;
 		var rotY = self.maskOffsetY;
 		var tmax = self.tMatrix;
@@ -1160,8 +1161,8 @@ function CanvasShow(containerName, zoomContainer) {
 		var out = Array();
 		for (i in mask) {
 			var row = mask[i];
-			var x = (row[0]-rotX) * sx;
-			var y = (row[1]-rotY) * sy;
+			var x = (row[0] - rotX) * sx;
+			var y = (row[1] - rotY) * sy;
 
 			var rx = a * x + c * y + rotX;
 			var ry = b * x + d * y + rotY;
@@ -1173,23 +1174,23 @@ function CanvasShow(containerName, zoomContainer) {
 		}
 		return out;
 	};
-	
+
 	self.drawGuiderFOV = function (ctx, guiderFOV) {
 		if (!E('showGuiderFOV').checked) return;
 		var layout = self.rotateMaskLayout(guiderFOV);
-		self.drawPolylines (ctx, layout, self.guiderFOVColor, 3);
+		self.drawPolylines(ctx, layout, self.guiderFOVColor, 3);
 	};
-	
+
 	self.drawBadColumns = function (ctx, badColumns) {
 		if (!E('showBadColumns').checked) return;
 		var layout = self.rotateMaskLayout(badColumns);
-		self.drawPolylines (ctx, layout, self.BadColumnsColor, 3);
+		self.drawPolylines(ctx, layout, self.BadColumnsColor, 3);
 	};
-	
-	self.drawMask = function(ctx, mask) {
-		var layout = mask.concat (self.centerMarker);
+
+	self.drawMask = function (ctx, mask) {
+		var layout = mask.concat(self.centerMarker);
 		var layout1 = self.rotateMaskLayout(layout);
-		self.drawPolylines (ctx, layout1, self.maskColor, 1);
+		self.drawPolylines(ctx, layout1, self.maskColor, 1);
 		return layout1;
 	};
 
@@ -1206,12 +1207,12 @@ function CanvasShow(containerName, zoomContainer) {
 			prent = prent.offsetParent;
 		}
 		return {
-			x : absLeft,
-			y : absTop
+			x: absLeft,
+			y: absTop
 		};
 	};
 
-	self.mouseUp = function(evt) {
+	self.mouseUp = function (evt) {
 		evt = evt || window.event;
 		evt.stopPropagation();
 		evt.preventDefault();
@@ -1221,14 +1222,14 @@ function CanvasShow(containerName, zoomContainer) {
 		var dy = my - self.anchory;
 		self.dragging = 0;
 		if (E('enableSelection').checked && abs(dx) < 2 && abs(dy) < 2) {
-			var ePos = getAbsPosition(self.contElem);		
-			self.selectTarget (mx - ePos.x, my - ePos.y);
+			var ePos = getAbsPosition(self.contElem);
+			self.selectTarget(mx - ePos.x, my - ePos.y);
 		}
 		self.redrawTxImage();
 		return false;
 	};
 
-	self.mouseDown = function(evt) {
+	self.mouseDown = function (evt) {
 		evt = evt || window.event;
 		evt.stopPropagation();
 		evt.preventDefault();
@@ -1257,30 +1258,30 @@ function CanvasShow(containerName, zoomContainer) {
 		return false;
 	};
 
-	self.reportPxValue = function(mx, my) {
-		if (!self.targets) 
+	self.reportPxValue = function (mx, my) {
+		if (!self.targets)
 			return;
 		var tmat = self.tMatrix;
-		var xy = tmat.s2w (mx, my, 0); // x/y coordinates in arcsec
-		var sx = self.xAsPerPixel; 
-		var sy = self.yAsPerPixel; 
+		var xy = tmat.s2w(mx, my, 0); // x/y coordinates in arcsec
+		var sx = self.xAsPerPixel;
+		var sy = self.yAsPerPixel;
 
 		var angRad = self.useDSS ? 0 : radians(90 + self.positionAngle);
 
-		var rxy = rotate(angRad, (xy[1]-self.skyY)*sy, (xy[0]-self.skyX)*sx);
+		var rxy = rotate(angRad, (xy[1] - self.skyY) * sy, (xy[0] - self.skyX) * sx);
 
 		var dec = self.centerDecDeg - (rxy[0]) / 3600;
 
-		var cosDec = Math.cos (radians(dec));
-		cosDec = Math.max (cosDec, 1E-4);
+		var cosDec = Math.cos(radians(dec));
+		cosDec = Math.max(cosDec, 1E-4);
 
 		var raHrs = (self.centerRaDeg - (rxy[1]) / 3600 / cosDec) / 15;
 		while (raHrs > 24) raHrs -= 24;
 		while (raHrs < 0) raHrs += 24;
 
-		showMsg('mouseStatus', "RA hrs= " + toSexa(raHrs) + " DEC deg= "  + toSexa(dec) +
-				" x=" + xy[0].toFixed(2) + " y=" + xy[1].toFixed(2) + 
-				" skyX=" + self.skyX.toFixed(1) + " skyY=" + self.skyY.toFixed(1));
+		showMsg('mouseStatus', "RA hrs= " + toSexa(raHrs) + " DEC deg= " + toSexa(dec) +
+			" x=" + xy[0].toFixed(2) + " y=" + xy[1].toFixed(2) +
+			" skyX=" + self.skyX.toFixed(1) + " skyY=" + self.skyY.toFixed(1));
 	};
 
 	self.zoomAll = function (mv) {
@@ -1295,7 +1296,7 @@ function CanvasShow(containerName, zoomContainer) {
 	self.panAll = function (dx, dy) {
 		var tx = self.tMatrix;
 		tx.translate(dx, dy);
-	};	
+	};
 
 	self.rotateSkyAngle = function (angRad) {
 		//
@@ -1303,7 +1304,7 @@ function CanvasShow(containerName, zoomContainer) {
 		// such that the remains at the same display position.
 		//
 		var tx = self.tMatrix;
-		var xy = tx.w2s (self.maskOffsetX, self.maskOffsetY, false);		
+		var xy = tx.w2s(self.maskOffsetX, self.maskOffsetY, false);
 
 		tx.rotate(angRad, xy[0], xy[1]);
 	};
@@ -1315,7 +1316,7 @@ function CanvasShow(containerName, zoomContainer) {
 		var xc = cv.width / 2;
 		var yc = cv.height / 2;
 		tx.rotate(angRad, xc, yc);
-	};	
+	};
 
 	self.panSky = function (dx, dy) {
 		var tx = self.tMatrix;
@@ -1333,8 +1334,8 @@ function CanvasShow(containerName, zoomContainer) {
 		var ndx = a * dx + b * dy;
 		var ndy = c * dx + d * dy;
 
-		self.skyX += ndx / scale /scale;
-		self.skyY += ndy /scale /scale;
+		self.skyX += ndx / scale / scale;
+		self.skyY += ndy / scale / scale;
 	};
 
 	self.rotateMask = function (ang) {
@@ -1347,13 +1348,13 @@ function CanvasShow(containerName, zoomContainer) {
 		tx.rotate(ang, xc, yc);
 	};
 
-	self.mouseMove = function(evt) {		
-		function whichButton (evt) {
-			var bbb = evt.buttons || evt.which || evt.button;		
+	self.mouseMove = function (evt) {
+		function whichButton(evt) {
+			var bbb = evt.buttons || evt.which || evt.button;
 			if (bbb === 1) return 1;
 			if (bbb === 2) return 2;
 			if (bbb === 4) return 4;
-			return 0;		
+			return 0;
 		}
 
 		// Not used
@@ -1368,26 +1369,26 @@ function CanvasShow(containerName, zoomContainer) {
 			}
 		}
 
-		function performMouseAction () {
+		function performMouseAction() {
 			switch (self.mouseAction) {
-			case 'panAll':
-				self.panAll(dx, dy);
-				break;
-			case 'panSky':
-				self.panSky(dx, dy);
-				break;
-			case 'rotateAll':
-				self.rotateAll(newAngle-self.baseAngle);
-				break;
-			case 'rotateSky':
-				self.rotateMask (-newAngle+self.baseAngle);
-				self.rotateSkyAngle (newAngle-self.baseAngle);
-				break;
-			case 'zoom':
-				break;
-			case 'contrast':
-				contrasting();
-				break;
+				case 'panAll':
+					self.panAll(dx, dy);
+					break;
+				case 'panSky':
+					self.panSky(dx, dy);
+					break;
+				case 'rotateAll':
+					self.rotateAll(newAngle - self.baseAngle);
+					break;
+				case 'rotateSky':
+					self.rotateMask(-newAngle + self.baseAngle);
+					self.rotateSkyAngle(newAngle - self.baseAngle);
+					break;
+				case 'zoom':
+					break;
+				case 'contrast':
+					contrasting();
+					break;
 			}
 		}
 
@@ -1407,7 +1408,7 @@ function CanvasShow(containerName, zoomContainer) {
 			self.reportPxValue(mx - ePos.x, my - ePos.y);
 			return;
 		}
-		
+
 		var tx = self.tMatrix;
 		var cv = self._Canvas;
 		var xc = cv.width / 2;
@@ -1415,10 +1416,10 @@ function CanvasShow(containerName, zoomContainer) {
 		var scale = tx.getScale();
 
 		var newAngle = Math.atan2(my - yc - ePos.y, mx - xc - ePos.x);
-		var button = whichButton (evt);
-		
+		var button = whichButton(evt);
+
 		performMouseAction();
-		
+
 		self.redrawTxImage();
 		self.lastmx = mx;
 		self.lastmy = my;
@@ -1426,58 +1427,58 @@ function CanvasShow(containerName, zoomContainer) {
 		return false;
 	};
 
-	self.mouseExit = function(evt) {
+	self.mouseExit = function (evt) {
 		self.dragging = 0;
 		self.contElem.blur();
 	};
 
-	self.moveLeft = function() {
+	self.moveLeft = function () {
 		self.skyX -= 10;
 	};
 
-	self.moveRight = function() {
+	self.moveRight = function () {
 		self.skyX += 10;
 	};
 
-	self.moveUp = function() {
+	self.moveUp = function () {
 		self.skyY -= 10;
 	};
 
-	self.moveDown = function() {
+	self.moveDown = function () {
 		self.skyY += 10;
 	};
 
-	self.keypressed = function(evt) {
+	self.keypressed = function (evt) {
 		var activeElem = document.activeElement;
 		if (self.contElem != activeElem)
 			return true;
 		evt.preventDefault();
 		var k = evt.key;
 		switch (k) {
-		case 'h':
-			self.panAll(5, 0);
-			break;
-		case 'l':
-			self.panAll(-5, 0);
-			break;
-		case 'j':
-			self.panAll(0, 5);
-			break;
-		case 'k':
-			self.panAll(0, -5);
-			break;
-		case '+':
-		case '>':
-		case '.':
-			self.zoomAll (3);
-			break;
-		case '-':
-		case '<':
-		case ',':
-			self.zoomAll (-3);
-			break;
-		default:	
-			break;
+			case 'h':
+				self.panAll(5, 0);
+				break;
+			case 'l':
+				self.panAll(-5, 0);
+				break;
+			case 'j':
+				self.panAll(0, 5);
+				break;
+			case 'k':
+				self.panAll(0, -5);
+				break;
+			case '+':
+			case '>':
+			case '.':
+				self.zoomAll(3);
+				break;
+			case '-':
+			case '<':
+			case ',':
+				self.zoomAll(-3);
+				break;
+			default:
+				break;
 		}
 		self.redrawTxImage();
 		return false;
@@ -1490,20 +1491,20 @@ function CanvasShow(containerName, zoomContainer) {
 		return false;
 	};
 
-	self.setMinPriority = function(mprio) {
+	self.setMinPriority = function (mprio) {
 		self.showMinPriority = Number(mprio);
 	};
 
-	self.show = function(imgUrl, flipY) {
+	self.show = function (imgUrl, flipY) {
 		self.img.src = imgUrl;
 		self.flipY = flipY;
 	};
 
-	self.fit = function() {
+	self.fit = function () {
 		self.mustFit = 1;
 	};
 
-	self.resetDisplay = function() {
+	self.resetDisplay = function () {
 		// Refits image and redraw
 		// Retains the sky offsets
 		// if (!self.img)
@@ -1512,18 +1513,18 @@ function CanvasShow(containerName, zoomContainer) {
 		// showMsg ('testDiv', "mask=" + self.maskTx.toString() + "sky=" +
 		// self.tMatrix.toString());
 		self.fitMask();
-		self.rotateSkyAngle (-maskAngleRad + Math.PI);
+		self.rotateSkyAngle(-maskAngleRad + Math.PI);
 		self.filter.setParams(1, 0);
 	};
 
-	self.resetOffsets = function() {
+	self.resetOffsets = function () {
 		/*
 		 * SkyX, SkyY = position of the sky, The matrix tmatrix is for display
 		 * only. The rotation in maskTx is the real rotation. Retains the
 		 * zooming scale, so it operates only on maskTx.
 		 */
 		self.skyX = 0;
-		self.skyY = 0;		
+		self.skyY = 0;
 
 		// var before = "mask=" + self.maskTx.toString() + "sky=" +
 		// self.tMatrix.toString();
@@ -1536,12 +1537,12 @@ function CanvasShow(containerName, zoomContainer) {
 
 		if (self.useDSS) {
 			var north = radians(self.northAngle + self.positionAngle);
-			self.rotateSkyAngle (maskAngleRad + north);
+			self.rotateSkyAngle(maskAngleRad + north);
 			self.rotateMask(-north);
 		}
 		else {
-			self.rotateSkyAngle (Math.PI + maskAngleRad);
-			self.maskTx.setRotAngle (Math.PI);
+			self.rotateSkyAngle(Math.PI + maskAngleRad);
+			self.maskTx.setRotAngle(Math.PI);
 		}
 
 		// var after = "mask=" + self.maskTx.toString() + "sky=" +
@@ -1549,15 +1550,15 @@ function CanvasShow(containerName, zoomContainer) {
 		// showMsg ('testDiv', "before " + before + "<br>after=" + after);
 
 		// self.redrawTxImage();
-	};	
+	};
 
 	self.reDrawTable = function () {
 		E('targetTableDiv').innerHTML = self.targetTable.showTable();
-		self.targetTable.setOnClickCB (self.clickedRow);
-		self.targetTable.setSortClickCB (self.reDrawTable);
+		self.targetTable.setOnClickCB(self.clickedRow);
+		self.targetTable.setSortClickCB(self.reDrawTable);
 	};
 
-	self.setTargets = function(targets) {
+	self.setTargets = function (targets) {
 		self.targets = targets;
 
 		var raHours = targets.raHour;
@@ -1574,8 +1575,8 @@ function CanvasShow(containerName, zoomContainer) {
 		targets.decSexa = decSexa;
 
 		self.insideTargetsIdx = [];
-		self.targetTable = new TargetTable (targets);
-		self.reDrawTable ();
+		self.targetTable = new TargetTable(targets);
+		self.reDrawTable();
 	};
 
 	self.setMaskLayout = function (layout, guiderFOV, badCols) {
@@ -1587,15 +1588,15 @@ function CanvasShow(containerName, zoomContainer) {
 
 	self.initialize();
 
-    E('showGuiderFOV').onchange = self.reallyDrawTxImage;
-    E('showBadColumns').onchange = self.reallyDrawTxImage;
-    
-	E('panAll').onchange = function () { self.mouseAction ='panAll'};
-	E('panSky').onchange = function () { self.mouseAction ='panSky'};
-	E('rotateAll').onchange = function () { self.mouseAction ='rotateAll'};
-	E('rotateSky').onchange = function () { self.mouseAction ='rotateSky'};
-    E('enableSelection').onchange = function () { self.mouseAction ='selection'};
-    E('panAll').checked = true;
+	E('showGuiderFOV').onchange = self.reallyDrawTxImage;
+	E('showBadColumns').onchange = self.reallyDrawTxImage;
+
+	E('panAll').onchange = function () { self.mouseAction = 'panAll' };
+	E('panSky').onchange = function () { self.mouseAction = 'panSky' };
+	E('rotateAll').onchange = function () { self.mouseAction = 'rotateAll' };
+	E('rotateSky').onchange = function () { self.mouseAction = 'rotateSky' };
+	E('enableSelection').onchange = function () { self.mouseAction = 'selection' };
+	E('panAll').checked = true;
 
 	self.contElem.onmouseup = self.mouseUp;
 	self.contElem.onmousedown = self.mouseDown;
