@@ -21,7 +21,7 @@ import warnings
 
 from smdtLibs.inOutChecker import InOutChecker
 from smdtLibs.configFile import ConfigFile
-from smdtLibs.utils import sexg2Float
+from smdtLibs.utils import sexg2Float, toSexagecimal
 
 from targets import TargetList
 from maskLayouts import MaskLayouts
@@ -112,7 +112,7 @@ SlitObjMap,C,BotDist,SlitObjMap,BotDist
 """
 
 
-class MaskDesignFile:
+class MaskDesignOutputFitsFile:
     def __init__(self, targetList):
         """
         This class represents the Mask Design Fits File.
@@ -121,6 +121,15 @@ class MaskDesignFile:
         targetList: input target list.
     
         The FITS file contains 8 tables, see _getHDUList().
+
+        - Table objectcat: star catalog
+        - Table catfiles:  input catalog file name(s), not used?
+        - Table maskdesign: mask's metadata, contains referecne RA/DEC
+        - Table desislits: Slits RA/DEC, lengths, PAs
+        - Table slitobjmap: object position inside the slits
+        - Table maskblu: more meta data, includes, temp, humidity, pressure, wavelength
+        - Table bluslits: slist coordiantes, 4 corners
+        - Table rdbmap: field name mapping to database
 
         """
         self.targetList = targetList
@@ -136,14 +145,14 @@ class MaskDesignFile:
         zeros = [0] * nTargets
         objClass = [objClassTable[min(3, p + 2)] for p in targets.pcode]
         cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=range(nTargets),))
-        cols.append(pf.Column(name="OBJECT", format="A68", null="INDEF", unit="None", array=targets.name,))
+        cols.append(pf.Column(name="OBJECT", format="A68", null="INDEF", unit="None", array=targets.objectId,))
         cols.append(pf.Column(name="RA_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.raHour * 15.0,))
         cols.append(pf.Column(name="DEC_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.decDeg,))
         cols.append(pf.Column(name="RADESYS", format="A8", null="INDEF", unit="None"))
         cols.append(pf.Column(name="EQUINOX", format="F8.3", null="-9999.00", unit="a", array=[2000] * nTargets,))
         cols.append(pf.Column(name="MJD-OBS", format="F11.3", null="-9999.000", unit="d", array=zeros))
         cols.append(pf.Column(name="mag", format="F7.3", null="-9999.0", unit="None", array=targets.mag,))
-        cols.append(pf.Column(name="pBand", format="A6", null="INDEF", unit="None", array=targets.band))
+        cols.append(pf.Column(name="pBand", format="A6", null="INDEF", unit="None", array=targets.pBand))
         cols.append(pf.Column(name="RadVel", format="F10.3", null="-9999.000", unit="None", array=zeros,))
         cols.append(pf.Column(name="MajAxis", format="F9.2", null="-9999.00", unit="arcsec", array=zeros,))
         cols.append(pf.Column(name="MajAxPA", format="F8.2", null="-9999.00", unit="deg", array=zeros))
@@ -167,7 +176,7 @@ class MaskDesignFile:
 
     def genMaskDesign(self):
         """
-        Generates the mask desing parameter table.
+        Generates the mask design parameter table.
         """
         tlist = self.targetList
         targets = tlist.targets
@@ -201,6 +210,13 @@ class MaskDesignFile:
     def genDesiSlits(self):
         """
         Generates the slit table
+        Includes slits RA/DEC and PA
+
+        Slit type:
+        A: alignment
+        G: guider
+        I: ignore
+        P: target
         """
         targets = self.targetList.targets
         cols = []
@@ -221,7 +237,7 @@ class MaskDesignFile:
             cols.append(pf.Column(name="slitDec", format="F12.8", null="-9999.000000", unit="deg", array=objInMask.decDeg,))
             cols.append(pf.Column(name="slitTyp", format="A1", null="I", unit="None", array=slitTypes))
             cols.append(pf.Column(name="slitLen", format="F11.3", null="-9999.000", unit="arcsec", array=slitLengths,))
-            cols.append(pf.Column(name="slitLPA", format="F8.3", null="-9999.00", unit="deg", array=objInMask.slitPA,))
+            cols.append(pf.Column(name="slitLPA", format="F8.3", null="-9999.00", unit="deg", array=objInMask.slitLPA,))
             cols.append(pf.Column(name="slitWid", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.slitWidth,))
             cols.append(pf.Column(name="slitWPA", format="F8.3", null="-9999.00", unit="deg", array=[140] * nSlits,))
         return pf.TableHDU.from_columns(cols, name="DesiSlits")
@@ -291,7 +307,7 @@ class MaskDesignFile:
             slitWidths = objInMask.slitWidth
             half = slitWidths
 
-            relAngles = np.radians(float(params.MaskPA[0]) - objInMask.slitPA)
+            relAngles = np.radians(float(params.MaskPA[0]) - objInMask.slitLPA)
             sines = np.sin(relAngles)
             cosines = np.cos(relAngles)
 
@@ -376,4 +392,125 @@ class MaskDesignFile:
         """
         hlist = self._getHDUList()
         hlist.writeto(fileName)
+
+
+def outputAsList(fileName, targets):
+    """
+    Outputs target list in list form, as as the input list form
+    """
+    with open(fileName, "w") as fh:
+        for i, row in targets.iterrows():
+            print(
+                "{:18s}{} {} {:.0f}{:>6.2f} {} {:5d} {} {} {}".format(
+                    row.objectId,
+                    toSexagecimal(row.raHour),
+                    toSexagecimal(row.decDeg),
+                    row.eqx,
+                    row.mag,
+                    row.pBand,
+                    row.pcode,
+                    row.sampleNr,
+                    row.selected,
+                    row.slitLPA,
+                ),
+                file=fh,
+            )
+
+
+class MaskDesignInputFitsFile:
+    """
+    This class handles the Fits File generated by MaskDesignOutputFitsFile
+    """
+
+    def __init__(self, fileName):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", AstropyWarning)
+            self.tables = []
+            ff = pf.open(fileName)
+            for hdr in ff:
+                self.tables.append(hdr.name)
+                self.__dict__[hdr.name.lower()] = pd.DataFrame(hdr.data)
+            self.allSlits = self.mergeSlitTables()
+
+    def mergeSlitTables(self):
+        """
+        Returns a dataframe that contains all the slit information.
+
+        slitobjmap : object position inside slits
+        bluslits: X/Y of 4 corners of the slits
+        desislits: RA/DEC coordinate and PAs of the slists
+        
+        All joined together in a single table: allSlits
+
+        """
+        self.objectcat.ObjClass = [s.strip() for s in self.objectcat.ObjClass]
+        d1 = self.bluslits.join(self.slitobjmap, lsuffix="", rsuffix="_1")
+        d2 = d1.join(self.desislits, lsuffix="", rsuffix="_2")
+        return d2
+
+    def getObjOnSlit(self, slits=None):
+        """
+        Returns the position of the object within the slit, 
+        using the geometry of the list and the lenghts ratio
+        """
+        slits = self.allSlits if slits is None else slits
+        x0 = (slits.slitX1 + slits.slitX4) / 2
+        y0 = (slits.slitY1 + slits.slitY4) / 2
+        x1 = (slits.slitX3 + slits.slitX2) / 2
+        y1 = (slits.slitY3 + slits.slitY2) / 2
+
+        t = slits.TopDist / (slits.TopDist + slits.BotDist)
+        x = (x1 - x0) * t + x0
+        y = (y1 - y0) * t + y0
+        return x, y
+
+    def getLengths(self):
+        slits = self.allSlits
+        x0 = slits.slitX1
+        x1 = slits.slitX2
+        y0 = slits.slitY1
+        y1 = slits.slitY2
+        dists = np.max(np.abs(x1 - x0), np.abs(y1 - y0))
+        return dists
+
+    def getCenter(self):
+        """
+        Returns the pointing RA/DEC as (ra, dec)
+        """
+        return self.maskdesign.RA_PNT[0], self.maskdesign.DEC_PNT[0]
+
+    def getAlignBoxes(self, slits=None):
+        slits = self.allSlists if slits == None else slits
+        return slits[["A" == s for s in slits.slitTyp]]
+
+    def getAsTargets(self, cenRADeg, cenDecDeg, config):
+        """
+        Returns the target list stored int the FITS file as a TargetList object.
+        """
+
+        def genPcode():
+            table = {"A": -2, "G": -1, "I": 0, "P": 1}
+            return [table[t] for t in self.allSlits.slitTyp]
+
+        orgIndices = [int(d) for d in self.slitobjmap.ObjectId]
+        objects = self.objectcat
+        nSlits = len(self.allSlits)
+        self.allSlits["raHour"] = [objects.RA_OBJ.iloc[d] / 15.0 for d in orgIndices]
+        self.allSlits["decDeg"] = [objects.DEC_OBJ.iloc[d] for d in orgIndices]
+
+        self.allSlits["objectId"] = [objects.OBJECT.iloc[d].strip() for d in orgIndices]
+        self.allSlits["eqx"] = [objects.EQUINOX.iloc[d] for d in orgIndices]
+        self.allSlits["mag"] = [objects.mag.iloc[d] for d in orgIndices]
+        self.allSlits["pBand"] = [objects.pBand.loc[d].strip() for d in orgIndices]
+
+        self.allSlits["orgIndex"] = range(nSlits)
+        self.allSlits["inMask"] = [0] * nSlits
+        self.allSlits["selected"] = [1] * nSlits
+        self.allSlits["pcode"] = genPcode()
+        self.allSlits["sampleNr"] = [1] * nSlits
+
+        # raDeg, decDeg = self.getCenter()
+        paDeg = self.maskdesign.PA_PNT
+
+        return TargetList(pd.DataFrame(self.allSlits), cenRADeg, cenDecDeg, paDeg, config, useDSS=False)
 

@@ -47,7 +47,7 @@ class InOutChecker:
                 x2, y2 = x, y
             elif flag == 2:
                 x1, y1 = x2, y2
-                x1, y1 = x0, y0
+                x2, y2 = x0, y0
 
             if y1 > y2:
                 xx1, yy1, xx2, yy2 = x2, y2, x1, y1

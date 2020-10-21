@@ -21,15 +21,20 @@ import sys
 import os
 import argparse
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 from urllib.parse import quote
 from threading import Thread
 
 from smdtLibs import utils
+from smdtLibs import drawUtils
 from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
 from smdtLibs.configFile import ConfigFile
 from slitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
-from maskDesignFile import MaskDesignFile
+from maskDesignFile import MaskDesignOutputFitsFile
 
 GlobalData = {}
 
@@ -37,7 +42,7 @@ GlobalData = {}
 def _getData(_id):
     d = GlobalData.get(_id)
     if not d:
-        d = SlitmaskDesignTool(b"", 0, None)
+        d = SlitmaskDesignTool(b"", config=None, useDSS=False)
     return d
 
 
@@ -59,7 +64,7 @@ class SMDesignHandler(EasyHTTPHandler):
         """
         content = qstr["targetList"][0]
         useDSS = self.intVal(qstr, "formUseDSS", 0)
-        _setData("smdt", SlitmaskDesignTool(content, useDSS, self.config))
+        _setData("smdt", SlitmaskDesignTool(content, self.config, useDSS))
         return "OK", self.PlainTextType
 
     @utils.tryEx
@@ -79,7 +84,7 @@ class SMDesignHandler(EasyHTTPHandler):
     @utils.tryEx
     def getDSSImage(self, req, qstr):
         sm = _getData("smdt")
-        return sm.drawDSSImage(), self.PNGImage
+        return drawUtils.img2Bitmap(sm.targetList.dssData), self.PNGImage
 
     @utils.tryEx
     def getROIInfo(self, req, qstr):
@@ -142,7 +147,7 @@ class SMDesignHandler(EasyHTTPHandler):
 
         try:
             mdFile = self.getDefValue(qstr, "mdFile", "mask.fits")
-            mdf = MaskDesignFile(sm.targetList)
+            mdf = MaskDesignOutputFitsFile(sm.targetList)
             buf = mdf.asBytes()
         except Exception as e:
             self.send_error(500, repr(e))
@@ -221,7 +226,7 @@ if __name__ == "__main__":
 
     cf = readConfig(args.config_file)
 
-    _setData("smdt", SlitmaskDesignTool(b"", False, cf))
+    _setData("smdt", SlitmaskDesignTool(b"", config=cf, useDSS=False))
     SMDesignHandler.config = cf
     SMDesignHandler.DocRoot = cf.getValue("docRoot", "docs")
     SMDesignHandler.defaultFile = cf.getValue("defaultFile", "index.html")

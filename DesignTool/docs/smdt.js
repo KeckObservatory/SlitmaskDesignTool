@@ -1,3 +1,9 @@
+/*
+Main entry point for the Slitmask Design Tool.
+Invoked by body.onload.
+This module interfaces with the server,
+while the canvasShow object renders the targets and the mask.
+*/
 function SlitmaskDesignTool() {
 	var self = this;
 

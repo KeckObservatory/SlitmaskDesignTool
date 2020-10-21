@@ -4,6 +4,7 @@ Created on Mar 20, 2018
 @author: skwok
 """
 import math
+import numpy as np
 import webbrowser
 import traceback
 
@@ -107,3 +108,16 @@ def transpose(arr):
 
 def launchBrowser(host, portnr, path):
     webbrowser.open(f"http://{host}:{portnr}/{path}", new=1)
+
+
+def rotate(xs, ys, rotDeg):
+    rotRad = math.radians(rotDeg)
+    sina = math.sin(rotRad)
+    cosa = math.cos(rotRad)
+    outxs = xs * cosa - ys * sina
+    outys = xs * sina + ys * cosa
+    return outxs, outys
+
+
+MM2AS = math.degrees(1.0 / 149583) * 3600
+

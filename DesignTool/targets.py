@@ -5,6 +5,10 @@ Created on Mar 20, 2018
 """
 
 import math
+import os
+
+os.environ["NUMEXPR_MAX_THREADS"] = "4"
+os.environ["NUMEXPR_NUM_THREADS"] = "4"
 import io
 import sys
 import numpy as np
@@ -57,30 +61,33 @@ class TargetList:
         priority: high +value = high priority, -2:align, -1:guide star, 0: ignore
         
         Optional:
-        sample: 1,2,3
+        sampleNr: 1,2,3
         selected: 0
-        slitPA: PA of the slit
+        slitWPA: PA of the slit
         length1: 4
         length2: 4
         slitWidth: 1
         """
 
-    def __init__(self, input, useDSS, config):
+    def __init__(self, input, raDeg=0, decDeg=0, paDeg=0, config=None, useDSS=False):
         """
         Reads the target list from file of from string.
         """
-        self.fileName = input
-        self.positionAngle = 0
-        self.centerRADeg = 0
-        self.centerDEC = 0
+        self.positionAngle = paDeg
+        self.centerRADeg = raDeg
+        self.centerDEC = decDeg
         self.dssSizeDeg = 0.35  # deg
         self.config = config
         self.useDSS = useDSS
+        self.fileName = None
         if type(input) == type(io.StringIO()):
             self.targets = self.readRaw(input)
+        elif type(input) == type(pd.DataFrame()):
+            self.targets = input
         else:
+            self.fileName = input
             self.targets = self.readFromFile(input)
-        self.loadDSSInfo(useDSS)
+        self.loadDSSInfo()
         self.__updateDate()
 
     def __updateDate(self):
@@ -89,7 +96,8 @@ class TargetList:
         """
         self.createDate = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    def loadDSSInfo(self, useDSS=True):
+    def loadDSSInfo(self):
+        useDSS = self.useDSS
         self._getDSS(useDSS)
 
         if len(self.targets) <= 0:
@@ -173,16 +181,16 @@ class TargetList:
 
         out = []
         cols = (
-            "name",
+            "objectId",
             "raHour",
             "decDeg",
             "eqx",
             "mag",
-            "band",
+            "pBand",
             "pcode",
-            "sample",
+            "sampleNr",
             "selected",
-            "slitPA",
+            "slitWPA",
             "length1",
             "length2",
             "slitWidth",
@@ -199,20 +207,20 @@ class TargetList:
             if len(parts) == 0:
                 # line empty
                 continue
-            name = parts[0]
+            objectId = parts[0]
             parts = parts[1:]
             if len(parts) < 4:
                 continue
             # print (nr, "len", parts)
 
-            template = ["", "", 2000.0, 99, "I", 99, 0, 1, 0, 4.0, 4.0, 1.5, 0]
+            template = ["", "", "2000", "99", "I", "99", "0", "1", "0", "4.0", "4.0", "1.5", "0"]
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
             if self._checkPA(parts):
                 continue
 
-            sample, selected, slitPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
-            mag, band, pcode = 99, "I", 99
+            sampleNr, selected, slitWPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
+            mag, pBand, pcode = 99, "I", 99
 
             try:
                 raHour = utils.sexg2Float(template[0])
@@ -226,17 +234,18 @@ class TargetList:
                 if eqx > 3000:
                     eqx = float(template[2][:4])
                     tmp = template[2][4:]
-                    template[2] = tmp
+                    template[3 : minLength + 1] = parts[2:minLength]
+                    template[3] = tmp
 
-                mag = float(template[3])
-                band = template[4].upper()
+                mag = toFloat(template[3])
+                pBand = template[4].upper()
                 pcode = int(template[5])
-                sample = int(template[6])
+                sampleNr = int(template[6])
                 selected = int(template[7])
-                slitPA = toFloat(template[8])
-                length1 = float(template[9])
-                length2 = float(template[10])
-                slitWidth = float(template[11])
+                slitWPA = toFloat(template[8])
+                length1 = toFloat(template[9])
+                length2 = toFloat(template[10])
+                slitWidth = toFloat(template[11])
                 inMask = 0
             except Exception as e:
                 SMDTLogger.info("line {}, error {}, {}".format(nr, e, template))
@@ -244,16 +253,16 @@ class TargetList:
                 # break
                 pass
             target = (
-                name,
+                objectId,
                 raHour,
                 decDeg,
                 eqx,
                 mag,
-                band,
+                pBand,
                 pcode,
-                sample,
+                sampleNr,
                 selected,
-                slitPA,
+                slitWPA,
                 length1,
                 length2,
                 slitWidth,
@@ -378,19 +387,19 @@ class TargetList:
 
         pcode = int(values["prior"])
         selected = int(values["selected"])
-        slitPA = float(values["slitPA"])
+        slitWPA = float(values["slitWPA"])
         slitWidth = float(values["slitWidth"])
         len1 = float(values["len1"])
         len2 = float(values["len2"])
 
         tgs.at[idx, "pcode"] = pcode
         tgs.at[idx, "selected"] = selected
-        tgs.at[idx, "slitPA"] = slitPA
+        tgs.at[idx, "slitWPA"] = slitWPA
         tgs.at[idx, "slitWidth"] = slitWidth
         tgs.at[idx, "length1"] = len1
         tgs.at[idx, "length2"] = len2
         SMDTLogger.info(
-            f"Updated target {idx}, pcode={pcode}, selected={selected}, slitPA={slitPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
+            f"Updated target {idx}, pcode={pcode}, selected={selected}, slitWPA={slitWPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
         )
         return 0
 
@@ -400,9 +409,11 @@ class TargetList:
         """
         inOutChecker = InOutChecker(layout)
         tgs = self.targets
+        inMask = []
         for i, stg in tgs.iterrows():
             isIn = 1 if inOutChecker.checkPoint(stg.xarcs, stg.yarcs) else 0
-            tgs.at[stg.orgIndex, "inMask"] = isIn
+            inMask.append(isIn)
+        self.targets["inMask"] = inMask
 
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
@@ -410,7 +421,12 @@ class TargetList:
         Results saved in xarcs, yarcs
         """
         telRaRad, telDecRad = self._fld2telax(raDeg, decDeg, posAngleDeg)
-        self._calcTelTargetCoords(telRaRad, telDecRad, raDeg, decDeg, posAngleDeg)
+        self.telRaRad, self.telDecRad = telRaRad, telDecRad
+
+        xarcs, yarcs = self._calcTelTargetCoords(telRaRad, telDecRad, self.targets.raHour, self.targets.decDeg, posAngleDeg)
+        self.targets["xarcs"] = xarcs
+        self.targets["yarcs"] = yarcs
+
         self.__updateDate()
         """
         try:
@@ -418,6 +434,22 @@ class TargetList:
         except:
             traceback.print_exc()
         """
+
+    def _project2FocalPlane(self, cenRADeg, cenDecDeg, raHours, decDegs, paDeg):
+        """               
+        Use the cosine method to project the RA/DEC to focal plane
+        Then rotate by PA - 90 and shifted by fldcenx, fldceny
+        Returns xs, ys in focal plane in arcsec
+        """
+        cf = self.config
+        fldCenX = cf.getValue("fldCenX", 0)
+        fldCenY = cf.getValue("fldCenY", 0)
+
+        ras = (raHours * 15 - cenRADeg) * 3600
+        decs = (decDegs - cenDecDeg) * 3600
+        ras = ras * np.cos(np.radians(tt.decDeg))
+        xs, ys = utils.rotate(ras, decs, paDeg - 90)
+        return xs + fldCenX, ys + fldCenY
 
     """
     Migrated routines from dsimulator by Luca Rizzi
@@ -461,7 +493,7 @@ class TargetList:
             math.asin((sind * cosd * cosa - cosr * sinr * cost) / (cosr * cosd * cosa - sinr * sind * cost)),
         )
 
-    def _calcTelTargetCoords(self, ra0, dec0, raDeg, decDeg, posAngle):
+    def _calcTelTargetCoords(self, ra0Rad, dec0Rad, raHours, decDegs, posAngle):
         """
         Calculates xarcs and yarcs, position of the targets in focal plane coordinates in arcsec.
         
@@ -473,29 +505,26 @@ class TargetList:
         offy = cf.getValue("maskOffsetY", 0)
 
         pa0 = math.radians(posAngle)
-        tt = self.targets
 
-        decRad = np.radians(tt.decDeg)
+        decRad = np.radians(decDegs)
         sinDec = np.sin(decRad)
-        sinDec0 = math.sin(dec0)
+        sinDec0 = math.sin(dec0Rad)
         cosDec = np.cos(decRad)
-        cosDec0 = math.cos(dec0)
+        cosDec0 = math.cos(dec0Rad)
 
-        deltaRA = np.radians(tt.raHour * 15) - ra0
+        deltaRA = np.radians(raHours * 15) - ra0Rad
         cosDeltaRA = np.cos(deltaRA)
         sinDeltaRA = np.sin(deltaRA)
 
         cosr = sinDec * sinDec0 + cosDec * cosDec0 * cosDeltaRA
         # cosr = np.clip(cosr, 0, 1.0)
         sinr = np.sqrt(np.abs(1.0 - cosr * cosr))
-        r = np.arccos(cosr)
+        # r = np.arccos(cosr)
 
         sinp = cosDec * sinDeltaRA / sinr
-        cosp = np.sqrt(np.abs(1.0 - sinp * sinp)) * np.where(decRad < dec0, -1, 1)
+        cosp = np.sqrt(np.abs(1.0 - sinp * sinp)) * np.where(decRad < dec0Rad, -1, 1)
         p = np.arctan2(sinp, cosp)
 
         rArcsec = sinr / cosr * math.degrees(1) * 3600
         deltaPA = pa0 - p
-
-        tt["xarcs"] = rArcsec * np.cos(deltaPA) + offx
-        tt["yarcs"] = rArcsec * np.sin(deltaPA) - offy
+        return rArcsec * np.cos(deltaPA), rArcsec * np.sin(deltaPA)

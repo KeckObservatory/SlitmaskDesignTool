@@ -13,7 +13,7 @@ sys.path.extend(("..", "../smdtLibs"))
 from configFile import ConfigFile
 from targets import TargetList
 from inOutChecker import InOutChecker
-from maskDesignFile import MaskDesignFile, MaskLayouts
+from maskDesignFile import MaskDesignOutputFitsFile, MaskLayouts
 import utils
 
 logging.disable()
@@ -23,7 +23,7 @@ logging.disable()
 def init_targets():
     config = ConfigFile("../smdt.cfg")
     config.properties["params"] = ConfigFile("../params.cfg")
-    tlist = TargetList("../../DeimosExamples/MihoIshigaki/CetusIII.lst", useDSS=False, config=config)
+    tlist = TargetList("../../DeimosExamples/MihoIshigaki/CetusIII.lst", config=config, useDSS=False)
     return tlist, config
 
 
@@ -38,7 +38,7 @@ def test_targets(init_targets):
 
 def test_MaskDesignFile(init_targets):
     tlist, config = init_targets
-    ft = MaskDesignFile(tlist)
+    ft = MaskDesignOutputFitsFile(tlist)
     fileout = "testout.fits"
     if os.path.exists(fileout):
         os.unlink(fileout)
@@ -53,7 +53,7 @@ def test_MaskDesignFile2(init_targets):
         if inOutChecker.checkPoint(stg.xarcs, stg.yarcs):
             tlist.targets.at[stg.orgIndex, "inMask"] = 1
 
-    ft = MaskDesignFile(tlist)
+    ft = MaskDesignOutputFitsFile(tlist)
 
     fileout = "testout.fits"
     if os.path.exists(fileout):

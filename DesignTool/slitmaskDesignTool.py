@@ -9,9 +9,6 @@ import numpy as np
 
 import matplotlib
 
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import smdtLibs.dss2Client as Dss2Client
 import smdtLibs.dss2Header as DSS2Header
 
@@ -26,7 +23,7 @@ class SlitmaskDesignTool:
     This class encapsulates the functionality of the Slitmask design tool.
     """
 
-    def __init__(self, tlistRaw, useDSS, config):
+    def __init__(self, tlistRaw, config, useDSS=False):
         """
         tlistRaw is the target list in raw format (bytes)
         useDSS: boolean, if true projection is done with the DSS WCS, otherwise use astropy WCS
@@ -36,25 +33,14 @@ class SlitmaskDesignTool:
             self.targetList = tlistRaw
         else:
             tlist = io.StringIO(tlistRaw.decode("UTF-8"))
-            self.setTargetList(tlist, useDSS, config)
+            self.setTargetList(tlist, config=config, useDSS=useDSS)
         self.config = config
 
-    def setTargetList(self, tlist, useDSS, config):
+    def setTargetList(self, tlist, config, useDSS):
         """
         Reset the target list
         """
-        self.targetList = TargetList(tlist, useDSS, config)
-
-    def drawDSSImage(self):
-        """
-        Returns the DSS image that covers the targets in PNG format
-        If no DSS requested, then just return an empty image.        
-        """
-        outData = io.BytesIO()
-        # print(self.targetList.dssData.shape)
-        plt.imsave(outData, self.targetList.dssData, origin="lower", format="png", cmap="gray")
-        outData.seek(0)
-        return outData.read()
+        self.targetList = TargetList(tlist, config=config, useDSS=useDSS)
 
     def getROIInfo(self):
         """
