@@ -124,7 +124,7 @@ class MaskDesignOutputFitsFile:
 
         - Table objectcat: star catalog
         - Table catfiles:  input catalog file name(s), not used?
-        - Table maskdesign: mask's metadata, contains referecne RA/DEC
+        - Table maskdesign: mask's metadata, contains reference RA/DEC
         - Table desislits: Slits RA/DEC, lengths, PAs
         - Table slitobjmap: object position inside the slits
         - Table maskblu: more meta data, includes, temp, humidity, pressure, wavelength
