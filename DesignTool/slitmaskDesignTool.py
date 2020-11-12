@@ -23,24 +23,23 @@ class SlitmaskDesignTool:
     This class encapsulates the functionality of the Slitmask design tool.
     """
 
-    def __init__(self, tlistRaw, config, useDSS=False):
+    def __init__(self, tlistRaw, config):
         """
         tlistRaw is the target list in raw format (bytes)
-        useDSS: boolean, if true projection is done with the DSS WCS, otherwise use astropy WCS
         config: configuration object        
         """
         if type(tlistRaw) == TargetList:
             self.targetList = tlistRaw
         else:
             tlist = io.StringIO(tlistRaw.decode("UTF-8"))
-            self.setTargetList(tlist, config=config, useDSS=useDSS)
+            self.setTargetList(tlist, config=config)
         self.config = config
 
-    def setTargetList(self, tlist, config, useDSS):
+    def setTargetList(self, tlist, config):
         """
         Reset the target list
         """
-        self.targetList = TargetList(tlist, config=config, useDSS=useDSS)
+        self.targetList = TargetList(tlist, config=config)
 
     def getROIInfo(self):
         """

@@ -492,8 +492,10 @@ class MaskDesignInputFitsFile:
             table = {"A": -2, "G": -1, "I": 0, "P": 1}
             return [table[t] for t in self.allSlits.slitTyp]
 
-        orgIndices = [int(d) for d in self.slitobjmap.ObjectId]
         objects = self.objectcat
+        objIndices = dict ([ (i1,i0) for i0, i1 in enumerate (objects.ObjectId) ])
+
+        orgIndices = [objIndices[d] for d in self.slitobjmap.ObjectId]
         nSlits = len(self.allSlits)
         self.allSlits["raHour"] = [objects.RA_OBJ.iloc[d] / 15.0 for d in orgIndices]
         self.allSlits["decDeg"] = [objects.DEC_OBJ.iloc[d] for d in orgIndices]
@@ -512,5 +514,5 @@ class MaskDesignInputFitsFile:
         # raDeg, decDeg = self.getCenter()
         paDeg = self.maskdesign.PA_PNT
 
-        return TargetList(pd.DataFrame(self.allSlits), cenRADeg, cenDecDeg, paDeg, config, useDSS=False)
+        return TargetList(pd.DataFrame(self.allSlits), cenRADeg, cenDecDeg, paDeg, config)
 

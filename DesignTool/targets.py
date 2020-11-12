@@ -17,7 +17,7 @@ import traceback
 import json
 import datetime
 
-from smdtLibs import utils, dss2Client, dss2Header
+from smdtLibs import utils, dss2Header
 from smdtLibs.inOutChecker import InOutChecker
 from smdtLogger import SMDTLogger
 from targetSelector import TargetSelector
@@ -67,18 +67,23 @@ class TargetList:
         length1: 4
         length2: 4
         slitWidth: 1
-        """
+    
+    Input can be a string, a pandas data frame, or a file.
+    After reading the input, the targets are stored in a pandas data frame.
+    Then targets are projected on the the focal plane, via loadDSSInfo.
+    If DSS is not desired (default) then the DSS image is a blank image and
+    a header is generated using WCS using cenRA/cenDEC.
 
-    def __init__(self, input, raDeg=0, decDeg=0, paDeg=0, config=None, useDSS=False):
+    """
+
+    def __init__(self, input, raDeg=0, decDeg=0, paDeg=0, config=None):
         """
         Reads the target list from file of from string.
         """
         self.positionAngle = paDeg
         self.centerRADeg = raDeg
         self.centerDEC = decDeg
-        self.dssSizeDeg = 0.35  # deg
         self.config = config
-        self.useDSS = useDSS
         self.fileName = None
         if type(input) == type(io.StringIO()):
             self.targets = self.readRaw(input)
@@ -87,7 +92,7 @@ class TargetList:
         else:
             self.fileName = input
             self.targets = self.readFromFile(input)
-        self.loadDSSInfo()
+        self.project2FocalPlane()
         self.__updateDate()
 
     def __updateDate(self):
@@ -96,52 +101,16 @@ class TargetList:
         """
         self.createDate = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    def loadDSSInfo(self):
-        useDSS = self.useDSS
-        self._getDSS(useDSS)
-
-        if len(self.targets) <= 0:
-            return
-        if useDSS:
-            self._proj2DSS()
-        else:
-            self.reCalcCoordinates(self.centerRADeg, self.centerDEC, self.positionAngle)
-
-    def _getDSS(self, useDSS=True):
-        """
-        Gets DSS image and info if useDSS is true
-        Otherwise, creates an black image as background and a header using WCS/TAN projection.
-
-        Note: DSS project do not map well. Not recommended.
-        """
-
+    def project2FocalPlane(self):
         targets = self.targets
         if len(targets) <= 0:
             raDeg, decDeg = 0, 0
         else:
             raDeg, decDeg = self.centerRADeg, self.centerDEC
 
-        self.dssFits = None
-
-        if useDSS:
-            cf = self.config
-            url = cf.getValue("dssServerURL", None) if cf != None else None
-            dss2 = dss2Client.Dss2Client(url)
-
-            SMDTLogger.info("Load DSS RA %s hr, DEC %s deg", utils.toSexagecimal(raDeg / 15), utils.toSexagecimal(decDeg))
-            self.dssFits = dss2.getFITS(raDeg, decDeg, self.dssSizeDeg)
-            if self.dssFits == None:
-                SMDTLogger.info("Failed to load DSS")
-            else:
-                self.dssData = self.dssFits[0].data
-                self.fheader = dss2Header.DssHeader(self.dssFits[0].header, raDeg, decDeg)
-
-        if self.dssFits == None:
-            # Not useDss or failed to load DSS
-            h = int(self.dssSizeDeg * 3600)
-            w = h
-            self.dssData = np.zeros(shape=(h, w))
+            w = h = 60 # 1 min
             self.fheader = dss2Header.DssWCSHeader(raDeg, decDeg, w, h)
+            self.reCalcCoordinates(raDeg, decDeg, self.positionAngle)
 
     def _checkPA(self, inParts):
         """
@@ -274,30 +243,11 @@ class TargetList:
         df = pd.DataFrame(out, columns=cols)
         # df["inMask"] = np.zeros_like(df.name)
 
-        if self.centerRADeg == self.centerDEC and self.centerRADeg == 0:
+        if self.centerRADeg == 0 and self.centerRADeg == 0:
             self.centerRADeg = df.raHour.median() * 15
             self.centerDEC = df.decDeg.median()
 
         return df
-
-    def _proj2DSS(self):
-        """
-        Uses DSS WCS to project the targets from RA/DEC to X/Y in image coordinates.
-        The targets X/Y are in pixels
-        """
-        targets = self.targets
-        if len(targets) <= 0:
-            targets["xarcs"] = []
-            targets["yarcs"] = []
-            return
-        fheader = self.fheader
-        if fheader == None:
-            return
-
-        xs, ys = fheader.rd2xy(targets.raHour, targets.decDeg)
-        # xs, ys are in pixels
-        targets["xarcs"] = xs
-        targets["yarcs"] = ys
 
     def getROIInfo(self):
         """
@@ -314,14 +264,6 @@ class TargetList:
         out["NAXIS1"] = hdr.naxis1
         out["NAXIS2"] = hdr.naxis2
 
-        if self.useDSS:
-            north, east = hdr.skyPA()
-            north = north - 180
-            east = east - 180
-        else:
-            north = 0
-            east = 90
-        out["useDSS"] = 1 if self.useDSS else 0
         out["northAngle"] = north
         out["eastAngle"] = east
         out["xpsize"] = hdr.xpsize  # pixel size in micron
@@ -381,6 +323,9 @@ class TargetList:
             targets.at[stg.orgIndex, "length2"] = stg.length2
 
     def updateTarget(self, jvalues):
+        """
+        Used by GUI to change values in a target.
+        """
         values = json.loads(jvalues)
         idx = values["idx"]
         tgs = self.targets
@@ -436,7 +381,9 @@ class TargetList:
         """
 
     def _project2FocalPlane(self, cenRADeg, cenDecDeg, raHours, decDegs, paDeg):
-        """               
+        """
+        Alternative to reCalCoordinates
+
         Use the cosine method to project the RA/DEC to focal plane
         Then rotate by PA - 90 and shifted by fldcenx, fldceny
         Returns xs, ys in focal plane in arcsec
@@ -447,7 +394,7 @@ class TargetList:
 
         ras = (raHours * 15 - cenRADeg) * 3600
         decs = (decDegs - cenDecDeg) * 3600
-        ras = ras * np.cos(np.radians(tt.decDeg))
+        ras = ras * np.cos(np.radians(cenDecDeg))
         xs, ys = utils.rotate(ras, decs, paDeg - 90)
         return xs + fldCenX, ys + fldCenY
 
@@ -495,14 +442,13 @@ class TargetList:
 
     def _calcTelTargetCoords(self, ra0Rad, dec0Rad, raHours, decDegs, posAngle):
         """
-        Calculates xarcs and yarcs, position of the targets in focal plane coordinates in arcsec.
+        Converts targets coordinates (raHours, decDegs) to xarcs and yarcs
+        Xarcs and Yarcs are in focal plane coordinates in arcsec.
         
         Ported from dsimulator
-        telRARad and telDecRad must be calculated via fld2telax().
+        ra0Rad and dec0Rad must be calculated via fld2telax().
+        
         """
-        cf = self.config
-        offx = cf.getValue("maskOffsetX", 0)
-        offy = cf.getValue("maskOffsetY", 0)
 
         pa0 = math.radians(posAngle)
 
@@ -520,8 +466,10 @@ class TargetList:
         # cosr = np.clip(cosr, 0, 1.0)
         sinr = np.sqrt(np.abs(1.0 - cosr * cosr))
         # r = np.arccos(cosr)
-
-        sinp = cosDec * sinDeltaRA / sinr
+        t1 = np.where (sinr == 0.0, 0, cosDec * sinDeltaRA)
+        t2 = np.where (sinr == 0.0, 1, sinr)
+        sinp = np.divide (t1, t2)
+        
         cosp = np.sqrt(np.abs(1.0 - sinp * sinp)) * np.where(decRad < dec0Rad, -1, 1)
         p = np.arctan2(sinp, cosp)
 

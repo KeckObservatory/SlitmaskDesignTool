@@ -42,7 +42,7 @@ GlobalData = {}
 def _getData(_id):
     d = GlobalData.get(_id)
     if not d:
-        d = SlitmaskDesignTool(b"", config=None, useDSS=False)
+        d = SlitmaskDesignTool(b"", config=None)
     return d
 
 
@@ -63,8 +63,7 @@ class SMDesignHandler(EasyHTTPHandler):
         Respond to the form action
         """
         content = qstr["targetList"][0]
-        useDSS = self.intVal(qstr, "formUseDSS", 0)
-        _setData("smdt", SlitmaskDesignTool(content, self.config, useDSS))
+        _setData("smdt", SlitmaskDesignTool(content, self.config))
         return "OK", self.PlainTextType
 
     @utils.tryEx
@@ -226,7 +225,6 @@ if __name__ == "__main__":
 
     cf = readConfig(args.config_file)
 
-    _setData("smdt", SlitmaskDesignTool(b"", config=cf, useDSS=False))
     SMDesignHandler.config = cf
     SMDesignHandler.DocRoot = cf.getValue("docRoot", "docs")
     SMDesignHandler.defaultFile = cf.getValue("defaultFile", "index.html")
