@@ -141,7 +141,7 @@ class MaskDesignOutputFitsFile:
         targets = self.targetList.targets
         objClassTable = ("Alignment_Star", "Guide_Star", "Ignored", "Program_Target")
         cols = []
-        nTargets = targets.name.shape[0]
+        nTargets = targets.shape[0]
         zeros = [0] * nTargets
         objClass = [objClassTable[min(3, p + 2)] for p in targets.pcode]
         cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=range(nTargets),))
@@ -512,7 +512,7 @@ class MaskDesignInputFitsFile:
         self.allSlits["sampleNr"] = [1] * nSlits
 
         # raDeg, decDeg = self.getCenter()
-        paDeg = self.maskdesign.PA_PNT
+        paDeg = self.maskdesign.PA_PNT[0]
 
         return TargetList(pd.DataFrame(self.allSlits), cenRADeg, cenDecDeg, paDeg, config)
 

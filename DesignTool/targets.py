@@ -63,7 +63,7 @@ class TargetList:
         Optional:
         sampleNr: 1,2,3
         selected: 0
-        slitWPA: PA of the slit
+        slitLPA: PA of the slit
         length1: 4
         length2: 4
         slitWidth: 1
@@ -159,7 +159,7 @@ class TargetList:
             "pcode",
             "sampleNr",
             "selected",
-            "slitWPA",
+            "slitLPA",
             "length1",
             "length2",
             "slitWidth",
@@ -188,7 +188,7 @@ class TargetList:
             if self._checkPA(parts):
                 continue
 
-            sampleNr, selected, slitWPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
+            sampleNr, selected, slitLPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
             mag, pBand, pcode = 99, "I", 99
 
             try:
@@ -211,7 +211,7 @@ class TargetList:
                 pcode = int(template[5])
                 sampleNr = int(template[6])
                 selected = int(template[7])
-                slitWPA = toFloat(template[8])
+                slitLPA = toFloat(template[8])
                 length1 = toFloat(template[9])
                 length2 = toFloat(template[10])
                 slitWidth = toFloat(template[11])
@@ -231,7 +231,7 @@ class TargetList:
                 pcode,
                 sampleNr,
                 selected,
-                slitWPA,
+                slitLPA,
                 length1,
                 length2,
                 slitWidth,
@@ -332,19 +332,19 @@ class TargetList:
 
         pcode = int(values["prior"])
         selected = int(values["selected"])
-        slitWPA = float(values["slitWPA"])
+        slitLPA = float(values["slitLPA"])
         slitWidth = float(values["slitWidth"])
         len1 = float(values["len1"])
         len2 = float(values["len2"])
 
         tgs.at[idx, "pcode"] = pcode
         tgs.at[idx, "selected"] = selected
-        tgs.at[idx, "slitWPA"] = slitWPA
+        tgs.at[idx, "slitLPA"] = slitLPA
         tgs.at[idx, "slitWidth"] = slitWidth
         tgs.at[idx, "length1"] = len1
         tgs.at[idx, "length2"] = len2
         SMDTLogger.info(
-            f"Updated target {idx}, pcode={pcode}, selected={selected}, slitWPA={slitWPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
+            f"Updated target {idx}, pcode={pcode}, selected={selected}, slitLPA={slitLPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
         )
         return 0
 

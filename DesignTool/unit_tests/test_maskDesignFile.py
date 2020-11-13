@@ -23,7 +23,7 @@ logging.disable()
 def init_targets():
     config = ConfigFile("../smdt.cfg")
     config.properties["params"] = ConfigFile("../params.cfg")
-    tlist = TargetList("../../DeimosExamples/MihoIshigaki/CetusIII.lst", config=config, useDSS=False)
+    tlist = TargetList("../../DeimosExamples/MihoIshigaki/CetusIII.lst", config=config)
     return tlist, config
 
 
