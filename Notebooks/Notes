@@ -1,0 +1,28 @@
+
+ApplyDistortion_test.ipynb
+    Tests the distortion compensation calculation
+    Compares results with output of the original tool
+
+Build_TestCases.ipynb
+    Parses the DeimosExample directory to create the list of test cases, as Test_InputM.py
+
+DistorsionFit.ipynb
+    Calculates the distorsion compensation coefficients using the cases in Test_InputM.py
+    and averaging the results
+    
+DistortionUtil.py
+    Helper functions for distorsion compensation
+
+Input_Test.ipynb
+    Display the DSIM .out file, which contains the catalog and the selected targets
+
+MaskDesignInputFitsFile_Test.ipynb
+    Tests the coordinates projection and compares with DSIM output
+
+Notes
+    This file.
+    
+ShowMaskLayouts.ipynb
+    Shows the mask geonmetry, the guider layout and bad columns
+    
+Test_InputM.py

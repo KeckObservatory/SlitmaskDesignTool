@@ -16,6 +16,7 @@ import pandas as pd
 import traceback
 import json
 import datetime
+from astropy.modeling import models
 
 from smdtLibs import utils, dss2Header
 from smdtLibs.inOutChecker import InOutChecker
@@ -112,21 +113,23 @@ class TargetList:
             self.fheader = dss2Header.DssWCSHeader(raDeg, decDeg, w, h)
             self.reCalcCoordinates(raDeg, decDeg, self.positionAngle)
 
-    def _checkPA(self, inParts):
+    def _checkPA(self, inLine):
         """
         Checks if input line contains the center RA/DEC and PA
         Use in readRaw
         """
-        paStr = inParts[3].upper()
-        if "PA=" in paStr:
-            parts0 = paStr.split("=")
-            self.positionAngle = float(parts0[1])
-            self.centerRADeg = utils.sexg2Float(inParts[0]) * 15
-            self.centerDEC = utils.sexg2Float(inParts[1])
-            # print ("Here", self.centerRADeg, self.centerDEC);
-            return True
-        else:
+        if not "PA=" in inLine.upper():
             return False
+        parts = inLine.split()
+
+        for i, s in enumerate(parts):
+            if "PA=" in s.upper():
+                self.centerRADeg = utils.sexg2Float(parts[i-3]) * 15
+                self.centerDEC = utils.sexg2Float(parts[i-2])
+                parts1 = (" ".join (parts[i:])).split ("=")
+                self.positionAngle = float (parts1[1].strip())
+                return True
+        return False
 
     def readFromFile(self, fname):
         """
@@ -178,14 +181,14 @@ class TargetList:
                 continue
             objectId = parts[0]
             parts = parts[1:]
-            if len(parts) < 4:
+            if len(parts) < 3:
                 continue
             # print (nr, "len", parts)
 
             template = ["", "", "2000", "99", "I", "99", "0", "1", "0", "4.0", "4.0", "1.5", "0"]
             minLength = min(len(parts), len(template))
-            template[:minLength] = parts[:minLength]
-            if self._checkPA(parts):
+            template[:minLength] = parts[:minLength]            
+            if self._checkPA(p1):
                 continue
 
             sampleNr, selected, slitLPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
@@ -217,7 +220,7 @@ class TargetList:
                 slitWidth = toFloat(template[11])
                 inMask = 0
             except Exception as e:
-                SMDTLogger.info("line {}, error {}, {}".format(nr, e, template))
+                SMDTLogger.info("line {}, error {}, {}".format(nr, e, line))
                 # traceback.print_exc()
                 # break
                 pass
@@ -364,6 +367,8 @@ class TargetList:
         """
         Recalculates xarcs and yarcs for new center RA/DEC and positionAngle
         Results saved in xarcs, yarcs
+
+        Returns xarcs, yarcs in focal plane coordinates in arcs.
         """
         telRaRad, telDecRad = self._fld2telax(raDeg, decDeg, posAngleDeg)
         self.telRaRad, self.telDecRad = telRaRad, telDecRad
@@ -373,12 +378,7 @@ class TargetList:
         self.targets["yarcs"] = yarcs
 
         self.__updateDate()
-        """
-        try:
-            self._calcSlitBoxCoords (posAngleDeg)
-        except:
-            traceback.print_exc()
-        """
+        return xarcs, yarcs
 
     def _project2FocalPlane(self, cenRADeg, cenDecDeg, raHours, decDegs, paDeg):
         """
@@ -408,9 +408,7 @@ class TargetList:
         Returns telRaRad and telDecRad.
         
         This is taken from dsim.x, procedure fld2telax
-        FLD2TELAX:  from field center and rotator PA, calc coords of telescope axis    
-        fldcenx = 0
-        fldceny = 0        
+        FLD2TELAX:  from field center and rotator PA, calc coords of telescope axis   
         """
         cf = self.config
         fldCenX = cf.getValue("fldCenX", 0)
@@ -476,3 +474,19 @@ class TargetList:
         rArcsec = sinr / cosr * math.degrees(1) * 3600
         deltaPA = pa0 - p
         return rArcsec * np.cos(deltaPA), rArcsec * np.sin(deltaPA)
+
+    def getDistortionFunctions (self):
+        """
+        Gets distortion coefficients from the configuration
+        Returns the polynomial models for X and Y
+        """
+        def _getPoly (coeffs):
+            pol = models.Polynomial2D (degree=4)
+            pol.parameters = [float(x) for x in coeffs.split(",")]
+            return pol
+
+        ccf = self.config
+
+        xPoly = _getPoly (ccf.distortionXCoeffs)
+        yPoly = _getPoly (ccf.distortionYCoeffs)
+        return xPoly, yPoly

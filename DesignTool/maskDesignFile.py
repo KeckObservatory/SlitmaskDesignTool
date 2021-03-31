@@ -204,7 +204,7 @@ class MaskDesignOutputFitsFile:
         cols.append(pf.Column(name="EQUINPNT", format="F13.6", null="-9999.000000", unit="a", array=[2000.0],))
         cols.append(pf.Column(name="PA_PNT", format="F12.7", null="-9999.000000", unit="deg", array=[params.MaskPA[0]],))
         cols.append(pf.Column(name="DATE_PNT", format="A19", null="INDEF", unit="None", array=[params.ObsDate[0]],))
-        cols.append(pf.Column(name="LST_PNT", format="F8.3", null="-9999.00", unit="deg", array=[0]))
+        cols.append(pf.Column(name="LST_PNT", format="F8.3", null="-9999.00", unit="deg", array=[0])) # May be HourAngle in deg
         return pf.TableHDU.from_columns(cols, name="MaskDesign")
 
     def genDesiSlits(self):
@@ -279,17 +279,17 @@ class MaskDesignOutputFitsFile:
         cols.append(pf.Column(name="BluObsvr", format="A68", null="INDEF", unit="None", array=[params.Observer[0]],))
         cols.append(pf.Column(name="BluCreat", format="A68", null="INDEF", unit="None", array=[SMDT_Name],))
         cols.append(pf.Column(name="BluDate", format="A19", null="INDEF", unit="None", array=[tlist.createDate],))
-        cols.append(pf.Column(name="LST_Use", format="F8.3", null="-9999.00", unit="deg", array=[obsTime],))
+        cols.append(pf.Column(name="LST_Use", format="F8.3", null="-9999.00", unit="deg", array=[obsTime],)) # Needs HA here
         cols.append(pf.Column(name="Date_Use", format="A19", null="INDEF", unit="None", array=[obsDate],))
         cols.append(pf.Column(name="TELESCOP", format="A68", null="INDEF", unit="None", array=[params.Telescope[0]],))
-        cols.append(pf.Column(name="RefrAlg", format="A68", null="INDEF", unit="None", array=["N/A"]))
+        cols.append(pf.Column(name="RefrAlg", format="A68", null="INDEF", unit="None", array=["Built-in"]))
 
         cols.append(pf.Column(name="AtmTempC", format="F5.1", null="-9999", unit="degC", array=[params.Temperature[0]],))
 
         cols.append(pf.Column(name="AtmPres", format="F6.1", null="-999.0", unit="hPa", array=[params.Pressure[0]],))
         cols.append(pf.Column(name="AtmHumid", format="F5.3", null="-9999", unit="None", array=[0.4]))
         cols.append(pf.Column(name="AtmTTLap", format="F7.5", null="-9999.0", unit="K/m", array=[0.0065],))
-        cols.append(pf.Column(name="RefWave", format="F7.2", null="-999.0", unit="nm", array=[refWave]))
+        cols.append(pf.Column(name="RefWave", format="F7.2", null="-999.0", unit="nm", array=[refWave/10.0])) # A to nm.
         cols.append(pf.Column(name="DistMeth", format="A68", null="INDEF", unit="None", array=["INDEF"],))
         return pf.TableHDU.from_columns(cols, name="MaskBlu")
 
@@ -444,9 +444,13 @@ class MaskDesignInputFitsFile:
 
         """
         self.objectcat.ObjClass = [s.strip() for s in self.objectcat.ObjClass]
-        d1 = self.bluslits.join(self.slitobjmap, lsuffix="", rsuffix="_1")
-        d2 = d1.join(self.desislits, lsuffix="", rsuffix="_2")
-        return d2
+        slitmap = self.slitobjmap.copy()
+        bluslits = self.bluslits.copy()
+        desislits = self.desislits.copy()
+
+
+        out = slitmap.join(bluslits, on="dSlitId", rsuffix="_1", how="left")
+        return out.join(desislits, on="dSlitId", rsuffix="_2")
 
     def getObjOnSlit(self, slits=None):
         """
@@ -459,7 +463,7 @@ class MaskDesignInputFitsFile:
         x1 = (slits.slitX3 + slits.slitX2) / 2
         y1 = (slits.slitY3 + slits.slitY2) / 2
 
-        t = slits.TopDist / (slits.TopDist + slits.BotDist)
+        t = slits.BotDist / (slits.TopDist + slits.BotDist)
         x = (x1 - x0) * t + x0
         y = (y1 - y0) * t + y0
         return x, y
@@ -486,6 +490,8 @@ class MaskDesignInputFitsFile:
     def getAsTargets(self, cenRADeg, cenDecDeg, config):
         """
         Returns the target list stored int the FITS file as a TargetList object.
+        Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
+
         """
 
         def genPcode():

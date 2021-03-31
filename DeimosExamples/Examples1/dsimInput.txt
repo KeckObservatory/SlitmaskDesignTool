@@ -1,0 +1,37 @@
+                    Image Reduction and Analysis Facility
+PACKAGE = deimos
+   TASK = dsimulator
+
+objfile =           dec0v2.txt  input file of targets
+output  =          dec0Pa0.out  output list selected/non-selected
+mdf     =         dec0Pa0.fits  Mask Design File (FITS)
+(plotfil=                     ) (opt) plotfile
+(ra0    =               16.494) Initial RA of field (hr)
+(dec0   =                0.911) Initial Dec of field (deg)
+(PA0    =                   0.) Initial PA of field (deg)
+(equinox=                2000.) Equinox of coordinates
+(ha0    =                0.001) Initial Hour Angle (hr)
+(min_sli=                   1.) Minimum slit length (arcsec)
+(sep_sli=                  0.5) Separation between slits (arcsec)
+(slit_wi=                  0.7) Width of slit (arcsec)
+(box_sz =                   4.) Alignment box size (arcsec)
+(blue   =                3200.) Shortest wavelength of interest
+(red    =                9999.) Longest wavelength of interest
+(proj_le=                  yes) Project slit length to preserve in spatial direc
+(no_over=                   no) Adjust slit lengths to avoid overlap? (YES)
+(std_for=                  yes) Is input standard text format?
+(lambda_=                3200.) wavelength for refraction
+(temp   =                   0.) Air temp (C)
+(pressur=                 615.) Air pressure (millibars==hPa)
+(maskid =                     ) Full Name of Mask
+(guiname=                 test) Name of Mask for GUI (6 char or less)
+(dateobs=           2021-03-25) Date of intended use (YYYY-MM-DD)
+(author = sy <syeh@keck.hawaii.edu>) Designer of Mask (name <email>)
+(observe= sy <syeh@keck.hawaii.edu>) Observer (name <email>)
+(project=                 test) Project name
+zoom_fac=                   0.  [zoom_factor]
+(coord  =                     ) graphics cursor input
+(mode   =                   ql)
+
+
+Varied PA0 from 0 deg to 180 deg in 15 deg steps.

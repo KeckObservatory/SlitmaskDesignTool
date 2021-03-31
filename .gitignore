@@ -2,6 +2,10 @@ __pycache__
 *.log
 .DS_Store
 .idea
-x.deimos.e
+*x_deimos.e*
 .gitignore
 .ipynb_checkpoints
+.vscode
+*.fits
+*.out
+dsimulator
