@@ -9,3 +9,7 @@ __pycache__
 *.fits
 *.out
 dsimulator
+.project
+.settings
+.pydevproject
+testData
