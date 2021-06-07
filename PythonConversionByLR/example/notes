@@ -1,0 +1,100 @@
+Description of files
+
+These files are packed in a FITS file as tables.
+
+
+bluslits
+--------
+The slits and the four corners of the slits.
+Columns:
+	bSlitId, Blue Slit Id, integer
+	BluId, Mask Id, integer
+	dSlitId, Slit Id, integer
+	slitX1, Slit X1, arcsec, float
+	slitY1, Slit Y1, arcsec, float
+	slitX2, Slit X2, arcsec, float
+	slitY2, Slit Y2, arcsec, float
+	slitX3, Slit X3, arcsec, float
+	slitY3, Slit Y3, arcsec, float
+	slitX4, Slit X4, arcsec, float
+	slitY4, Slit Y4, arcsec, float
+
+
+desislit
+--------
+The output of the design, the selected slits.
+
+Columns:
+	tId, Slit Id, a number, integer
+	DesId, Mask ID, integer
+	SlitName, Name of slit, eg. 000, 3 digits
+	slitRA, Slits RA, in hour, hour, float
+	slitDec, Slits DEC in degree, degree, float
+	slitTyp, Type, A=Alignment, P=Program target, char
+	slitLen, Length of slit, in arcsec, arcsec, float
+	slitLPA, Slits position angle in degree, degree, float
+	slitWid, Slits width, in arcsec, arcsec, float
+	slitWPA, Slits width PA, in degree ??, degree, float
+
+
+input_objects
+------------
+Empty ?
+
+objects
+-------
+Object catalog, as input for the design process.
+
+Columns:
+	ObjectId, A number identifying the object in this list	integer
+	OBJECT, Name of object	string
+	RA_OBJ, Objects right ascension in hour	hour,  float
+	DEC_OBJ, Objects declination in degree	degree,  float
+	RADESYS, Coordinate Frame,  blank	?
+	EQUINOX, Equinox in year,  eg 2000.0	year,  float
+	MJD-OBS, Modified Julian-date of observation,  eg. 0	0.0
+	mag, Objects magnitude,  what wavelength?	float
+	pBand, Photometric band,  eg. B	char
+	RadVel, Radial velocity,  eg 0	?
+	MajAxis, 0	?
+	MajAxPA, Major axis position angle,  in deg	degree,  float
+	MinAxis, 0	?
+	PM_RA, Proper motion in RA	?
+	PM_Dec, Proper motion in DEC	?
+	Parallax, 0,  ?	degree,  float
+	ObjClass, Objects class, eg. Alignment Star, Program_Target	string
+	CatFilePK, 1, ?	?
+
+objects_selected_standard_format
+--------------------------------
+This file was created from the jupyter notebook using th 'object' as input.
+
+Columns: 
+	object name, 
+	RA sexa hrs
+	DEC sexa deg
+	equinox, ie 2000.0
+	magnitude
+	band, ie V,R
+	pcode, priority, ie -2 align, -1, guide star, 0 not used, >0 high=high priority
+	sample, grouping of targets, default 1
+	select, 0=not selected, 1=preselected, default 0
+	slitPA, position angle, degree
+	len1, length of slit left side, arcsec, default=4
+	len2, length of slit right side, arcsec, default=4
+	slitwidth, width of slit, arcsec, default 1.5
+
+
+
+slitobjmap
+----------
+Contains top/bottom lengths of slits.
+Maps slit ID to object ID.
+
+Columns:
+	DesId, Mask Id, integer
+	ObjectId, Objects Id, integer
+	dSlitId, Slits Id, integer
+	TopDist, Distance to top end of slit arcsec, arcsec, float
+	BotDist	Distance to bottom end of slit arcsec	arcsec, float
+
