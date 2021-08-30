@@ -56,15 +56,8 @@ class EasyHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     out = bytes(out, "UTF-8")
                 self.send_response(200, "OK")
                 self.send_header("Expires", "Feb  1 17:17:37 HST 2016")
-                self.send_header("Cache-Control", "no-cache, must-revalidate")
-                self.send_header("Cache-Control", "no-store")
                 self.send_header("Connection", "close")
                 self.send_header("Content-type", contype)
-                """
-                l = sys.getsizeof(out)
-                if l > 0:
-                    self.send_header ("Content-length", l)
-                """
                 self.end_headers()
                 self.wfile.write(out)
                 self.wfile.flush()
@@ -83,6 +76,18 @@ class EasyHTTPHandler(http.server.SimpleHTTPRequestHandler):
             traceback.print_exc()
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
 
+    def end_headers (self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "*")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+
+        return super(EasyHTTPHandler, self).end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_GET(self):
         parts = urlparse(self.path)
         qs = parse_qs(parts.query)
@@ -91,9 +96,18 @@ class EasyHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parts = urlparse(self.path)
-        length = int(self.headers["content-length"])
-        ctype, pdict = cgi.parse_header(self.headers["content-type"])
-        pdict["CONTENT-LENGTH"] = length
+        len1 = self.headers.get("Content-Length", None)
+        length = None
+        if len1 is not None:
+            length = int(len1)
+        contType = self.headers.get("content-type", None)
+
+        ctype, pdict = None, {}
+        if contType is not None:
+            ctype, pdict = cgi.parse_header(contType)
+        if length is not None:
+            pdict["CONTENT-LENGTH"] = length
+
         boundary = pdict.get("boundary")
 
         if boundary:

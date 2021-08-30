@@ -444,6 +444,7 @@ class MaskDesignInputFitsFile:
 
         """
         self.objectcat.ObjClass = [s.strip() for s in self.objectcat.ObjClass]
+        self.objectcat.OBJECT = [s.strip() for s in self.objectcat.OBJECT]
         slitmap = self.slitobjmap.copy()
         bluslits = self.bluslits.copy()
         desislits = self.desislits.copy()
@@ -477,27 +478,37 @@ class MaskDesignInputFitsFile:
         dists = np.max(np.abs(x1 - x0), np.abs(y1 - y0))
         return dists
 
-    def getCenter(self):
+    def getPNTCenter(self):
         """
-        Returns the pointing RA/DEC as (ra, dec)
+        Returns the pointing RA/DEC as (ra, dec), PA
         """
-        return self.maskdesign.RA_PNT[0], self.maskdesign.DEC_PNT[0]
+        return self.maskdesign.RA_PNT[0], self.maskdesign.DEC_PNT[0], self.maskdesign.PA_PNT[0]
+
+    def getRotationCenter (self, config):
+        vx, vy = config.getValue ("fldCenX"), config.getValue("fldCenY")
+        radius = math.hypot(vx, vy) / 3600 # arcsec to degree
+
+        pntX, pntY, paDeg = self.getPNTCenter()
+        paRad = -math.radians(paDeg)
+
+        dx = math.cos(paRad) * radius
+        dy = math.sin (paRad) * radius
+        return pntX - dx, pntY - dy
 
     def getAlignBoxes(self, slits=None):
         slits = self.allSlists if slits == None else slits
         return slits[["A" == s for s in slits.slitTyp]]
 
-    def getAsTargets(self, cenRADeg, cenDecDeg, config):
+    def getAsTargets(self,  cenRADeg, cenDecDeg, config):
         """
         Returns the target list stored int the FITS file as a TargetList object.
         Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
-
         """
 
         def genPcode():
             table = {"A": -2, "G": -1, "I": 0, "P": 1}
             return [table[t] for t in self.allSlits.slitTyp]
-
+        
         objects = self.objectcat
         objIndices = dict ([ (i1,i0) for i0, i1 in enumerate (objects.ObjectId) ])
 

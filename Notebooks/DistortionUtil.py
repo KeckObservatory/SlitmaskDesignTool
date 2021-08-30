@@ -1,10 +1,10 @@
 #
 # Helper functions for distortion model
 #
-
+import numpy as np
 from targets import TargetList
 from smdtLibs import utils
-
+import math
 from astropy.modeling import models, fitting
 
 from smdtLibs.inOutChecker import InOutChecker
@@ -13,10 +13,11 @@ from maskDesignFile import (
     MaskDesignOutputFitsFile,
     outputAsList,
 )
+import targets
 
-def projectTargetXYs(allSlits, offx, offy):
+def projectTargetXYs(allSlits, scale=1.0):
     """
-    Converts the DSIM slits coordinates in mm to arcsec,
+    Takes the DSIM slits coordinates in mm,
     and builds the outline of the slits for plotting.
     
     Returns targetOnSlitX, targetOnSlitY from Slits (Dsim), slitXYs
@@ -26,16 +27,15 @@ def projectTargetXYs(allSlits, offx, offy):
     """
 
     slitXYs = [] 
-    mm2as = utils.MM2AS
 
-    x1 = allSlits.slitX1 * mm2as + offx
-    y1 = allSlits.slitY1 * mm2as + offy
-    x2 = allSlits.slitX2 * mm2as + offx
-    y2 = allSlits.slitY2 * mm2as + offy
-    x3 = allSlits.slitX3 * mm2as + offx
-    y3 = allSlits.slitY3 * mm2as + offy
-    x4 = allSlits.slitX4 * mm2as + offx
-    y4 = allSlits.slitY4 * mm2as + offy
+    x1 = allSlits.slitX1 * scale
+    y1 = allSlits.slitY1 * scale
+    x2 = allSlits.slitX2 * scale
+    y2 = allSlits.slitY2 * scale
+    x3 = allSlits.slitX3 * scale
+    y3 = allSlits.slitY3 * scale
+    x4 = allSlits.slitX4 * scale
+    y4 = allSlits.slitY4 * scale
     
     for xx1, yy1, xx2, yy2, xx3, yy3, xx4, yy4 in zip (x1, y1, x2, y2, x3, y3, x4, y4):
         slitXYs.append ((xx1, yy1, 0))
@@ -55,11 +55,65 @@ def projectTargetXYs(allSlits, offx, offy):
 
     return targetOnSlitX, targetOnSlitY, slitXYs
 
+@np.vectorize
+def noopx (x, y):
+    return x
 
-def getMDFSlits(designInfo):
+@np.vectorize
+def noopy (x, y):
+    return y
+
+def projectTargets2Slits (targets, config, offx=0, offy=0, pfx=noopx, pfy=noopy):
+    """
+    Calculates the slits position for targets
+    Returns slisXYs for plotting.
+    """
+    
+    #Get slit length and width from configuration    
+    slitLen = config.params.minslitlength[0]
+    slitWidth = config.params.slitwidth[0]
+    slitWidth = 0.7
+    slitHalf = slitLen / 2
+    slitHWidth = slitWidth / 2
+
+    slitXYs = []  # Stores slits coordinates in arcsec
+
+    #print(f"Calculate slit positions, slit width = {slitWidth}")
+    
+    xarcs = targets.xarcs + offx
+    yarcs = targets.yarcs + offy
+    
+    xarcs, yxarcs = pfx(xarcs, yarcs), pfy(xarcs, yarcs)
+    
+    top = targets.TopDist
+    bot = targets.BotDist
+    
+    x0 = xarcs - top
+    y0 = yarcs - slitHWidth
+    
+    x1 = xarcs + bot
+    y1 = yarcs - slitHWidth
+    
+    x2 = xarcs + top
+    y2 = yarcs + slitHWidth
+    
+    x3 = xarcs - top
+    y3 = yarcs + slitHWidth
+    
+    for xx0, yy0, xx1, yy1, xx2, yy2, xx3, yy3 in zip (x0, y0, x1, y1, x2, y2, x3, y3):
+        slitXYs.append((xx0, yy0, 0))
+        slitXYs.append((xx1, yy1, 1))
+        slitXYs.append((xx2, yy2, 1))
+        slitXYs.append((xx3, yy3, 1))
+        slitXYs.append((xx0, yy0, 2))
+    
+    return xarcs, yarcs, slitXYs
+    
+    
+def getMDF(designInfo):
     """
     Creates a Mask design fits file object
-    Returns MDF object and the center
+    Returns MDF object and center
     """
     (
         input_fname,
@@ -84,10 +138,11 @@ def fitModel(calcX, calcY, dsimX, dsimY):
     """
     pdeg = 4
     model0 = models.Polynomial2D(degree=pdeg)
-    fitter = fitting.LinearLSQFitter()
+    xfitter = fitting.LinearLSQFitter()
+    yfitter = fitting.LinearLSQFitter()
 
-    xfitted = fitter(model0, calcX, calcY, dsimX)
-    yfitted = fitter(model0, calcX, calcY, dsimY)
+    xfitted = xfitter(model0, calcX, calcY, dsimX)
+    yfitted = yfitter(model0, calcX, calcY, dsimY)
     return xfitted, yfitted
 
 
@@ -102,35 +157,49 @@ def applyDistortionCorrection(xs, ys, targetList):
     return pxs, pys
 
 
-def project(designInfo, config, layout, offx, offy):
+def project(designInfo, config, layout, scale=1):
     """
     Given a designInfo, reads FITS file and the center.
     Then gets the targets coordinates and projects them onto the focal plane.
 
-    xarcs,yarcs are the projected coordinates
-    targetX, targetY are the DSIM coordinates
-
-    Returns the MaskDesign object, the targets, xarcs, yarcs, targetX, targetY, slitsXY
+    Returns the MaskDesign object, the targets, xmm, ymm, dsimXs, dsimYs, slitsXY
     """
-    mdf, cenRADeg, cenDECDeg = getMDFSlits(designInfo)
+    (input_fname, input_RA, input_DEC, fieldPA, xxslitPA, enabled, ) = designInfo  # Test_Inputs[objName]
+    mdf = MaskDesignInputFitsFile(input_fname)
+    
+    allTargets = mdf.allSlits#.sort_values("slitX1")
+    inDsims = allTargets[
+        np.logical_and(allTargets.slitTyp == "P", allTargets.dSlitId > 0)
+    ]
+    dsimXs, dsimYs, slitXYs = projectTargetXYs(inDsims, scale=scale)
 
-    # Gets targets as TargetList object
-    tlist = mdf.getAsTargets(cenRADeg, cenDECDeg, config)
+    tname = input_fname.replace (".fits", ".out")
+    tlist = targets.TargetList(tname, config=config)
     tlist.markInside(layout)
+    allTargets = tlist.targets#.sort_values("xarcs")
+    inTargets = allTargets[allTargets.inMask > 0]
+    selectedTargets = inTargets[inTargets.selected > 0]
+    inSelectedTargets = selectedTargets[selectedTargets.pcode > 0]
 
-    allTargets = tlist.targets
-    allTargets = allTargets[allTargets.pcode > 0]
-
-    # targetX, and targetY from DSIM
-    targetX, targetY, slitXYs = projectTargetXYs(allTargets, offx, offy)
-
-    return mdf, tlist, allTargets.xarcs, allTargets.yarcs, targetX, targetY, slitXYs
+    if scale == 1:
+        return mdf, tlist, inSelectedTargets.xmm, inSelectedTargets.ymm, dsimXs, dsimYs, slitXYs
+    else:
+        return mdf, tlist, inSelectedTargets.xarcs, inSelectedTargets.yarcs, dsimXs, dsimYs, slitXYs
 
 
-def calcDistortionCoef(designInfo, config, layout, offx, offy):
+def calcDistortionCoef(designInfo, config, layout, scale):
     """
     Fits model to map from xarcs/yarcs to targetX/targetY
     Return MaskDesign object, model
     """
-    mdf, tlist, xarcs, yarcs, targetX, targetY, slitXYs = project(designInfo, config, layout, offx, offy)
-    return mdf, fitModel(xarcs, yarcs, targetX, targetY)
+    mdf, tlist, xmm, ymm, dsimXs, dsimYs, slitXYs = project(designInfo, config, layout, scale)
+    
+    inBoth = xmm.index.join(dsimXs.index, how="inner")
+    xmm, ymm, dsimXs, dsimYs = [ x[inBoth] for x in ( xmm, ymm, dsimXs, dsimYs )]
+    
+    xfitted, yfitted = fitModel( xmm, ymm, dsimXs, dsimYs)
+    
+    xresid = np.linalg.norm(dsimXs - xfitted(xmm, ymm))
+    yresid = np.linalg.norm(dsimYs - yfitted(xmm, ymm))
+    
+    return mdf, xfitted, yfitted, xresid, yresid

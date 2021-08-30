@@ -23,14 +23,8 @@
                 <p id='kecklogo'></p>
                 <h2 id='headline'>&nbsp;Slitmask Design Tool Prototype</h2>
                 <ul id='keckmenu'>
-                    <li id='Links'>
-                        <p>Links</p>
-                    </li>
-                    <li id='Sofware'>
-                        <p>Software</p>
-                    </li>
                     <li id='Keck'>
-                        <p>Keck</p>
+                        <p><a href='https://keckobservatory.org'>Keck</a></p>
                     </li>
                 </ul>
     </table>
@@ -54,8 +48,9 @@
                     <div id='paramTableDiv' style='visibility: hidden; display: none'></div>
                     <table id='paramButtonTable'>
                         <tr>
-                            <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp; <input
-                                    type='button' id='setSlitsLength' value='Set slits length'> &nbsp; <input
+                            <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp;
+                                <input type='button' id='setMaskPA' value='Set mask PA'> &nbsp;
+                                <input type='button' id='setSlitsLength' value='Set slits length'> &nbsp; <input
                                     type='button' id='setSlitsWidth' value='Set slit width'>
                     </table>
 
@@ -64,23 +59,16 @@
                             <td>
                         <tr>
                             <td>
-                                <table>
-                                    <tr>
-                                        <td>Status: <span id='statusDiv'>&nbsp;</span>
-                                </table>
-                            </td>
-                        <tr>
-                            <td>
                                 <table id='buttonPanel'>
                                     <tr>
                                         <td>
                                             <table>
-                                                <tr>
-                                                    <td>Pan: <input type='radio' name='mouseAction' id='panAll' checked>
-                                                    <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky'>
+                                                <tr>                                                    
+                                                    <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky' checked>
+                                                    <td>Rotate Sky: <input type='radio' name='mouseAction' id='rotateSky'>
+                                                    <td>Pan: <input type='radio' name='mouseAction' id='panAll'>
                                                     <td>Rotate: <input type='radio' name='mouseAction' id='rotateAll'>
-                                                    <td>Rotate Sky: <input type='radio' name='mouseAction'
-                                                            id='rotateSky'>
+
                                                     <td>Enable selection: <input type='radio' name='mouseAction'
                                                             id='enableSelection'>
                                                     <td><input type='button' id='resetDisplay' value='Reset Display'>
@@ -93,17 +81,16 @@
                                                 <tr>
                                                     <td>Show all targets: <input type='radio' name='showSel'
                                                             id='showAll' checked>
-                                                    <td>Show selected : <input type='radio' name='showSel'
+                                                    <td> selected: <input type='radio' name='showSel'
                                                             id='showSelected'>
-                                                    <td>Show by priority :<input type='radio' name='showSel'
-                                                            id='showByPriority'>
+                                                    <td> align boxes: <input type='checkbox' id='showAlignBox'>
+                                                    <td> guide boxes: <input type='checkbox' id='showGuideBox'>
+                                                <tr>
+                                                    <td>Show by priority:<input type='radio' name='showSel'
+                                                    id='showByPriority'>
                                                     <td>Min. Priority: <input id='minPriority' value='0'>
-
-                                                    <td>Show align box: <input type='checkbox' id='showAlignBox'>
-                                                    <td>Show preview :<input type='radio' name='showViewMode'
-                                                            id='showPreview' checked>
-                                                    <td>Show slit pos:<input type='radio' name='showViewMode'
-                                                            id='showSlitPos'>
+                                                    <td>Max. Priority: <input id='maxPriority' value='9999'>                                                    
+                                                <tr>
                                                     <td><input type='button' id='recalculateMask'
                                                             value='Recalculate mask'>
                                             </table>
@@ -113,27 +100,27 @@
                                                 <tr>
                                                     <td>Show Guider FOV: <input type='checkbox' id='showGuiderFOV'>
                                                     <td>Show bad columns: <input type='checkbox' id='showBadColumns'>
-                                                    <td>DSS: <input type='checkbox' id='useDSS'>
 
                                             </table>
                                     <tr>
                                         <td>
                                             <div id='testDiv'></div>
                                     <tr>
+                                        <td>Center: <span id='statusDiv'>&nbsp;</span>
+                                    </tr>
+                                    <tr>
                                         <td style='display:contents'>
                                             <div id='canvasDiv' tabindex='0'>Initializing ...</div>
                                 </table>
                         <tr>
                             <td>
-                                <div id='mouseStatus'></div> &#x2795; Selected target; &#x2796;Target; &#x25FB;
+                                <div id='mouseStatus'></div> &#x2795; Selected target; &#x25ef;Target; &#x2b1c;
                                 Alignment
                                 box; <br>
                                 Keys: h: left; &nbsp;l: right; &nbsp;j: move up; &nbsp;k: down Zoom: &nbsp;&gt;: zoom
                                 in; &nbsp;&lt;: zoom out.
                     </table>
         </table>
-
-        <input type='hidden' id='formUseDSS' value='0' name='formUseDSS'>
     </form>
     <br>
     <table id='targetForms'>
@@ -176,7 +163,7 @@
     <hr>
     <table id='footerTable'>
         <tr>
-            <td>Slitmask Design Tool Prototype - (C) 2018 - W. M. Keck Observatory
+            <td>Slitmask Design Tool Prototype - (C) - <a href='https://keckobservatory.org'>W. M. Keck Observatory</a>
     </table>
     <iframe name='targetListFrame' id='targetListFrame'> allowfullscreen</iframe>
 </body>

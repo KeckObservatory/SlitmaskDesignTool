@@ -111,13 +111,16 @@ def launchBrowser(host, portnr, path):
 
 
 def rotate(xs, ys, rotDeg):
-    rotRad = math.radians(rotDeg)
-    sina = math.sin(rotRad)
-    cosa = math.cos(rotRad)
+    rotRad = np.radians(rotDeg)
+    sina = np.sin(rotRad)
+    cosa = np.cos(rotRad)
     outxs = xs * cosa - ys * sina
     outys = xs * sina + ys * cosa
     return outxs, outys
 
 
-MM2AS = math.degrees(1.0 / 149583) * 3600
+#MM2AS = math.degrees(1.0 / 149583) * 3600   # 1.3789321396622367
+MM2AS = math.degrees(3600 / 150327)          # 
+
+AS2MM = 1.0 / MM2AS                         # 0.7251988486140772
 

@@ -43,6 +43,21 @@ MaskLayouts = {
         (498.0, 187.0, 1),
         (259.7, 187.0, 2),
     ),
+    "deimos_no_gap": (
+        (-498.0, 187.0, 0),  # mask x,y;  NB in arcsec on sky; sense depends on this
+        (-498.0, 332.0, 1),
+        (-460.0, 385.0, 1),
+        (-420.0, 428.0, 1),
+        (-360.0, 479.0, 1),
+
+        (360.0, 479.0, 1),
+        (420.0, 428.0, 1),
+        (460.0, 385.0, 1),
+        (498.0, 332.0, 1),
+        (498.0, 187.0, 1),
+
+        (-498.0, 187.0, 2),
+    ),
     "lris": ((-100, -100, 0), (100, -100, 1), (100, 100, 1), (-100, 100, 2)),
 }
 
@@ -176,3 +191,6 @@ def shrinkMask(mask, margin=0.5):
             # print()
             state = 0
     return out
+
+def scaleLayout (layout, scale, offx, offy):
+    return [ (x*scale+offx, y*scale+offy, t) for x, y, t in layout]

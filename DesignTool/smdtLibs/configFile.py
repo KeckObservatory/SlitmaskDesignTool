@@ -13,8 +13,7 @@ class ConfigFile(ConfigParser):
         """
         super(ConfigFile, self).__init__(kwargs)
         self.fileName = fileName
-        self.default_secion = kwargs.get("default_section", "DEFAULT")
-        self.split = kwargs.get("split", False)
+        self.default_secion = kwargs.get("default_section", "DEFAULT")        
         self.properties = {}
         if fileName is not None:
             self.read(fileName)

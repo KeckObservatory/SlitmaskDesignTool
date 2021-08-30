@@ -7,15 +7,15 @@ function TargetTable (targets) {
 	
 	self.targets = targets;
 	self.columns = [
-		['Name', 100, 'name', 0],
+		['Name', 100, 'objectId', 0],
 		['RA', 90, 'raSexa', 0],
 		['DEC', 90, 'decSexa', 0],
 		['Prior', 70, 'pcode', 0],
 		['Sel', 35, 'selected', 0],
 		['In', 35, 'inMask', 0],		
-		['Slit PA', 70, 'slitPA', 0],
+		['Slit PA', 70, 'slitLPA', 0],
 		['Magn', 70, 'mag', 0],
-		['Band', 50, 'band', 0],
+		['Band', 50, 'pBand', 0],
 		['Len1', 50, 'length1', 0],
 		['Len2', 50, 'length2', 0],
 		['SlitWidth', 70, 'slitWidth', 0]];
@@ -25,15 +25,15 @@ function TargetTable (targets) {
 	
 		var i;
 		var columns = self.columns;
-		var names = targets.name;
+		var names = targets.objectId;
 		var raHours = targets.raSexa;
 		var decDegs = targets.decSexa;
 		var pcodes = targets.pcode;
 		var selecteds = targets.selected;
 		var inMask = targets.inMask;
-		var slitPAs = targets.slitPA;
+		var slitPAs = targets.slitLPA;
 		var mags = targets.mag;
-		var bands = targets.band;
+		var bands = targets.pBand;
 		var len1s = targets.length1;
 		var len2s = targets.length2;
 		var slitWidths = targets.slitWidth;		

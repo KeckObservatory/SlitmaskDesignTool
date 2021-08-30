@@ -20,7 +20,8 @@ import json
 import sys
 import os
 import argparse
-
+import time
+import signal
 import matplotlib
 
 matplotlib.use("Agg")
@@ -42,7 +43,7 @@ GlobalData = {}
 def _getData(_id):
     d = GlobalData.get(_id)
     if not d:
-        d = SlitmaskDesignTool(b"", config=None)
+        d = SlitmaskDesignTool(None, config=None)
     return d
 
 
@@ -62,8 +63,9 @@ class SMDesignHandler(EasyHTTPHandler):
         """
         Respond to the form action
         """
-        content = qstr["targetList"][0]
-        _setData("smdt", SlitmaskDesignTool(content, self.config))
+        content = self.getDefValue(qstr, "targetList", None)
+        if content is not None:
+            _setData("smdt", SlitmaskDesignTool(content, self.config))
         return "OK", self.PlainTextType
 
     @utils.tryEx
@@ -119,11 +121,15 @@ class SMDesignHandler(EasyHTTPHandler):
         minSlitLength = self.floatVal(qstr, "minSlitLengthAs", 8)
         boxSize = self.floatVal(qstr, "boxSize", 4)
         parts = vals.split(",")
-        if len(parts):
-            targetIdx = [int(x) for x in vals.split(",")]
-            sm.recalculateMask(targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
-            return sm.targetList.toJson(), self.PlainTextType
-        return sm.targetList.toJson(), self.PlainTextType
+        try:
+            if len(parts):
+                targetIdx = [int(x) for x in parts]
+                sm.recalculateMask(targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
+        except Exception as e:
+            print ("Failed in recalculateMask", e)
+            pass
+            
+        return sm.targetList.toJsonWithInfo(), self.PlainTextType
 
     @utils.tryEx
     def setColumnValue(self, req, qstr):
@@ -132,14 +138,14 @@ class SMDesignHandler(EasyHTTPHandler):
         colName = self.getDefValue(qstr, "colName", "")
         if colName != "":
             sm.targetList.targets[colName] = value
-        return "[]", self.PlainTextType
+        return self.response("[]", self.PlainTextType)
 
     @utils.tryEx
     def updateTarget(self, req, qstr):
         sm = _getData("smdt")
 
         sm.targetList.updateTarget(self.getDefValue(qstr, "values", ""))
-        return "[]", self.PlainTextType
+        return self.response("[]", self.PlainTextType)
 
     def saveMaskDesignFile(self, req, qstr):
         sm = _getData("smdt")
@@ -160,10 +166,13 @@ class SMDesignHandler(EasyHTTPHandler):
         self.wfile.flush()
         return None, "application/fits"
 
-    @infoLog
     def quit(self, req, qstr):
-        # SMDTLogger.info("%s", "Terminated")
-        # os._exit(1)
+        if args.browser:
+            time.sleep(1)
+            SMDTLogger.info("%s", "Terminated")
+            os._exit(1)
+            print ("Exiting ...")
+            return None, None
         return self.response("[]", self.PlainTextType)
 
     def log_message(self, msg, *args):
@@ -188,14 +197,14 @@ class SWDesignServer:
             self.hostip = ""
 
     def _start(self):
-        try:
-            httpd = EasyHTTPServerThreaded(("", self.portNr), SMDesignHandler)
+        try:            
+            self.httpd = httpd = EasyHTTPServerThreaded(("", self.portNr), SMDesignHandler)
             print("HTTPD started {} ({}), port {}".format(self.host, self.hostip, self.portNr))
             try:
                 httpd.serve_forever()
                 httpd.shutdown()
-            except KeyboardException:
-                pass
+            #except (KeyboardException, KeyboardInterrupt):
+            #    pass
             except:
                 print("HTTPD Terminated")
         except Exception as e:
@@ -209,10 +218,28 @@ class SWDesignServer:
 def readConfig(confName):
     print("Using config file ", confName)
     cf = ConfigFile(confName)
-    pf = ConfigFile(cf.paramFile, split=True)
+    pf = ConfigFile(cf.paramFile)
     cf.properties["params"] = pf
     return cf
 
+def initSignals ():
+    def reallyQuit (signum, frame):    
+        try:
+            smd.httpd.shutdown()
+            os._exit(0)
+        except Exception as e:
+            pass
+        return True
+
+    def handler (signum, frame):
+        signal.signal(signal.SIGINT, reallyQuit)
+        print ("\nPress Ctrl-C again to quit")
+        time.sleep (2)
+        print ("Resuming ...")
+        signal.signal(signal.SIGINT, handler)
+        return False
+
+    signal.signal(signal.SIGINT, handler)
 
 if __name__ == "__main__":
 
@@ -222,7 +249,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--browser", dest="browser", help="Start browser", action="store_true")
 
     args = parser.parse_args()
-
+    initSignals ()
     cf = readConfig(args.config_file)
 
     SMDesignHandler.config = cf

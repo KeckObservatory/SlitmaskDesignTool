@@ -1,9 +1,9 @@
 #!/bin/sh
 
-PYTHONHOME="/local/anaconda3/"
-PYTHON="${PYTHONHOME}/bin/python"
-
-export PYTHONHOME 
+#PYTHONHOME="/local/skwok/anaconda3/"
+#PYTHON="${PYTHONHOME}/bin/python"
+#export PYTHONHOME 
+PYTHON=`which python3`
 
 checkIfRunning()
 {

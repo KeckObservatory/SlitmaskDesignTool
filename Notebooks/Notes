@@ -1,8 +1,4 @@
 
-ApplyDistortion_test.ipynb
-    Tests the distortion compensation calculation
-    Compares results with output of the original tool
-
 Build_TestCases.ipynb
     Parses the DeimosExample directory to create the list of test cases, as Test_InputM.py
 
@@ -26,3 +22,4 @@ ShowMaskLayouts.ipynb
     Shows the mask geonmetry, the guider layout and bad columns
     
 Test_InputM.py
+    A list of test cases.

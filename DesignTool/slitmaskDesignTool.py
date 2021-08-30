@@ -28,7 +28,9 @@ class SlitmaskDesignTool:
         tlistRaw is the target list in raw format (bytes)
         config: configuration object        
         """
-        if type(tlistRaw) == TargetList:
+        if tlistRaw is None:
+            self.setTargetList(None, config=config)
+        elif type(tlistRaw) == TargetList:
             self.targetList = tlistRaw
         else:
             tlist = io.StringIO(tlistRaw.decode("UTF-8"))
@@ -71,7 +73,7 @@ class SlitmaskDesignTool:
         targets.centerRADeg = raDeg
         targets.centerDEC = decDeg
         targets.positionAngle = paDeg
-        mask = MaskLayouts[self.config.get("Instrument").lower()]
+        mask = MaskLayouts[self.config.getValue("Instrument", "deimos").lower()]
         minX, maxX = np.min(mask, axis=0)[0], np.max(mask, axis=0)[0]
 
         # Updates targets coordinates for the new center raDeg and decDeg
