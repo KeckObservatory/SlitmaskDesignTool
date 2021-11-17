@@ -64,7 +64,8 @@ case x$CMD in
 		start $*
 	;;
 	*)
-		echo "runDesignTool.sh start|stop|restart|status"
+		echo "runDesignTool.sh start|stop|restart|status [-b]"
+		echo "-b: start browser"
 		status 
 	;;
 esac

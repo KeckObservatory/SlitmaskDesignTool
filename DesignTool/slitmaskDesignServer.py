@@ -22,6 +22,7 @@ import os
 import argparse
 import time
 import signal
+import traceback
 import matplotlib
 
 matplotlib.use("Agg")
@@ -35,7 +36,7 @@ from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThr
 from smdtLibs.configFile import ConfigFile
 from slitmaskDesignTool import SlitmaskDesignTool
 from smdtLogger import SMDTLogger, infoLog
-from maskDesignFile import MaskDesignOutputFitsFile
+from maskDesignFile import MaskDesignOutputFitsFile, getListAsBytes
 
 GlobalData = {}
 
@@ -43,7 +44,7 @@ GlobalData = {}
 def _getData(_id):
     d = GlobalData.get(_id)
     if not d:
-        d = SlitmaskDesignTool(None, config=None)
+        d = SlitmaskDesignTool(None, "deimos", config=None)
     return d
 
 
@@ -65,7 +66,7 @@ class SMDesignHandler(EasyHTTPHandler):
         """
         content = self.getDefValue(qstr, "targetList", None)
         if content is not None:
-            _setData("smdt", SlitmaskDesignTool(content, self.config))
+            _setData("smdt", SlitmaskDesignTool(content, "deimos", self.config))
         return "OK", self.PlainTextType
 
     @utils.tryEx
@@ -107,71 +108,88 @@ class SMDesignHandler(EasyHTTPHandler):
     @utils.tryEx
     def getMaskLayout(self, req, qstr):
         sm = _getData("smdt")
-        inst = self.getDefValue(qstr, "instrument", "deimos")
-        return json.dumps(sm.getMaskLayout(inst)), self.PlainTextType
+        return json.dumps(sm.getMaskLayout()), self.PlainTextType
 
     @utils.tryEx
     def recalculateMask(self, req, qstr):
+        """
+        Selects targets that are inside the mask and are not overlapping
+        Recalculates the slit lengths (length1 and lenght2).
+        Updates selected flag.
+        """
         sm = _getData("smdt")
-        vals = self.getDefValue(qstr, "insideTargets", "")
         currRaDeg = self.floatVal(qstr, "currRaDeg", 0)
         currDecDeg = self.floatVal(qstr, "currDecDeg", 0)
         currAngleDeg = self.floatVal(qstr, "currAngleDeg", 0)
         minSep = self.floatVal(qstr, "minSepAs", 0.5)
         minSlitLength = self.floatVal(qstr, "minSlitLengthAs", 8)
-        boxSize = self.floatVal(qstr, "boxSize", 4)
-        parts = vals.split(",")
+        extentSlits = self.intVal(qstr, "extendSlits", 1)
         try:
-            if len(parts):
-                targetIdx = [int(x) for x in parts]
-                sm.recalculateMask(targetIdx, currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, boxSize)
+            sm.recalculateMask(currRaDeg, currDecDeg, currAngleDeg, minSlitLength, minSep, ext=extentSlits)
+            return sm.targetList.toJsonWithInfo(), self.PlainTextType
         except Exception as e:
-            print ("Failed in recalculateMask", e)
+            print("Failed in recalculateMask", e)
+            traceback.print_exc()
             pass
-            
-        return sm.targetList.toJsonWithInfo(), self.PlainTextType
+
+        return None, None
 
     @utils.tryEx
     def setColumnValue(self, req, qstr):
         sm = _getData("smdt")
         value = self.getDefValue(qstr, "value", "")
         colName = self.getDefValue(qstr, "colName", "")
+        avalue = self.getDefValue(qstr, "avalue", "")
         if colName != "":
-            sm.targetList.targets[colName] = value
+            sm.setColumnValue(colName, utils.asType(value), utils.asType(avalue))
+            # sm.targetList.targets[colName] = utils.asType (value)
         return self.response("[]", self.PlainTextType)
 
     @utils.tryEx
     def updateTarget(self, req, qstr):
         sm = _getData("smdt")
 
-        sm.targetList.updateTarget(self.getDefValue(qstr, "values", ""))
+        idx = sm.targetList.updateTarget(self.getDefValue(qstr, "values", ""))
+        return self.response(f"[{idx}]", self.PlainTextType)
+
+    @utils.tryEx
+    def deleteTarget(self, req, qstr):
+        sm = _getData("smdt")
+
+        sm.targetList.deleteTarget(self.intVal(qstr, "idx", -1))
         return self.response("[]", self.PlainTextType)
 
     def saveMaskDesignFile(self, req, qstr):
         sm = _getData("smdt")
-
+        mdFile = self.getDefValue(qstr, "mdFile", "mask.fits")
         try:
-            mdFile = self.getDefValue(qstr, "mdFile", "mask.fits")
-            mdf = MaskDesignOutputFitsFile(sm.targetList)
-            buf = mdf.asBytes()
+            prefix = os.path.splitext(mdFile)[0]
+            # make sure extension is fits
+            fitsname = os.path.realpath(prefix + ".fits")
+            listname = os.path.realpath(prefix + ".out")
+            fbase = os.path.basename(fitsname)
+            lbase = os.path.basename(listname)
+            dname = os.path.dirname(fitsname)
+            fname, fbackupName = sm.saveDesignAsFits(fitsname)
+            lname, lbackupName = sm.saveDesignAsList(listname)
+            out = {
+                "fitsname": fbase,
+                "listname": lbase,
+                "path": dname,
+                "errstr": "OK",
+                "fbackup": fbackupName,
+                "lbackup": lbackupName,
+            }
         except Exception as e:
-            self.send_error(500, repr(e))
-            return None, "application/fits"
-
-        self.send_response(200, "OK")
-        self.send_header("Content-type", "application/fits")
-        self.send_header("Content-Disposition", "attachment; filename=" + mdFile)
-        self.end_headers()
-        self.wfile.write(buf)
-        self.wfile.flush()
-        return None, "application/fits"
+            out = {"errstr": repr(e)}
+        return self.response(json.dumps(out), self.PlainTextType)
 
     def quit(self, req, qstr):
         if args.browser:
             time.sleep(1)
             SMDTLogger.info("%s", "Terminated")
             os._exit(1)
-            print ("Exiting ...")
+            print("Exiting ...")
             return None, None
         return self.response("[]", self.PlainTextType)
 
@@ -197,13 +215,13 @@ class SWDesignServer:
             self.hostip = ""
 
     def _start(self):
-        try:            
+        try:
             self.httpd = httpd = EasyHTTPServerThreaded(("", self.portNr), SMDesignHandler)
             print("HTTPD started {} ({}), port {}".format(self.host, self.hostip, self.portNr))
             try:
                 httpd.serve_forever()
                 httpd.shutdown()
-            #except (KeyboardException, KeyboardInterrupt):
+            # except (KeyboardException, KeyboardInterrupt):
             #    pass
             except:
                 print("HTTPD Terminated")
@@ -222,8 +240,9 @@ def readConfig(confName):
     cf.properties["params"] = pf
     return cf
 
-def initSignals ():
-    def reallyQuit (signum, frame):    
+
+def initSignals():
+    def reallyQuit(signum, frame):
         try:
             smd.httpd.shutdown()
             os._exit(0)
@@ -231,15 +250,16 @@ def initSignals ():
             pass
         return True
 
-    def handler (signum, frame):
+    def handler(signum, frame):
         signal.signal(signal.SIGINT, reallyQuit)
-        print ("\nPress Ctrl-C again to quit")
-        time.sleep (2)
-        print ("Resuming ...")
+        print("\nPress Ctrl-C again to quit")
+        time.sleep(2)
+        print("Resuming ...")
         signal.signal(signal.SIGINT, handler)
         return False
 
     signal.signal(signal.SIGINT, handler)
+
 
 if __name__ == "__main__":
 
@@ -249,7 +269,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--browser", dest="browser", help="Start browser", action="store_true")
 
     args = parser.parse_args()
-    initSignals ()
+    initSignals()
     cf = readConfig(args.config_file)
 
     SMDesignHandler.config = cf

@@ -7,6 +7,7 @@ Created on Mar 20, 2018
 from targetSelector import TargetSelector
 from smdtLogger import SMDTLogger
 from smdtLibs.inOutChecker import InOutChecker
+from maskLayouts import MaskLayouts
 from smdtLibs import utils, dss2Header, DARCalculator
 from astropy.modeling import models
 import datetime
@@ -80,6 +81,7 @@ class TargetList:
         self.centerRADeg = None
         self.centerDEC = None
         self.fileName = None
+        self.maskName = "Unknown"
         if type(input) == type(io.StringIO()):
             self.targets = self.readRaw(input)
         elif type(input) == type(pd.DataFrame()):
@@ -89,8 +91,18 @@ class TargetList:
         else:
             self.fileName = input
             self.targets = self.readFromFile(input)
+
+        instrument = "deimos"
+        if config is not None:
+            instrument = config.properties["instrument"]
+
+        self.xgaps = []
+        self.layout = MaskLayouts[instrument]
         self.project2FocalPlane()
         self.__updateDate()
+
+    def getNrTargets(self):
+        return self.targets.shape[0]
 
     def __updateDate(self):
         """
@@ -106,26 +118,29 @@ class TargetList:
             self.centerRADeg = self.centerDEC = 0, 0
         else:
             if self.centerRADeg is None and self.centerDEC is None:
-                self.centerRADeg = np.mean(targets.raHour)* 15
+                self.centerRADeg = np.mean(targets.raHour) * 15
                 self.centerDEC = np.mean(targets.decDeg)
 
             self.reCalcCoordinates(self.centerRADeg, self.centerDEC, self.positionAngle)
-        
+
     def _checkPA(self, inLine):
         """
         Checks if input line contains the center RA/DEC and PA
-        Use in readRaw
+        Used in readRaw
         """
         if not "PA=" in inLine.upper():
             return False
         parts = inLine.split()
 
+        # name, ra, dec, eqx, pa = parts
+
         for i, s in enumerate(parts):
             if "PA=" in s.upper():
-                self.centerRADeg = utils.sexg2Float(parts[i-3]) * 15
-                self.centerDEC = utils.sexg2Float(parts[i-2])
+                self.centerRADeg = utils.sexg2Float(parts[i - 3]) * 15
+                self.centerDEC = utils.sexg2Float(parts[i - 2])
                 parts1 = (" ".join(parts[i:])).split("=")
                 self.positionAngle = float(parts1[1].strip())
+                self.maskName = parts[i - 4]
                 return True
         return False
 
@@ -166,7 +181,8 @@ class TargetList:
             "slitWidth",
             "orgIndex",
             "inMask",
-            "raRad", "decRad"
+            "raRad",
+            "decRad",
         )
         cnt = 0
         for nr, line in enumerate(fh):
@@ -185,8 +201,7 @@ class TargetList:
                 continue
             # print (nr, "len", parts)
 
-            template = ["", "", "2000", "99", "I", "0", "-1",
-                        "0", "0", "4.0", "4.0", "1.5", "0", "0"]
+            template = ["", "", "2000", "99", "I", "0", "-1", "0", "0", "4.0", "4.0", "1.5", "0", "0"]
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
             if self._checkPA(p1):
@@ -207,7 +222,7 @@ class TargetList:
                 if eqx > 3000:
                     eqx = float(template[2][:4])
                     tmp = template[2][4:]
-                    template[3: minLength + 1] = parts[2:minLength]
+                    template[3 : minLength + 1] = parts[2:minLength]
                     template[3] = tmp
 
                 mag = toFloat(template[3])
@@ -243,7 +258,8 @@ class TargetList:
                 slitWidth,
                 cnt,
                 inMask,
-                raRad, decRad
+                raRad,
+                decRad,
             )
             out.append(target)
             cnt += 1
@@ -253,7 +269,7 @@ class TargetList:
         if self.centerRADeg is None or self.centerRADeg is None:
             msg = "Center RA and DEC undefined. Using averge of input RA and DEC."
             SMDTLogger.info(msg)
-            #print(msg)
+            # print(msg)
             self.centerRADeg = df.raHour.mean() * 15
             self.centerDEC = df.decDeg.mean()
             self.positionAngle = 0
@@ -306,7 +322,8 @@ class TargetList:
         for i, colName in enumerate(tgs.columns):
             data1[colName] = data[i]
 
-        data2 = {"info": self.getROIInfo(), "targets": data1}
+        data2 = {"info": self.getROIInfo(), "targets": data1, "xgaps": self.xgaps}
+
         return json.dumps(data2, cls=MyJsonEncoder)
 
     def setColum(self, colName, value):
@@ -315,32 +332,31 @@ class TargetList:
         """
         self.targets[colName] = value
 
-    def select(self, idxList, minX, maxX, minSlitLength, minSep, boxSize):
+    def calcSlitPosition(self, minX, maxX, minSlitLength, minSep, ext):
         """
         Selects the targets to put on slits
-
+        ext: extends to fill gaps
         """
-        targets = self.targets
-        #
-        targets["inMask"] = np.zeros(targets.shape[0])
-        mIdx = targets.columns.get_loc("inMask")
+        self.markInside()
+        selector = TargetSelector(self.targets, minX, maxX, minSlitLength, minSep)
+        self.targets = selector.performSelection(extendSlits=ext)
+        self.xgaps = selector.xgaps
 
-        selector = TargetSelector(
-            targets.iloc[idxList], minX, maxX, minSlitLength, minSep, boxSize)
-        selIdx = selector.performSelection()
-        orgIdx = selector.targets.iloc[selIdx].orgIndex
-        targets.iloc[orgIdx, [mIdx]] = 1
-
-        for i, stg in selector.targets.iterrows():
-            targets.at[stg.orgIndex, "length1"] = stg.length1
-            targets.at[stg.orgIndex, "length2"] = stg.length2
+    def findTarget(self, targetName):
+        """
+        Finds entry with the given targName.
+        Returns idx, or -1 if not found
+        """
+        for i, stg in self.targets.iterrows():
+            if stg.objectId == targetName:
+                return stg.orgIndex
+        return -1
 
     def updateTarget(self, jvalues):
         """
         Used by GUI to change values in a target.
         """
         values = json.loads(jvalues)
-        idx = values["idx"]
         tgs = self.targets
 
         pcode = int(values["prior"])
@@ -349,23 +365,82 @@ class TargetList:
         slitWidth = float(values["slitWidth"])
         len1 = float(values["len1"])
         len2 = float(values["len2"])
+        targetName = values["targetName"]
 
-        tgs.at[idx, "pcode"] = pcode
-        tgs.at[idx, "selected"] = selected
-        tgs.at[idx, "slitLPA"] = slitLPA
-        tgs.at[idx, "slitWidth"] = slitWidth
-        tgs.at[idx, "length1"] = len1
-        tgs.at[idx, "length2"] = len2
-        SMDTLogger.info(
-            f"Updated target {idx}, pcode={pcode}, selected={selected}, slitLPA={slitLPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
-        )
-        return 0
+        raSexa = values["raSexa"]
+        decSexa = values["decSexa"]
+        raHour = utils.sexg2Float(raSexa)
+        decDeg = utils.sexg2Float(decSexa)
 
-    def markInside(self, layout):
+        raRad = math.radians(raHour * 15)
+        decRad = math.radians(decDeg)
+
+        idx = self.findTarget(targetName)
+
+        if idx >= 0:
+            # Existing entry
+            tgs.at[idx, "pcode"] = pcode
+            tgs.at[idx, "selected"] = selected
+            tgs.at[idx, "slitLPA"] = slitLPA
+            tgs.at[idx, "slitWidth"] = slitWidth
+            tgs.at[idx, "length1"] = len1
+            tgs.at[idx, "length2"] = len2
+
+            tgs.at[idx, "raHour"] = raHour
+            tgs.at[idx, "decDeg"] = decDeg
+            tgs.at[idx, "raRad"] = raRad
+            tgs.at[idx, "decRad"] = decRad
+
+            SMDTLogger.info(
+                f"Updated target {idx}, ra {raSexa}, dec {decSexa}, pcode={pcode}, selected={selected}, slitLPA={slitLPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}"
+            )
+        else:
+            # Add a new entry
+            idx = self.targets.objectId.shape[0]
+            newItem = {
+                "objectId": targetName,
+                "raHour": raHour,
+                "decDeg": decDeg,
+                "eqx": 2000,
+                "mag": int(values["mag"]),
+                "pBand": values["pBand"],
+                "pcode": int(values["prior"]),
+                "sampleNr": 1,
+                "selected": selected,
+                "slitLPA": slitLPA,
+                "inMask": 0,
+                "length1": len1,
+                "length2": len2,
+                "slitWidth": slitWidth,
+                "orgIndex": idx,
+                "raRad": raRad,
+                "decRad": decRad,
+            }
+
+            self.targets = tgs.append(newItem, ignore_index=True)
+
+            SMDTLogger.info(
+                f"New target {targetName}, ra {raSexa}, dec {decSexa}, pcode={pcode}, selected={selected}, slitLPA={slitLPA:.2f}, slitWidth={slitWidth:.2f}, len1={len1}, len2={len2}, idx={idx}"
+            )
+
+        self.reCalcCoordinates(self.centerRADeg, self.centerDEC, self.positionAngle)
+        return idx
+
+    def deleteTarget(self, idx):
+        """
+        Remove a row idx from the data frame
+        """
+        if idx < 0:
+            return
+        tgs = self.targets
+        self.targets = tgs.drop(tgs.index[idx])
+        SMDTLogger.info("Delete target idx")
+
+    def markInside(self):
         """
         Sets the inMask flag to 1 (inside) or 0 (outside)
         """
-        inOutChecker = InOutChecker(layout)
+        inOutChecker = InOutChecker(self.layout)
         tgs = self.targets
         inMask = []
         for i, stg in tgs.iterrows():
@@ -378,17 +453,13 @@ class TargetList:
         Applies refraction on the cneter of mask coordinates
         """
         atRefr = DARCalculator.DARCalculator(
-            self.config.properties["tellatitude"],
-            self.config.properties["referencewavelen"] * 1000,
-            615,
-            0,
+            self.config.properties["tellatitude"], self.config.properties["referencewavelen"] * 1000, 615, 0,
         )
-        raDeg, decDeg, refr = atRefr.getRefr(
-            [centerRADeg], [centerDECDeg], centerRADeg, haDeg)
+        raDeg, decDeg, refr = atRefr.getRefr([centerRADeg], [centerDECDeg], centerRADeg, haDeg)
 
         return raDeg, decDeg
 
-    def toPNTCenter (self, paDeg, haDeg):
+    def toPNTCenter(self, paDeg, haDeg):
         """
         Rotates vector to center of telescope and adds refraction correction to center of mask
         Result is pointing center to be stored in FITS file.
@@ -399,13 +470,12 @@ class TargetList:
 
         ra2, dec2 = utils.rotate(pntX, pntY, -paDeg - 90.0)
         cosd = np.cos(np.radians(dec1[0]))
-        if abs(cosd) > 1E-5:
+        if abs(cosd) > 1e-5:
             ra2 = ra2 / cosd
         pntRaDeg = ra1[0] + ra2 / 3600
         pntDecDeg = dec1[0] + dec2 / 3600
 
-        return pntRaDeg, pntDecDeg 
-
+        return pntRaDeg, pntDecDeg
 
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
@@ -415,22 +485,23 @@ class TargetList:
         Returns xarcs, yarcs in focal plane coordinates in arcs.
         """
 
-        #raDeg, decDeg = self.calcRefrCoords(raDeg, decDeg)
+        # raDeg, decDeg = self.calcRefrCoords(raDeg, decDeg)
 
         telRaRad, telDecRad = self._fld2telax(raDeg, decDeg, posAngleDeg)
         self.telRaRad, self.telDecRad = telRaRad, telDecRad
 
-        xarcs, yarcs = self._calcTelTargetCoords(
-            telRaRad, telDecRad, self.targets.raRad, self.targets.decRad, posAngleDeg)
+        xarcs, yarcs = self._calcTelTargetCoords(telRaRad, telDecRad, self.targets.raRad, self.targets.decRad, posAngleDeg)
 
         self.targets["xarcs"] = xarcs
         self.targets["yarcs"] = yarcs
 
-        xs, ys = self.gnom_to_dproj (xarcs * utils.AS2MM, yarcs *utils.AS2MM)        
+        xs, ys = self.gnom_to_dproj(xarcs * utils.AS2MM, yarcs * utils.AS2MM)
         xmm, ymm, pas = self.proj_to_mask(xs, ys, 0)
 
-        self.targets["xmm"] = xmm       
-        self.targets["ymm"] = ymm        
+        self.targets["xmm"] = xmm
+        self.targets["ymm"] = ymm
+
+        self.targets["orgIndex"] = range(0, self.targets.shape[0])
 
         self.__updateDate()
         return xarcs, yarcs
@@ -492,8 +563,7 @@ class TargetList:
 
         return (
             math.radians(raDeg) - math.asin(sina),
-            math.asin((sind * cosd * cosa - cosr * sinr * cost) /
-                      (cosr * cosd * cosa - sinr * sind * cost)),
+            math.asin((sind * cosd * cosa - cosr * sinr * cost) / (cosr * cosd * cosa - sinr * sind * cost)),
         )
 
     def _calcTelTargetCoords(self, ra0Rad, dec0Rad, raRads, decRads, posAngle):
@@ -523,8 +593,7 @@ class TargetList:
         t2 = np.where(sinr == 0.0, 1, sinr)
         sinp = np.divide(t1, t2)
 
-        cosp = np.sqrt(np.abs(1.0 - sinp * sinp)) * \
-            np.where(decRads < dec0Rad, -1, 1)
+        cosp = np.sqrt(np.abs(1.0 - sinp * sinp)) * np.where(decRads < dec0Rad, -1, 1)
         p = np.arctan2(sinp, cosp)
 
         rArcsec = sinr / cosr * math.degrees(1) * 3600
@@ -539,22 +608,22 @@ class TargetList:
         return xd, yd
 
     def proj_to_mask(self, xp, yp, ap):
-        mu = np.arcsin(np.clip(xp/M_RCURV, -1.0, 1.0))
+        mu = np.arcsin(np.clip(xp / M_RCURV, -1.0, 1.0))
         cosm = np.cos(mu)
         cost = np.cos(M_ANGLERAD)
         tant = np.tan(M_ANGLERAD)
         xx = M_RCURV * mu
-        yy = (yp-ZPT_YM)/cost + M_RCURV*tant*(1-cosm)
+        yy = (yp - ZPT_YM) / cost + M_RCURV * tant * (1 - cosm)
 
-        tanpa = np.tan(np.radians(ap))*cosm/cost+tant*xp/M_RCURV
+        tanpa = np.tan(np.radians(ap)) * cosm / cost + tant * xp / M_RCURV
         ac = np.degrees(np.arctan(tanpa))
 
         # spherical image surface height
-        rho = np.sqrt(xp*xp+yp*yp)
-        rho = np.minimum (rho, R_IMSURF)
-        hs = R_IMSURF*(1-np.sqrt(1-(rho/R_IMSURF)**2))
+        rho = np.sqrt(xp * xp + yp * yp)
+        rho = np.minimum(rho, R_IMSURF)
+        hs = R_IMSURF * (1 - np.sqrt(1 - (rho / R_IMSURF) ** 2))
         # mask surface height
-        hm = MASK_HT0 + yy * np.sin(M_ANGLERAD)+M_RCURV*(1-cosm)
+        hm = MASK_HT0 + yy * np.sin(M_ANGLERAD) + M_RCURV * (1 - cosm)
         # correction
         yc = yy + (hs - hm) * yp / PPLDIST / cost
         xc = xx + (hs - hm) * xp / PPLDIST / cosm
@@ -565,6 +634,7 @@ class TargetList:
         Gets distortion coefficients from the configuration
         Returns the polynomial models for X and Y
         """
+
         def _getPoly(coeffs):
             pol = models.Polynomial2D(degree=4)
             pol.parameters = [float(x) for x in coeffs.split(",")]
@@ -575,3 +645,49 @@ class TargetList:
         xPoly = _getPoly(ccf.distortionXCoeffs)
         yPoly = _getPoly(ccf.distortionYCoeffs)
         return xPoly, yPoly
+
+    def writeTo(self, fileName):
+        def outputPA(fh):
+            print("# Mark name, center:", file=fh)
+            print("#", file=fh)
+            print(
+                "{:20s} {} {} 2000.0 PA={:.3f}".format(
+                    self.maskName,
+                    utils.toSexagecimal(self.centerRADeg / 15, secFmt="{:06.3f}"),
+                    utils.toSexagecimal(self.centerDEC, plus="+"),
+                    self.positionAngle,
+                ),
+                file=fh,
+            )
+            print("#", file=fh)
+            print("#", file=fh)
+            # end of outputPA
+
+        def outputTargets(fh):
+            for i, row in tgs.iterrows():
+                print(
+                    fmt.format(
+                        row.objectId,
+                        utils.toSexagecimal(row.raHour, secFmt="{:06.3f}"),
+                        utils.toSexagecimal(row.decDeg, plus="+"),
+                        row.eqx,
+                        row.mag,
+                        row.pBand,
+                        row.pcode,
+                        row.sampleNr,
+                        row.selected,
+                        row.slitLPA,
+                        row.length1,
+                        row.length2,
+                        row.slitWidth,
+                    ),
+                    file=fh,
+                )
+            # end outputTargets
+
+        tgs = self.targets
+        fmt = "{:20s} {} {} {} {:.3f} {} {:5.0f} {:.0f} {:.0f} {:.1f} {:.1f} {:.1f} {:.1f}"
+        with open(fileName, "w") as fh:
+            outputPA(fh)
+            outputTargets(fh)
+

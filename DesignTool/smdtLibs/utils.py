@@ -5,8 +5,13 @@ Created on Mar 20, 2018
 """
 import math
 import numpy as np
+import os
+import datetime
 import webbrowser
 import traceback
+
+MM2AS = math.degrees(3600 / 150327)  # 1.3789321396622367
+AS2MM = 1.0 / MM2AS  # 0.7251988486140772
 
 
 def tryEx(f):
@@ -23,7 +28,7 @@ def as2Radian(arcsec):
     return math.radians(arcsec / 3600.0)
 
 
-def toSexagecimal(deg, plus=" "):
+def toSexagecimal(deg, plus=" ", secFmt="{:05.2f}"):
     """Converts deg to dd:mm:ss """
     sign = plus
     if deg < 0:
@@ -36,9 +41,9 @@ def toSexagecimal(deg, plus=" "):
     mm = int(t)
     ss = (t - mm) * 60
 
-    ssStr = "%05.2f" % ss
+    ssStr = secFmt.format(ss)
 
-    return "%s%02d:%02d:%s" % (sign, hh, mm, ssStr)
+    return "{}{:02d}:{:02d}:{:s}".format(sign, hh, mm, ssStr)
 
 
 def sexg2Float(str0):
@@ -119,8 +124,28 @@ def rotate(xs, ys, rotDeg):
     return outxs, outys
 
 
-#MM2AS = math.degrees(1.0 / 149583) * 3600   # 1.3789321396622367
-MM2AS = math.degrees(3600 / 150327)          # 
+def asType(any):
+    try:
+        asInt = int(any)
+        return asInt
+    except:
+        pass
+    try:
+        asFloat = float(any)
+        return asFloat
+    except:
+        pass
+    return any
 
-AS2MM = 1.0 / MM2AS                         # 0.7251988486140772
 
+def getBackupName(name):
+    """
+    Returns a filename that does not already exist.
+    """
+    bname = name
+    while os.path.exists(bname):
+        dstr = datetime.datetime.now().strftime(".%Y%m%d_%H%M%S")
+        bname = name + dstr
+    if bname != name:
+        return bname
+    return None

@@ -1,223 +1,229 @@
 body {
-	background-color: #ffffee;
-	font-family: sans-serif;
-	margin-top: 0;
+  background-color: #ffffee;
+  font-family: sans-serif;
+  margin-top: 0;
+  font-size: 12px;
 }
 
 #kecklogo {
-	float: left;
-	margin: 0;
-	width: 82px;
-	height: 72px;
-	background: transparent url(./kecklogo.gif) no-repeat top left;
+  float: left;
+  margin: 0;
+  width: 82px;
+  height: 72px;
+  background: transparent url(./kecklogo.gif) no-repeat top left;
 }
 
 h2 #headline {
-	float: left;
-	margin: 0;
-	padding: 10px 0 0 40px;
-	font-size: 200%;
+  float: left;
+  margin: 0;
+  padding: 10px 0 0 40px;
+  font-size: 200%;
 }
 
 #keckmenu {
-	float: right;
-	width: 100%;
-	margin: -72px 0 0 0;
-	padding: 0;
-	list-style: none;
+  float: right;
+  width: 100%;
+  margin: -72px 0 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 #keckmenu li {
-	float: right;
-	margin: 0;
-	padding: 0;
-	font-family: "Lucida Grande", sans-serif;
-	font-size: 70%;
+  float: right;
+  margin: 0;
+  padding: 0;
+  font-family: "Lucida Grande", sans-serif;
+  font-size: 70%;
 }
 
 #keckmenu p {
-	float: none;
-	display: block;
-	margin: 0 1px 0 0;
-	padding: 2px 4px;
-	color: #000;
-	text-decoration: none;
-	background: #dde;
-	border: 1px solid #eef;
+  float: none;
+  display: block;
+  margin: 0 1px 0 0;
+  padding: 2px 4px;
+  color: #000;
+  text-decoration: none;
+  background: #dde;
+  border: 1px solid #eef;
 }
 
 #keckmenu p:hover {
-	color: #333;
-	padding-bottom: 2px;
-	border-color: #500;
-	background: #fee;
-	border: 1px solid #333;
+  color: #333;
+  padding-bottom: 2px;
+  border-color: #500;
+  background: #fee;
+  border: 1px solid #333;
 }
 
 #headerTable {
-	background-color: #ffffdd;
-	width: 100%;
+  background-color: #ffffdd;
+  width: 100%;
 }
 
 #footerTable {
-	font-size: 70%;
+  font-size: 70%;
 }
 
 #buttonPanel {
-	width: 100%;
+  width: 100%;
 }
 
 #buttonPanel tr td {
-	align-content: center;
-	vertical-align: top;
+  align-content: center;
+  vertical-align: top;
 }
 
 #contentTable tr td {
-	vertical-align: top;
-	background-color: #ffffee;
+  vertical-align: top;
+  background-color: #ffffee;
 }
 
 #contentPanel {
-	width: 100%;
+  width: 100%;
 }
 
 #contentCell {
-	width: 100%;	
+  width: 100%;
 }
 
 #canvasDiv {
-	width: 100%;
-	height: 100%;
-	border: solid 1px white;
-	background-color: black;
+  width: 100%;
+  height: 100%;
+  border: solid 1px white;
+  background-color: black;
 }
 
 #targetListFrame {
-	visibility: hidden;
-	display: none;
-	width: 2px;
-	height: 2px;
-	border: solid 1px black;
-	background-color: #ffffff;	
+  visibility: hidden;
+  display: none;
+  width: 2px;
+  height: 2px;
+  border: solid 1px black;
+  background-color: #ffffff;
 }
 
 #targetListName tr td {
-    vertical-align: middle;
+  vertical-align: middle;
 }
 
 #saveMDF {
-	background-color: #ffaaaa;
-	font-size: 120%;
+  background-color: #ffaaaa;
+  font-size: 120%;
 }
 
 #targetTableDiv {
-	background-color: #ffffee;
+  background-color: #ffffee;
 }
 
 #targetTable {
-	font-size: 80%;
-	border-collapse: collapse;
-	width: 855px;
+  font-size: 80%;
+  border-collapse: collapse;
 }
 
 #targetTable tbody {
-	display: block;
-	overflow-y: auto;
-	height: 300px;
-	padding: 0px;
-	scroll-behavior: smooth;
-		
+  display: block;
+  overflow-y: scroll;
+  height: 300px;
+  padding: 0px;
+  scroll-behavior: smooth;
 }
 
 #targetTable thead tr {
-	display: block;
-	padding: 0px;
+  display: block;
+  padding: 0px;
+  overflow-y: scroll;
 }
 
-#targetTable thead tr th {
-	padding: 2px 2px 2px 2px;
-	text-align: right;
-	background-color: #dfdfdf;
-	border: solid 1px #aaaaaa;
+#targetTable thead tr th,
+#targetTable tbody tr th {
+  padding: 2px 2px 2px 2px;
+  text-align: right;
+  background-color: #dfdfdf;
+  border: solid 1px #aaaaaa;
 }
 
 #targetTable tbody tr:nth-child(even) td {
-	padding: 2px 2px 2px 2px;
-	text-align: right;
-	background-color: #eeeecc;
-	border: solid 1px #aaaaaa;
+  padding: 2px 2px 2px 2px;
+  text-align: right;
+  background-color: #eeeecc;
+  border: solid 1px #aaaaaa;
 }
 
 #targetTable tbody tr:nth-child(odd) td {
-	padding: 2px 2px 2px 2px;
-	text-align: right;
-	background-color: #ffffee;
-	border: solid 1px #aaaaaa;
+  padding: 2px 2px 2px 2px;
+  text-align: right;
+  background-color: #ffffee;
+  border: solid 1px #aaaaaa;
 }
 
 #targetTable tbody tr.selectedRow td {
-    padding: 2px 2px 2px 2px;
-    text-align: right;
-    background-color: #ccffee;
-    border: solid 1px #aaaaaa;
+  padding: 2px 2px 2px 2px;
+  text-align: right;
+  background-color: #ffcccc;
+  border: solid 1px #aaaaaa;
 }
 
 #targetTable tbody tr.hiRow td {
-    padding: 2px 2px 2px 2px;
-    text-align: right;
-    background-color: #ffcccc;
-    border: solid 1px #aaaaaa;
+  padding: 2px 2px 2px 2px;
+  text-align: right;
+  background-color: #ffffcc;
+  border: solid 1px #aaaaaa;
 }
 
 #targetForms tr td {
-	vertical-align: top;
+  vertical-align: top;
+  padding-left: 20px;
 }
 
-#targetFormTable {	
-	font-size: 80%;
-	border-collapse: collapse;
+#targetFormTable {
+  font-size: 80%;
+  border-collapse: collapse;
 }
 
 #targetFormTable tr th {
-	background-color: #eeeecc;
-	text-align: left;
-	vertical-align: bottom;
-	height: 20px;
-	padding: 2px 5px 2px 5px;
+  background-color: #eeeecc;
+  text-align: left;
+  vertical-align: bottom;
+  height: 20px;
+  padding: 2px 5px 2px 5px;
 }
 
 #targetFormTable tr td {
-	height: 20px;
-	vertical-align: bottom;
-	padding: 2px 5px 2px 5px;
+  height: 20px;
+  vertical-align: bottom;
+  padding: 2px 5px 2px 5px;
+}
+
+.panButtonTable tr td {
+  padding: 2px 15px 2px 2px;
 }
 
 #targetName {
-	background-color: #eeeeff;
-	padding: 10px;
+  background-color: #eeeeff;
+  padding: 2px;
 }
 
 #recalculateMask {
-	font-size: 110%;
+  font-size: 110%;
 }
 
 #paramTable {
-	font-size: 85%;
-	margin: 5px 5px 2px 5px;
-    border-collapse: collapse;
+  font-size: 85%;
+  margin: 5px 5px 2px 5px;
+  border-collapse: collapse;
 }
 
 #paramTable td {
-    border: solid 1px #aaaaaa;
-    margin: 0px;
-    padding: 2px 2px 0px 2px;
-    vertical-align: bottom;
+  border: solid 1px #aaaaaa;
+  margin: 0px;
+  padding: 2px 2px 0px 2px;
+  vertical-align: bottom;
 }
 
 #paramTable tr:nth-child(even) td {
-	background-color: #eeeecc;
+  background-color: #eeeecc;
 }
 
 #paramTable tr:nth-child(odd) td {
-    background-color: #ffffee;
+  background-color: #ffffee;
 }
