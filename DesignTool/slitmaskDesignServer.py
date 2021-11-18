@@ -66,7 +66,8 @@ class SMDesignHandler(EasyHTTPHandler):
             v = params.getValue(k1, None)
             if v is not None:
                 v1, v2, v3, v4 = v
-                params.setValue(k, (qstr[k], v2, v3, v4))
+                # print("setting ", k1, qstr[k][0])
+                params.setValue(k1, (utils.asType(qstr[k][0]), v2, v3, v4))
 
     @utils.tryEx
     def sendTargets2Server(self, req, qstr):
