@@ -593,17 +593,19 @@ function CanvasShow(containerName, zoomContainer) {
         // positionAngle is telescope PA
         // view angle in screen coordinates
         let tmAngle = self.tMatrix.getRotAngle();
+        let tmDeg = degrees(tmAngle)
 
         self.positionAngle = degrees(self.targetMatrix.getRotAngle());
 
         let skyPA = self.positionAngle + self.origPA;
         // compass North in screen angle
-        self.compassNorthDeg = degrees(tmAngle) + 90 + skyPA;
+        self.compassNorthDeg = tmDeg + 90 + skyPA;
 
         // slit angle in screen angle
-        self.slitBaseAngleDeg = self.compassNorthDeg + 90;
+        //self.slitBaseAngleDeg = self.compassNorthDeg + 90;
+        self.slitBaseAngleDeg = tmDeg;
 
-        self.slitRel2Mask = radians(skyPA);
+        self.slitRel2Mask = 0; //radians(skyPA);
 
         // mask angle in screen angle
         self.maskBaseAngleRad = tmAngle;
@@ -835,7 +837,7 @@ function CanvasShow(containerName, zoomContainer) {
             let x11, y11, x12, y12;
 
             if (projSlitLen) {
-                let scosa = Math.cos(self.slitRel2Mask + slitAngle);
+                let scosa = -Math.cos(slitAngle);
                 if (scosa < 0) {
                     if (scosa > -0.01) scosa = -0.01;
                 }
