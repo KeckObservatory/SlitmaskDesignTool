@@ -360,6 +360,36 @@ function SlitmaskDesignTool() {
 		ajaxCall("deleteTarget", params, callback);
 	};
 
+	self.showDiv = function (divname, cont) {
+		let elem = E(divname);
+
+		elem.style.display = "block";
+		elem.style.position = "absolute";
+		elem.style.visibility = "visible";
+
+		let button = "<br><input type='button' value='Close' id='closeBt'>";
+		elem.innerHTML = cont + button;
+		let w = document.body.clientWidth;
+		let h = document.body.clientWidth;
+		let w1 = elem.offsetWidth;
+		let h1 = elem.offsetHeight;
+		let x1 = document.body.scrollLeft + (w - w1) / 2;
+		let y1 = document.body.scrollTop + (h - h1) / 2;
+		elem.style.left = "500px";
+		elem.style.top = "500px";
+
+		let closeBt = E('closeBt');
+		if (closeBt)
+			closeBt.onclick = function (evt) { self.hideDiv(divname); };
+	};
+
+	self.hideDiv = function (divname) {
+		let elem = E(divname);
+		let s = elem.style;
+		s.display = "none";
+		s.visibility = "hidden";
+	};
+
 	self.saveMDF = function (evt) {
 		function callbackSave(data) {
 			let fname = data['fitsname'];
@@ -370,20 +400,22 @@ function SlitmaskDesignTool() {
 			let lbackup = data['lbackup'];
 
 			if (errstr != "OK") {
-				alert("Failed to save mask design " + mdFile);
+				alert(`Failed to save mask design ${mdFile}`);
 				return;
 			}
 			let fbstr = "";
 			if (fbackup != null) {
-				fbstr = "\nBackup file:  " + fbackup;
+				fbstr = `<br>Backup file:  <b>${fbackup}</b>`;
 			}
 			let lbstr = "";
 			if (lbackup != null) {
-				lbstr = "\nBackup file: " + lbackup;
+				lbstr = `<br>Backup file: <b>${lbackup}</b>`;
 			}
-			let fstr = "Fits file " + fname + " successfully saved to " + path + fbstr;
-			let lstr = "Target list " + lname + " successfully saved to " + path + lbstr;
-			alert(fstr + "\n\n" + lstr);
+			let fstr = `Fits file<br><b>${fname}</b> successfully saved to <b>${path}</b> ${fbstr}`;
+			let lstr = `Target list<br><b>${lname}</b> successfully saved to <b>${path}</b> ${lbstr}`;
+
+			self.showDiv("savePopup", `${fstr}<br><br>${lstr}`);
+
 		}
 
 		function callback(data) {
@@ -441,6 +473,7 @@ function SlitmaskDesignTool() {
 	E('deleteTarget').onclick = self.deleteTarget;
 	E('saveMDF').onclick = self.saveMDF;
 
+	hideDiv("savePopup");
 
 	return this;
 }
