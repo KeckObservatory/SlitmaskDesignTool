@@ -13,7 +13,7 @@ class ConfigFile(ConfigParser):
         """
         super(ConfigFile, self).__init__(kwargs)
         self.fileName = fileName
-        self.default_secion = kwargs.get("default_section", "DEFAULT")        
+        self.default_secion = kwargs.get("default_section", "DEFAULT")
         self.properties = {}
         if fileName is not None:
             self.read(fileName)
@@ -52,6 +52,10 @@ class ConfigFile(ConfigParser):
         return value
 
     def _getPath(self, path):
+        """
+        If path is regular path then returns it.
+        Else tries to find it in the resources, ie where the source code is.
+        """
         if path is None:
             return None
 
@@ -65,6 +69,11 @@ class ConfigFile(ConfigParser):
         return None
 
     def read(self, cgfile):
+        """
+        Reads config using super class reader.
+        Then digests the content, ie. gets the right types for the values.
+        """
+
         def digestItems(sec, known):
             values = self.items(sec)
             secValues = {}
@@ -103,3 +112,5 @@ class ConfigFile(ConfigParser):
             return defValue
         return val
 
+    def setValue(self, key, value):
+        self.properties[key] = value

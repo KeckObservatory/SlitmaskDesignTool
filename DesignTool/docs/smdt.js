@@ -74,9 +74,12 @@ function SlitmaskDesignTool() {
 			unit = row[1];
 			label = row[2];
 			descText = row[3];
+			txt = `<tr><td> ${label} :<td><input id="${i}fd" name="${i}fd" value="${value}"><td>${descText}`;
+			/* 
 			txt = '<tr><td>' +
 				label + ':<td><input id="' + i + 'fd" value="' + value + '">' +
 				'<td>' + descText;
+			*/
 			buf.push(txt);
 		}
 		buf.push('</table>');
