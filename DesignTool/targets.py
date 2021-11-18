@@ -185,6 +185,12 @@ class TargetList:
             "decRad",
         )
         cnt = 0
+        params = self.config.getValue("params")
+        slitLength = params.getValue("minslitlength", 10)[0]
+        halfLen = slitLength / 2
+        slitWidth = params.getValue("slitwidth", 1)[0]
+        slitpa = params.getValue("slitpa", 0)[0]
+
         for nr, line in enumerate(fh):
             if not line:
                 continue
@@ -201,7 +207,7 @@ class TargetList:
                 continue
             # print (nr, "len", parts)
 
-            template = ["", "", "2000", "99", "I", "0", "-1", "0", "0", "4.0", "4.0", "1.5", "0", "0"]
+            template = ["", "", "2000", "99", "I", "0", "-1", "0", slitpa, halfLen, halfLen, slitWidth, "0", "0"]
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
             if self._checkPA(p1):

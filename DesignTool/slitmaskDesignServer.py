@@ -59,12 +59,22 @@ class SMDesignHandler(EasyHTTPHandler):
     def echo(self, req, qstr):
         return json.dumps(qstr), self.PlainTextType
 
+    def _updateConfigParams(self, qstr):
+        params = self.config.getValue("params")
+        for k in qstr.keys():
+            k1 = k.replace("fd", "")
+            v = params.getValue(k1, None)
+            if v is not None:
+                v1, v2, v3, v4 = v
+                params.setValue(k, (qstr[k], v2, v3, v4))
+
     @utils.tryEx
     def sendTargets2Server(self, req, qstr):
         """
         Respond to the form action
         """
         content = self.getDefValue(qstr, "targetList", None)
+        self._updateConfigParams(qstr)
         if content is not None:
             _setData("smdt", SlitmaskDesignTool(content, "deimos", self.config))
         return "OK", self.PlainTextType
