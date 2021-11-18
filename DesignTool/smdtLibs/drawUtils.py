@@ -1,6 +1,5 @@
 import io
 import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.path as path
 import matplotlib.patches as patches

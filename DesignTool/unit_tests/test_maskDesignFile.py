@@ -28,6 +28,9 @@ def init_targets():
 
 
 def test_targets(init_targets):
+    """
+    Tests reading target file ('.lst')
+    """
     tlist, config = init_targets
     tlist.positionAngle == 52
     raStr = utils.toSexagecimal(tlist.centerRADeg / 15).strip()
@@ -36,17 +39,28 @@ def test_targets(init_targets):
     assert 318 == tlist.targets.shape[0], "Unexpected number of targets"
 
 
+def removeFile(fname):
+    if os.path.exists(fname):
+        os.unlink(fname)
+
+
 def test_MaskDesignFile(init_targets):
+    """
+    Tests writing mask design FITS file.
+    """
     tlist, config = init_targets
     ft = MaskDesignOutputFitsFile(tlist)
     fileout = "testout.fits"
-    if os.path.exists(fileout):
-        os.unlink(fileout)
+    removeFile(fileout)
     ft.writeTo(fileout)
     assert os.path.exists("testout.fits"), "Failed to create mask design file"
 
 
 def test_MaskDesignFile2(init_targets):
+    """
+    Tests writing mask design FITS file.
+    Outputs only targets that are inside the mask
+    """
     tlist, config = init_targets
     inOutChecker = InOutChecker(MaskLayouts[config.params.Instrument[0].lower()])
     for i, stg in tlist.targets.iterrows():
@@ -56,9 +70,19 @@ def test_MaskDesignFile2(init_targets):
     ft = MaskDesignOutputFitsFile(tlist)
 
     fileout = "testout.fits"
-    if os.path.exists(fileout):
-        os.unlink(fileout)
+    removeFile(fileout)
     ft.writeTo(fileout)
 
     assert os.path.exists("testout.fits"), "Failed to create mask design file"
+
+
+def test_WriteList(init_targets):
+    """
+    Tests writing targets as list to a file
+    """
+    tlist, config = init_targets
+    fileout = "testout.out"
+    removeFile(fileout)
+    tlist.writeTo(fileout)
+    assert os.path.exists("testout.out"), "Failed to create target list file"
 

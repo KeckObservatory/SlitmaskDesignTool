@@ -21,213 +21,343 @@ and returned in getSelected.
 
 
 class TargetSelector:
-    def __init__(self, targetList, minX, maxX, minSlitLength, minSep, boxSize):
+    """
+    A tool to select slits such that they don't overlap. 
+    """
+
+    def __init__(self, targetList, minX, maxX, minSlitLength, minSep):
         """
         targetList is a pandas data frame
         minSep is minimal separation between slits in arcsec.
         """
         self.targets = targetList.copy()
+
+        self.targets["selected"] = 0
         self._sortTargets()
         self.minX = minX
         self.maxX = maxX
         self.minSlitLength = minSlitLength
-        self.boxSize = boxSize
         self.minSep = minSep
+        self.xgaps = []
 
     def _sortTargets(self):
+        """
+        Sorts targets by x-coordinates
+        """
         tgs = self.targets
-        tgs["xsort"] = tgs.xarcs - tgs.length1
-        tgs.sort_values(by=["selected", "pcode", "xsort"], ascending=(False, False, True), inplace=True)
+        tgs["oldIndex"] = range(0, tgs.shape[0])
+        tgs.sort_values(by=["pcode", "xarcs"], ascending=(False, True), inplace=True)
         self.targets = tgs.reset_index(drop=True)
 
-    def _canFit(self, xgaps, xpos, slitLength, minSep, margin):
+    def restoreIndex(self):
+        self.targets.sort_values(by="oldIndex", ignore_index=True, inplace=True)
+        self.targets = self.targets.reset_index(drop=True)
+
+    def _canFit(self, xgaps, xpos, slitLength, minSep):
         """
         Tries to fit the new segment in a gap
+        Returns (canFit, index in xgaps)
         """
-        minMargin = minSep + margin
+        halfSep = minSep
         # print ('xgaps', xgaps)
         for idx, (gapStart, gapEnd) in enumerate(xgaps):
             # print ("xpos", xpos, "gap", gapStart, gapEnd)
-            if xpos < gapStart:
+            if xpos < gapStart + halfSep:
                 """
                 xpos is left of gap, 
                 It is also left of all remaining gaps, so return false
                 """
                 return False, idx
-            if xpos > gapEnd:
+            if xpos >= gapEnd - halfSep:
                 """
                 xpos is on the right side, continue
                 """
                 continue
             """ xpos is in the gap, checks for margin
-                returns True if inside
-            """
-            if (gapStart + minMargin) < xpos < (gapEnd - minMargin):
-                """
+                returns True if inside            
                 If xpos is in this gap, it cannot be in another gap, so OK to return 
-                """
-                gapLength = gapEnd - gapStart - minSep
-                if gapLength < slitLength:
-                    """ Gap too short """
-                    return False, idx
-                return True, idx
+            """
+            gapLength = gapEnd - gapStart - minSep
+            if gapLength < slitLength:
+                # Gap too short
+                return False, idx
+            return True, idx
         return False, -1
 
-    def _splitGap(self, xgaps, gIdx, xpos, slitLength, minSep, margin):
+    def _splitGap(self, xgaps, gIdx, xpos, slitLength, minSep):
         """
         Splits the gap at xgaps[gIdx] into two
         """
         gapStart, gapEnd = xgaps[gIdx]
         # gap will be split into two gaps
 
-        minMargin = minSep + margin
+        halfSep = minSep / 2
         halfLength = slitLength / 2.0
 
-        if xpos - halfLength < gapStart + minSep:
+        left = xpos - halfLength - halfSep
+        right = xpos + halfLength + halfSep
+
+        if left < gapStart:
             """ xpos is closer to the left side
                 so adjust left 
             """
-            left = gapStart + minSep
-            right = left + slitLength
-        elif gapEnd - minSep < xpos + halfLength:
+            left = gapStart
+            right = left + slitLength + minSep
+            xgaps[gIdx] = (right, gapEnd)
+        elif right > gapEnd:
             """ xpos is closer to the right side, 
                 so adjust right
             """
-            right = gapEnd - minSep
-            left = right - slitLength
+            right = gapEnd
+            left = right - slitLength - minSep
+            xgaps[gIdx] = (gapStart, left)
         else:
-            """ slit can fit in the gap
+            """ slit can fit in the gap, split gap into two
             """
-            left = xpos - halfLength
-            right = xpos + halfLength
+            # gap1 = gapStart, left
+            # gap2 = right, gapEnd
+            xgaps[gIdx] = (gapStart, left)
+            xgaps.insert(gIdx + 1, (right, gapEnd))
 
-        # gap1 = gapStart, left
-        # gap2 = right, gapEnd
-        xgaps[gIdx] = (gapStart, left)
-        xgaps.insert(gIdx + 1, (right, gapEnd))
-        return xgaps, left, right
+        return xgaps, left + halfSep, right - halfSep
 
-    def mergeSegments(self, xsegms, left, right):
-        if len(xsegms) == 0:
-            return [(left, right)]
-        else:
-            xsegms.append((left, right))
-        s0 = [(a[0], a) for a in xsegms]
-        s0.sort()
-        xsegms = [t for s, t in s0]
-        left, right = xsegms[0]
-        newSegms = []
-        for start, end in xsegms[1:]:
-            # print ('newseg', newSegms)
-            if right < start or end < left:
-                # disjunct
-                newSegms.append((left, right))
-                left, right = start, end
+    def insertAlignBoxes(self, aboxes, minx, maxx):
+        """
+        First step in the target selection sequence.
+
+        aboxes: alignment boxes, pcode < -1
+        Returns a list of disjunct segments corresponding to the alignment boxes
+        """
+        sortedBoxes = aboxes.sort_values(by="xarcs")
+        lastx = -1e10
+        halfSep = self.minSep / 2.0
+        xsegms = []
+        for aIdx, seg in sortedBoxes.iterrows():
+            xpos = seg.xarcs
+            x0, x1 = xpos - seg.length1 - halfSep, xpos + seg.length2 + halfSep
+            if x1 < minx:
                 continue
-            # merge
-            x0 = min(start, left)
-            x1 = max(end, right)
-            left, right = x0, x1
-        newSegms.append((left, right))
-        return newSegms
+            if x0 > maxx:
+                break
+            if x0 > lastx:
+                # no overlap
+                lastx = x1
+                xsegms.append((x0, x1))
+            else:
+                # merge
+                lastSeg = xsegms[-1]
+                xsegms[-1] = (lastSeg[0], x1)
+            self.targets.at[aIdx, "selected"] = 1
+        return xsegms
 
-    def segments2Gaps(self, xsegms, xgaps, margin):
+    def segments2Gaps(self, xsegms, minx, maxx):
         """
         Turns segments into gaps.
+        Gaps already include min separation.
         Returns a list of gaps.
         
-        A gap is a pair (left, right) of space that is not occupied.
-        
+        A gap is a pair (left, right) of space that is not occupied.        
         """
-        for segmLeft, segmRight in xsegms:
-            newGaps = []
-            # print ('segm', segmLeft, segmRight, xgaps)
-            """ Checks if a segment is in a gap, if so, split the gap in two. """
-            for gapLeft, gapRight in xgaps:
-                if gapRight < segmLeft or segmRight < gapLeft:
-                    """Segm is not in gap, keep this gap """
-                    newGaps.append((gapLeft, gapRight))
-                else:
-                    """ Segm and gap intersect, need to merge """
-                    if segmLeft < gapLeft:
-                        if segmRight > gapRight:
-                            """ segm is bigger than the gap.
-                                so, don't keep the gap
-                            """
-                            continue
-                        """ segm is on the left side of gap, segmRight must be in the gap
-                            so, gap is shortened on the left side
-                        """
-                        gapLeft = segmRight
-                        newGaps.append((gapLeft, gapRight))
-                    else:
-                        if segmRight < gapRight:
-                            """ segm is entirely inside the gap
-                                so, split the gap in two
-                            """
-                            newGaps.append((gapLeft, segmLeft))
-                            newGaps.append((segmRight, gapRight))
-                            continue
+        xgaps = []
+        currX = minx
+        for seg in xsegms:
+            if currX > maxx:
+                # beyond maxx, done
+                break
+            x0, x1 = seg
+            if x1 < currX:
+                # cannot happend
+                # Segments are sorted, x0, x1 should be greater the currX always.
+                continue
+            if x0 <= currX <= x1:
+                # overlapped segments
+                currX = x1
+                continue
+            if currX < x0:
+                # Segments starts at x0
+                # There is a gap from currX, to x0.
+                # The next gap will start at x1
+                xgaps.append((currX, x0))
+                currX = x1
 
-                        """ segm is on the right side of the gap, segmLeft is in the gap
-                            so, gap is shortened on the right side 
-                        """
-                        newGaps.append((gapLeft, segmLeft))
-
-            xgaps = newGaps
+        if currX < maxx:
+            xgaps.append((currX, maxx))
         return xgaps
-
-    def insertAlignBoxes(self, tgs):
-        """
-        Inserts by merging the segments into xsesegmRight
-        Returns a list of selected targets and the segments they occupy: (selected, xsegms) 
-        
-        tgs: alignment boxes, pcode < -1
-        A segment is a pair (left,right), where left and right are the limits of the alignment box.
-        """
-        xsegms = []
-        selected = []
-        half = (self.boxSize + self.minSep) / 2
-        boxHalf = self.boxSize / 2
-        for tIdx, tg in tgs.iterrows():
-            left = tg.xarcs - half
-            right = tg.xarcs + half
-            xsegms = self.mergeSegments(xsegms, left, right)
-            self.targets.at[tIdx, "length1"] = boxHalf
-            self.targets.at[tIdx, "length2"] = boxHalf
-            selected.append(tIdx)
-        return selected, xsegms
 
     def _printGaps(self, gaps):
         for l, r in gaps:
-            print(f"({l:.1f} {r:.1f})", end=",")
+            print(f"({l:.1f} {r:.1f}, d={r-l:.2f})")
         print()
 
-    def _selectTargets(self, xgaps, tgs, minSlitLength, margin):
+    def _selectTargets(self, xgaps, tgs, minSlitLength, minSep):
         """
         Selects targets that can fit in a gap.
-        Returns a list of indices of selected targets
         
         tgs: list of targets, pcode > 0
         """
-        selIdx = []
-
-        # print ("gaps")
-        # self.printGaps(xgaps)
+        halfSep = minSep / 2
         for tIdx, tg in tgs.iterrows():
             xpos = tg.xarcs
-            fits, gIdx = self._canFit(xgaps, xpos, minSlitLength, self.minSep, margin)
+            fits, gIdx = self._canFit(xgaps, xpos, minSlitLength, minSep)
             if fits:
-                xgaps, left, right = self._splitGap(xgaps, gIdx, xpos, minSlitLength, self.minSep, margin)
+                xgaps, left, right = self._splitGap(xgaps, gIdx, xpos, minSlitLength, minSep)
                 # print ("gaps")
                 # self.printGaps(xgaps)
                 # print (f'tidx={tIdx}, gIdx={gIdx}, left={left:.1f}, right={right:.1f}')
                 self.targets.at[tIdx, "length1"] = xpos - left
                 self.targets.at[tIdx, "length2"] = right - xpos
-                selIdx.append(tIdx)
-        return selIdx
+                self.targets.at[tIdx, "selected"] = 1
+        return xgaps
 
-    def performSelection(self):
+    def _extendSlits(self, xgaps, tgs, minSep):
+        """
+        Extends the slits beyond the maximum length
+        """
+
+        def equals(x, y, eps=1e-4):
+            d = abs(x - y)
+            return d < eps
+
+        def checkIsSegm(pairs, idx, side, ref):
+            """
+            Returns True if the current segm is a segment, False if it is a gap
+            If idx out of range, returns False
+            if the end point is not equal to ref, returns False
+            End point can be left side or right side.
+            """
+            # print ("check isSegm idx", idx)
+            if idx < 0 or idx >= len(pairs):
+                return False
+
+            start, end, i, isGap = pairs[idx]
+            if isGap == 1:
+                return False
+
+            if side == "left":
+                # segm is left, gap right
+                # print ("left", end, ref)
+                return equals(end, ref)
+
+            if side == "right":
+                # segm is right, gap left
+                # print ("right", start, ref)
+                return equals(start, ref)
+
+            return False
+
+        def updateLengths(length1, length2, idx, isGap):
+            """
+            Updates the segment at index idx with the new lengths
+            Ignores segment is no a gap
+            """
+            if isGap == 0:
+                mid = tgs.at[idx, "xarcs"]
+                # print(f"set length {idx}, {mid:.2f}, {length1:.2f}, {length2:.2f}, {tgs.at[idx, 'objectId']}")
+                self.targets.at[idx, "length1"] = mid - length1
+                self.targets.at[idx, "length2"] = length2 - mid
+            return length1, length2, idx, isGap
+
+        def split3(pairs, idx1, halfSep):
+            """
+            Both left and right sides are segments.
+            Splits the current gap, left side goes to the left segment
+            and right side goes to the right segment.
+            """
+            idx0, idx2 = idx1 - 1, idx1 + 1
+            leftSegm = pairs[idx0]
+            gap = pairs[idx1]
+            rightSegm = pairs[idx2]
+            midX = (gap[0] + gap[1]) / 2
+
+            pairs[idx0] = updateLengths(leftSegm[0], midX - halfSep, leftSegm[2], leftSegm[3])
+            pairs[idx1] = midX, midX, gap[2], gap[3]
+            pairs[idx2] = updateLengths(midX + halfSep, rightSegm[1], rightSegm[2], rightSegm[3])
+
+        def split2Left(pairs, idx1, halfSep):
+            """
+            Left side is a segment.
+            Left segment takes all the gap.
+            """
+            idx0, idx2 = idx1 - 1, idx1 + 1
+            leftSegm = pairs[idx0]
+            gap = pairs[idx1]
+            ref = gap[1]
+            pairs[idx0] = updateLengths(leftSegm[0], ref - halfSep, leftSegm[2], leftSegm[3])
+            pairs[idx1] = updateLengths(ref, ref, gap[2], gap[3])
+
+        def split2Right(pairs, idx1, halfSep):
+            """
+            Right side is a segment
+            Right segment takes all the gap.
+            """
+            idx0, idx2 = idx1 - 1, idx1 + 1
+            rightSegm = pairs[idx2]
+            gap = pairs[idx1]
+            ref = gap[0]
+            pairs[idx2] = updateLengths(ref - halfSep, *rightSegm[1:])
+            pairs[idx1] = updateLengths(ref, ref, gap[2], gap[3])
+
+        def genPairs(gaps, tgs):
+            """
+            Generates a list of tuples (x0, x1, idx, isGap),
+            where x0, x1 are the start and end of a segment or gap, isGap = 1 if this is gap.
+            idx is the index in the list
+            """
+            allPairs = []
+            for i, g in enumerate(gaps):
+                allPairs.append((g[0], g[1], None, 1))
+
+            halfSep = minSep / 2
+            for tIdx, tg in tgs.iterrows():
+                x = tg.xarcs
+                x0, x1 = x - tg.length1 - halfSep, x + tg.length2 + halfSep
+                allPairs.append((x0, x1, tIdx, 0))
+                # print(f"{x0:.2f}, {x1:.2f}, {tIdx}, {tg.oldIndex} {tg.pcode}")
+
+            return sorted(allPairs, key=lambda x: x[0])
+
+        def splitGaps(allPairs):
+            """
+            For all the gaps, split the gap to either left, right or both segments
+            """
+            halfSep = minSep / 2
+            for idx, pair in enumerate(allPairs):
+                start, end, idx0, isGap = pair
+                if isGap != 1:
+                    continue
+
+                if (end - start) < minSep:
+                    continue
+
+                # print ("pair ", idx, pair)
+
+                # Is left pair a segmenet?
+                leftIsSegm = checkIsSegm(allPairs, idx - 1, "left", start)
+                # Is right pair a segment?
+                rightIsSegm = checkIsSegm(allPairs, idx + 1, "right", end)
+
+                if leftIsSegm:
+                    if rightIsSegm:
+                        # split gap
+                        # print ("split3")
+                        split3(allPairs, idx, halfSep)
+                    else:
+                        # left takes all
+                        # print ("split left")
+                        split2Left(allPairs, idx, halfSep)
+                else:
+                    if rightIsSegm:
+                        # right takes all
+                        # print ("split right")
+                        split2Right(allPairs, idx, halfSep)
+            # end of splitGaps
+
+        allPairs = genPairs(xgaps, tgs)
+        splitGaps(allPairs)
+        # print (self.targets[self.targets.pcode >0][['objectId','length1', 'length2']])
+        return [x for x in allPairs if x[3] == 1]
+
+    def performSelection(self, extendSlits=False):
         """
         This is the main method.
         
@@ -235,18 +365,25 @@ class TargetSelector:
         Returns a list of indices of the selected targets.
         """
 
-        xgaps = [(self.minX, self.maxX)]  # a sorted list of gaps (xa,xb)
+        # Inserts the alignment boxes
+        inAlignBoxes = self.targets[self.targets.inMask == 1]
+        inAlignBoxes = inAlignBoxes[inAlignBoxes.pcode < 0]
+        xsegms = self.insertAlignBoxes(inAlignBoxes, self.minX, self.maxX)
 
-        """ Inserts the alignment boxes"""
-        selected, xsegms = self.insertAlignBoxes(self.targets[self.targets.pcode < -1])
+        # Turns the segments into gaps
+        xgaps = self.segments2Gaps(xsegms, self.minX, self.maxX)
 
-        """ Turns the segments into gaps """
-        xgaps = self.segments2Gaps(xsegms, xgaps, self.minSep)
+        # Inserts the targets
+        inTargets = self.targets[self.targets.inMask == 1]
+        inTargets = inTargets[inTargets.pcode > 0]
+        self.xgaps = self._selectTargets(xgaps, inTargets, self.minSlitLength, self.minSep)
 
-        """ Inserts the targets """
-        selTargets = self._selectTargets(xgaps, self.targets[self.targets.pcode > 0], self.minSlitLength, self.minSep)
+        if extendSlits:
+            inTargets = self.targets[self.targets.inMask == 1]
+            inTargets = inTargets[inTargets.pcode > 0]
+            inTargets = inTargets[inTargets.selected == 1]
+            self.xgaps = self._extendSlits(self.xgaps, inTargets, self.minSep)
 
-        """ Merges with selected aligment boxes"""
-        selected.extend(selTargets)
+        self.restoreIndex()
+        return self.targets
 
-        return selected

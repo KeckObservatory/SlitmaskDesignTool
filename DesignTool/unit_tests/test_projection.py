@@ -22,14 +22,17 @@ logging.disable()
 @pytest.fixture
 def init_targets():
     config = ConfigFile("../smdt.cfg")
-    config.properties["params"] = ConfigFile("../params.cfg")  
-    prefix =  "../../DeimosExamples/MihoIshigaki/"
+    config.properties["params"] = ConfigFile("../params.cfg")
+    prefix = "../../DeimosExamples/MihoIshigaki/"
     tlist = TargetList(prefix + "CetusIII.lst", config=config)
     mdf = MaskDesignInputFitsFile(prefix + "CetusIII.fits")
     return mdf, tlist, config
 
 
 def test_proj1(init_targets):
+    """
+    Compares calculated coordinates (using TargetList) with the coordinates in the FITS file.
+    """
     mdf, tlist, config = init_targets
     dsimXs, dsimYs = mdf.getObjOnSlit()
 
@@ -50,5 +53,4 @@ def test_proj1(init_targets):
 
     xErr, yErr = np.mean(calcXs - dsimXs), np.mean(calcYs - dsimYs)
     assert xErr < 0.1 and yErr < 0.1, "Calculated coordinates do not match dsim's"
-
 
