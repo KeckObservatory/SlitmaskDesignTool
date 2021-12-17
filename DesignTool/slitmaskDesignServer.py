@@ -27,7 +27,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from urllib.parse import quote
 from threading import Thread
 
 from smdtLibs import utils
@@ -55,6 +54,13 @@ def _setData(_id, smdata):
 class SMDesignHandler(EasyHTTPHandler):
     PNGImage = "image/png"
     config = None
+
+    @classmethod
+    def setDocRoot(cls, docRoot):
+        if not os.path.exists(docRoot):
+            rpath = os.path.dirname(os.path.realpath(__file__))
+            docRoot = f"{rpath}/{docRoot}"
+        cls.DocRoot = docRoot
 
     def echo(self, req, qstr):
         return json.dumps(qstr), self.PlainTextType
@@ -196,12 +202,9 @@ class SMDesignHandler(EasyHTTPHandler):
         return self.response(json.dumps(out), self.PlainTextType)
 
     def quit(self, req, qstr):
-        if args.browser:
-            time.sleep(1)
-            SMDTLogger.info("%s", "Terminated")
-            os._exit(1)
-            print("Exiting ...")
-            return None, None
+        time.sleep(1)
+        SMDTLogger.info("%s", "Terminated")
+        os._exit(1)
         return self.response("[]", self.PlainTextType)
 
     def log_message(self, msg, *args):
@@ -245,14 +248,22 @@ class SWDesignServer:
 
 
 def readConfig(confName):
-    print("Using config file ", confName)
+    def getPath(rpath, fname):
+        if not os.path.isfile(fname):
+            fname = f"{rpath}/{fname}"
+            return fname
+        return fname
+
+    rpath = os.path.dirname(os.path.realpath(__file__))
+    confName = getPath(rpath, confName)
+    SMDTLogger.info(f"Loading config {confName}")
     cf = ConfigFile(confName)
-    pf = ConfigFile(cf.paramFile)
+    pf = ConfigFile(getPath(rpath, cf.paramFile))
     cf.properties["params"] = pf
     return cf
 
 
-def initSignals():
+def initSignals(smd):
     def reallyQuit(signum, frame):
         try:
             smd.httpd.shutdown()
@@ -262,35 +273,15 @@ def initSignals():
         return True
 
     def handler(signum, frame):
-        signal.signal(signal.SIGINT, reallyQuit)
+        for s in sigList:
+            signal.signal(s, reallyQuit)
         print("\nPress Ctrl-C again to quit")
         time.sleep(2)
         print("Resuming ...")
         signal.signal(signal.SIGINT, handler)
         return False
 
-    signal.signal(signal.SIGINT, handler)
+    sigList = signal.SIGINT, signal.SIGQUIT, signal.SIGABRT
+    for s in sigList:
+        signal.signal(s, handler)
 
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Slitmask design tool server")
-    parser.add_argument("-c", "--config", dest="config_file", help="Configuration file", default="smdt.cfg", required=False)
-    parser.add_argument("-H", "--host", dest="host", help="Manually specify host name", required=False, default=None)
-    parser.add_argument("-b", "--browser", dest="browser", help="Start browser", action="store_true")
-
-    args = parser.parse_args()
-    initSignals()
-    cf = readConfig(args.config_file)
-
-    SMDesignHandler.config = cf
-    SMDesignHandler.DocRoot = cf.getValue("docRoot", "docs")
-    SMDesignHandler.defaultFile = cf.getValue("defaultFile", "index.html")
-    SMDesignHandler.logEnabled = cf.getValue("logEnabled", False)
-
-    port = cf.getValue("serverPort", 50080)
-    smd = SWDesignServer(args.host, port)
-    smd.start()
-
-    if args.browser:
-        utils.launchBrowser(host=smd.host, portnr=port, path=SMDesignHandler.defaultFile)

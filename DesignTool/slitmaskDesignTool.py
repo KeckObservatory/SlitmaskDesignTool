@@ -10,9 +10,7 @@ import numpy as np
 
 import matplotlib
 
-import smdtLibs.dss2Client as Dss2Client
-import smdtLibs.dss2Header as DSS2Header
-import smdtLibs.utils as utils
+from smdtLibs import utils
 
 from targets import TargetList
 from maskLayouts import MaskLayouts, GuiderFOVs, BadColumns

@@ -2,7 +2,6 @@ import sys
 import json
 import os
 from configparser import ConfigParser
-import pkg_resources
 
 
 class ConfigFile(ConfigParser):
@@ -51,23 +50,6 @@ class ConfigFile(ConfigParser):
 
         return value
 
-    def _getPath(self, path):
-        """
-        If path is regular path then returns it.
-        Else tries to find it in the resources, ie where the source code is.
-        """
-        if path is None:
-            return None
-
-        if os.path.isfile(path):
-            return path
-        else:
-            fullpath = pkg_resources.resource_filename(__name__, path)
-            if os.path.isfile(fullpath):
-                return fullpath
-
-        return None
-
     def read(self, cgfile):
         """
         Reads config using super class reader.
@@ -83,10 +65,9 @@ class ConfigFile(ConfigParser):
                 secValues[k] = self._getType(v)
             return secValues
 
-        path = self._getPath(cgfile)
-        if path is None:
+        if not os.path.isfile(cgfile):
             raise Exception(f"Config file {cgfile} not found")
-        super().read(path)
+        super().read(cgfile)
 
         self.properties.update(digestItems(self.default_section, {}))
         sections = self.sections()

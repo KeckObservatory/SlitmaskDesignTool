@@ -150,7 +150,11 @@ class TargetList:
         Returns a Pandas dataframe
         """
         with open(fname, "r") as fh:
-            return self.readRaw(fh)
+            try:
+                return self.readRaw(fh)
+            except:
+                SMDTLogger.info(f"Failed to open {fname}")
+                return None
 
     def readRaw(self, fh):
         """
