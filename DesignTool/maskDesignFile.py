@@ -21,7 +21,7 @@ import warnings
 
 from smdtLibs.inOutChecker import InOutChecker
 from smdtLibs.configFile import ConfigFile
-from smdtLibs.utils import sexg2Float, toSexagecimal
+from smdtLibs.utils import sexg2Float, toSexagecimal, rotate
 
 from targets import TargetList
 from maskLayouts import MaskLayouts
@@ -304,42 +304,17 @@ class MaskDesignOutputFitsFile:
         objInMask = targets[targets.inMask > 0]
         nSlits = objInMask.shape[0]
         if nSlits > 0:
-            slitWidths = objInMask.slitWidth
-            half = slitWidths
-
-            relAngles = np.radians(float(params.MaskPA[0]) - objInMask.slitLPA)
-            sines = np.sin(relAngles)
-            cosines = np.cos(relAngles)
-
-            slitX = objInMask.xarcs
-            slitY = objInMask.yarcs
-            l1 = objInMask.length1
-            l2 = objInMask.length2
-
-            slitX10 = slitX + cosines * l1
-            slitY10 = slitY + sines * l1
-            slitX1 = slitX10
-            slitY1 = slitY10 - half
-            slitX2 = slitX10
-            slitY2 = slitY10 + half
-
-            slitX30 = slitX - cosines * l2
-            slitY30 = slitY - sines * l2
-            slitX3 = slitX30
-            slitY3 = slitY30 - half
-            slitX4 = slitX30
-            slitY4 = slitY30 + half
             cols.append(pf.Column(name="bSlitId", format="I11", null="-9999", unit="None", array=range(nSlits),))
             cols.append(pf.Column(name="BluId", format="I11", null="-9999", unit="None", array=[1] * nSlits,))
             cols.append(pf.Column(name="dSlitId", format="I11", null="-9999", unit="None", array=range(nSlits),))
-            cols.append(pf.Column(name="slitX1", format="F9.3", null="0.000", unit="mm", array=slitX1))
-            cols.append(pf.Column(name="slitY1", format="F9.3", null="0.000", unit="mm", array=slitY1))
-            cols.append(pf.Column(name="slitX2", format="F9.3", null="0.000", unit="mm", array=slitX2))
-            cols.append(pf.Column(name="slitY2", format="F9.3", null="0.000", unit="mm", array=slitY2))
-            cols.append(pf.Column(name="slitX3", format="F9.3", null="0.000", unit="mm", array=slitX3))
-            cols.append(pf.Column(name="slitY3", format="F9.3", null="0.000", unit="mm", array=slitY3))
-            cols.append(pf.Column(name="slitX4", format="F9.3", null="0.000", unit="mm", array=slitX4))
-            cols.append(pf.Column(name="slitY4", format="F9.3", null="0.000", unit="mm", array=slitY4))
+            cols.append(pf.Column(name="slitX1", format="F9.3", null="0.000", unit="mm", array=objInMask.slitX1))
+            cols.append(pf.Column(name="slitY1", format="F9.3", null="0.000", unit="mm", array=objInMask.slitY1))
+            cols.append(pf.Column(name="slitX2", format="F9.3", null="0.000", unit="mm", array=objInMask.slitX2))
+            cols.append(pf.Column(name="slitY2", format="F9.3", null="0.000", unit="mm", array=objInMask.slitY2))
+            cols.append(pf.Column(name="slitX3", format="F9.3", null="0.000", unit="mm", array=objInMask.slitX3))
+            cols.append(pf.Column(name="slitY3", format="F9.3", null="0.000", unit="mm", array=objInMask.slitY3))
+            cols.append(pf.Column(name="slitX4", format="F9.3", null="0.000", unit="mm", array=objInMask.slitX4))
+            cols.append(pf.Column(name="slitY4", format="F9.3", null="0.000", unit="mm", array=objInMask.slitY4))
 
         return pf.TableHDU.from_columns(cols, name="BluSlits")
 
@@ -517,7 +492,21 @@ class MaskDesignInputFitsFile:
         slits = self.allSlists if slits == None else slits
         return slits[["A" == s for s in slits.slitTyp]]
 
-    def getAsTargets(self, cenRADeg, cenDecDeg, config):
+    def pntCen2MaskCenter (self, config):
+        """
+        Calculates the mask center using the PNT center.
+        Returns mask center Ra/dec, and paDeg
+        """               
+        pntX, pntY = config.properties["fldcenx"], config.properties["fldceny"]
+        pntRa, pntDec, paDeg = self.getPNTCenter()
+
+        x1, y1 = rotate(-pntX, -pntY, -paDeg - 90)
+        cosd = np.cos(np.radians(pntDec))
+
+        y1 = y1 / cosd
+        return pntRa + x1 / 3600, pntDec + y1 / 3600, paDeg
+
+    def getAsTargets(self, config):
         """
         Returns the target list stored int the FITS file as a TargetList object.
         Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
@@ -534,20 +523,25 @@ class MaskDesignInputFitsFile:
         nSlits = len(self.allSlits)
         self.allSlits["raHour"] = [objects.RA_OBJ.iloc[d] / 15.0 for d in orgIndices]
         self.allSlits["decDeg"] = [objects.DEC_OBJ.iloc[d] for d in orgIndices]
+        self.allSlits["raRad"] =  [math.radians(objects.RA_OBJ.iloc[d]) for d in orgIndices]
+        self.allSlits["decRad"] =  [math.radians(objects.DEC_OBJ.iloc[d]) for d in orgIndices]
 
         self.allSlits["objectId"] = [objects.OBJECT.iloc[d].strip() for d in orgIndices]
         self.allSlits["eqx"] = [objects.EQUINOX.iloc[d] for d in orgIndices]
         self.allSlits["mag"] = [objects.mag.iloc[d] for d in orgIndices]
         self.allSlits["pBand"] = [objects.pBand.loc[d].strip() for d in orgIndices]
+        self.allSlits["length1"] = self.allSlits["TopDist"]
+        self.allSlits["length2"] = self.allSlits["BotDist"]
 
         self.allSlits["orgIndex"] = range(nSlits)
         self.allSlits["inMask"] = [0] * nSlits
-        self.allSlits["selected"] = [1] * nSlits
+        self.allSlits["selected"] = [0] * nSlits
         self.allSlits["pcode"] = genPcode()
         self.allSlits["sampleNr"] = [1] * nSlits
+        self.allSlits["slitWidth"] = self.allSlits.slitWid;
 
         # raDeg, decDeg = self.getCenter()
         paDeg = self.maskdesign.PA_PNT[0]
 
-        return TargetList(pd.DataFrame(self.allSlits), cenRADeg, cenDecDeg, paDeg, config)
+        return TargetList(pd.DataFrame(self.allSlits).copy(), config)
 

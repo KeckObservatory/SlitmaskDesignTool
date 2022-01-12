@@ -84,6 +84,7 @@ class SlitmaskDesignTool:
         minX, maxX = np.min(mask, axis=0)[0], np.max(mask, axis=0)[0]
 
         # Updates targets coordinates for the new center raDeg and decDeg
+        targets.markInside ()
         targets.reCalcCoordinates(raDeg, decDeg, paDeg)
         targets.calcSlitPosition(minX, maxX, minSlitLength, minSep, ext)
         # Results are stored in targets

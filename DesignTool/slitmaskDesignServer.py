@@ -211,7 +211,7 @@ class SMDesignHandler(EasyHTTPHandler):
         SMDTLogger.info(msg, *args)
 
 
-class SWDesignServer:
+class SMDesignServer:
     def __init__(self, host=None, portNr=50080):
         self.portNr = portNr
         if host is None:
@@ -220,6 +220,7 @@ class SWDesignServer:
             except:
                 hostname = "localhost"
         else:
+            # If the host has multiple network addresses, use the giving host name
             hostname = host
 
         self.host = hostname

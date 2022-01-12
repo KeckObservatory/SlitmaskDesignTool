@@ -14,6 +14,7 @@ from configFile import ConfigFile
 from targets import TargetList
 from inOutChecker import InOutChecker
 from maskDesignFile import MaskDesignOutputFitsFile, MaskLayouts
+from slitmaskDesignTool import SlitmaskDesignTool
 import utils
 
 logging.disable()
@@ -62,10 +63,8 @@ def test_MaskDesignFile2(init_targets):
     Outputs only targets that are inside the mask
     """
     tlist, config = init_targets
-    inOutChecker = InOutChecker(MaskLayouts[config.params.Instrument[0].lower()])
-    for i, stg in tlist.targets.iterrows():
-        if inOutChecker.checkPoint(stg.xarcs, stg.yarcs):
-            tlist.targets.at[stg.orgIndex, "inMask"] = 1
+    sdt = SlitmaskDesignTool(tlist, "deimos", config)
+    sdt.recalculateMask(tlist.centerRADeg, tlist.centerDEC, 0, 4, 0.5, False)
 
     ft = MaskDesignOutputFitsFile(tlist)
 

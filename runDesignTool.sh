@@ -6,7 +6,7 @@ PYTHON=`which python3`
 
 checkIfRunning()
 {
-	pgrep -fl "slitmaskDesignServer.py $*"
+	pgrep -fl "slitmaskdesign.py $*"
 }
 
 start()
@@ -15,11 +15,11 @@ start()
 	if [ "x$RES" = "x" ]
 	then
 		echo "Starting .." $*
-		#$PYTHON  slitmaskDesignServer.py $*        
+		#$PYTHON  slitmaskdesign.py $*        
         $PYTHON slitmaskdesign.py $*
 
 	else
-		echo "slitmaskDesignServer.py $* already running"
+		echo "slitmaskdesign.py $* already running"
 	fi
 }
 
@@ -30,7 +30,7 @@ stop()
 	then
 		echo "Nothing to stop"
 	else
-		pkill -f "slitmaskDesignServer.py $*"
+		pkill -f "slitmaskdesign.py $*"
 	fi
 }
 
@@ -39,10 +39,10 @@ status()
 	RES=`checkIfRunning $*`
 	if [ "x$RES" = "x" ]
 	then
-		echo "slitmaskDesignServer.py not running"
+		echo "slitmaskdesign.py not running"
 		echo $RES
 	else
-		pgrep -fl "slitmaskDesignServer.py $*"
+		pgrep -fl "slitmaskdesign.py $*"
 	fi
 }
 

@@ -11,14 +11,8 @@ import argparse
 rpath = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(rpath + "/DesignTool")
 
-from smdtLibs import utils
-from smdtLibs import drawUtils
-from smdtLibs.easyHTTP import EasyHTTPHandler, EasyHTTPServer, EasyHTTPServerThreaded
-from smdtLibs.configFile import ConfigFile
-from slitmaskDesignTool import SlitmaskDesignTool
-from smdtLogger import SMDTLogger, infoLog
-from maskDesignFile import MaskDesignOutputFitsFile, getListAsBytes
 from slitmaskDesignServer import *
+from smdtLibs import utils
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Slitmask design tool server")
@@ -37,9 +31,9 @@ if __name__ == "__main__":
     SMDesignHandler.logEnabled = cf.getValue("logEnabled", False)
 
     port = cf.getValue("serverPort", 50080)
-    smd = SWDesignServer(args.host, port)
+    smd = SMDesignServer(args.host, port)
     smd.start()
     initSignals(smd)
 
     if args.browser:
-        utils.launchBrowser(host=smd.host, portnr=port, path=SMDesignHandler.defaultFile)
+        utils.launchBrowser(host=smd.host, portnr=port, path=SMDesignHandler.defaultFile+"?q=1")

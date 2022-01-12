@@ -5,24 +5,25 @@ function TargetTable(targets) {
 	}
 
 	var self = this;
-	self.reDrawTargetTable = function () {};
+	self.reDrawTargetTable = function () { };
 	self.selectedIdx = -1;
 
 	self.targets = targets;
 	self.columns = [
 		['#', 60, 'orgIndex', 0],
-		['Name', 100, 'objectId', 0],
+		['Name', 160, 'objectId', 0],
 		['RA', 80, 'raSexa', 0],
 		['DEC', 80, 'decSexa', 0],
-		['Prior', 60, 'pcode', 0],
-		['Sel', 35, 'selected', 0],
-		['In', 35, 'inMask', 0],
-		['Slit PA', 60, 'slitLPA', 0],
+		
 		['Magn', 60, 'mag', 0],
-		['Band', 50, 'pBand', 0],
+		['Band', 50, 'pBand', 0],	
+		['Prior', 60, 'pcode', 0],		
+		['Sel', 35, 'selected', 0],
+		['Slit PA', 60, 'slitLPA', 0],
 		['Len1', 50, 'length1', 0],
 		['Len2', 50, 'length2', 0],
-		['SlitWidth', 60, 'slitWidth', 0]
+		['SlitWidth', 60, 'slitWidth', 0],
+		['In', 35, 'inMask', 0],
 	];
 
 	self.showTable = function () {
@@ -33,7 +34,7 @@ function TargetTable(targets) {
 		let sum = 0;
 		let bufHeader = [];
 		let buf = []
-		
+
 		// Build the header row
 		for (i in columns) {
 			let col = columns[i];
@@ -52,13 +53,13 @@ function TargetTable(targets) {
 		//buf.push("<table id='targetTable' style='width:"+ sum + "px'>");
 		buf.push("<table id='targetTable'>");
 		buf.push("<thead><tr>");
-		buf.push (bufHeader.join(''));
+		buf.push(bufHeader.join(''));
 		buf.push("</tr></thead>");
 		buf.push("<tbody id='targetTableBody'>");
-		
+
 		//buf.push("<tr>");
 		//buf.push (bufHeader.join(''));
-		
+
 		if (targets) {
 			let orgIndex = targets.orgIndex;
 			let names = targets.objectId;
@@ -86,7 +87,7 @@ function TargetTable(targets) {
 				// Alternating color is done in CSS with tr:nth-child(even) and tr:nth-child(odd) 			
 				//
 				buf.push("<tr id='" + tId + "'>");
-				buf.push("<td width='" + columns[k][1] + "px'>" + (orgIndex[i]+1));
+				buf.push("<td width='" + columns[k][1] + "px'>" + (orgIndex[i] + 1));
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + names[i]);
 				k += 1;
@@ -94,23 +95,23 @@ function TargetTable(targets) {
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + decDegs[i]);
 				k += 1;
+				buf.push("<td width='" + columns[k][1] + "px'>" + mags[i].toFixed(2));
+				k += 1;
+				buf.push("<td width='" + columns[k][1] + "px'>" + bands[i]);
+				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + pcodes[i]);
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + selecteds[i]);
 				k += 1;
-				buf.push("<td width='" + columns[k][1] + "px'>" + inMask[i]);
-				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + slitPAs[i]);
-				k += 1;
-				buf.push("<td width='" + columns[k][1] + "px'>" + mags[i].toFixed(2));
-				k += 1;
-				buf.push("<td width='" + columns[k][1] + "px'>" + bands[i]);
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + len1s[i].toFixed(2));
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + len2s[i].toFixed(2));
 				k += 1;
 				buf.push("<td width='" + columns[k][1] + "px'>" + slitWidths[i].toFixed(2));
+				k += 1;
+				buf.push("<td width='" + columns[k][1] + "px'>" + inMask[i]);
 				buf.push("</tr>");
 			}
 		}
@@ -155,7 +156,7 @@ function TargetTable(targets) {
 			let nRows = self.targets.orgIndex.length;
 			let pixelPerRow = tBody.scrollHeight / nRows;
 			let visibleRows = tBody.clientHeight / pixelPerRow; // no margin, scrollbar
-			let nIdx = self.reverseIndices[idx];			
+			let nIdx = self.reverseIndices[idx];
 			let scrollY = nIdx * pixelPerRow;
 
 			// Where are we now?
@@ -181,10 +182,10 @@ function TargetTable(targets) {
 	};
 
 	self.markSelected = function (idx) {
-		self.selectedIdx = idx;		
+		self.selectedIdx = idx;
 		if (idx < 0) return;
 		let elem = E('target' + idx);
-		if (elem) elem.className = 'selectedRow';		
+		if (elem) elem.className = 'selectedRow';
 	};
 
 	self.markNormal = function (idx) {
@@ -222,7 +223,7 @@ function TargetTable(targets) {
 		let upDown = info[3];
 
 		// Remember original sort order
-		for (i = 0; i < dataCol.length; ++i){
+		for (i = 0; i < dataCol.length; ++i) {
 			indices[i] = i;
 		}
 

@@ -10,8 +10,9 @@ import datetime
 import webbrowser
 import traceback
 
-MM2AS = math.degrees(3600 / 150327)  # 1.3789321396622367
-AS2MM = 1.0 / MM2AS  # 0.7251988486140772
+#MM2AS = math.degrees(3600 / 150327) 
+MM2AS = math.degrees(3600 / 150280)  # 
+AS2MM = 1.0 / MM2AS  # 
 
 
 def tryEx(f):

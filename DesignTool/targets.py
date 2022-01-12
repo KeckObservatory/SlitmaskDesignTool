@@ -351,6 +351,8 @@ class TargetList:
         selector = TargetSelector(self.targets, minX, maxX, minSlitLength, minSep)
         self.targets = selector.performSelection(extendSlits=ext)
         self.xgaps = selector.xgaps
+        self.selector = selector
+        self.calcSlitXYs()
 
     def findTarget(self, targetName):
         """
@@ -487,6 +489,51 @@ class TargetList:
 
         return pntRaDeg, pntDecDeg
 
+    def calcSlitXYs(self):
+        """
+        Calculates the corners of the slits
+        """
+        targets = self.targets
+        selector = targets.inMask > 0
+        aboxSelect = targets.pcode == -2
+        targets.loc[aboxSelect, "slitLPA"] = self.positionAngle
+        selected = targets[selector]
+        nSlits = selected.shape[0]
+        if nSlits > 0:
+            slitWidths = selected.slitWidth
+            half = slitWidths / 2
+
+            relAngles = np.radians(self.positionAngle - selected.slitLPA)
+            sines = np.sin(relAngles)
+            cosines = np.cos(relAngles)
+
+            slitX = selected.xarcs
+            slitY = selected.yarcs
+            l1 = selected.length1
+            l2 = selected.length2
+
+            slitX10 = slitX - cosines * l1
+            slitY10 = slitY - sines * l1
+            slitX1, slitY1, pa0 = self.proj_to_mask(slitX10, slitY10 - half, 0)
+            slitX2, slitY2, pa0 = self.proj_to_mask(slitX10, slitY10 + half, 0)
+
+            slitX30 = slitX + cosines * l2
+            slitY30 = slitY + sines * l2
+            slitX3, slitY3, pa0 = self.proj_to_mask(slitX30, slitY30 + half, 0)
+            slitX4, slitY4, pa0 = self.proj_to_mask(slitX30, slitY30 - half, 0)
+
+            targets.loc[selector, "slitX1"] = slitX1
+            targets.loc[selector, "slitY1"] = slitY1
+            targets.loc[selector, "slitX2"] = slitX2
+            targets.loc[selector, "slitY2"] = slitY2
+            targets.loc[selector, "slitX3"] = slitX3
+            targets.loc[selector, "slitY3"] = slitY3
+            targets.loc[selector, "slitX4"] = slitX4
+            targets.loc[selector, "slitY4"] = slitY4
+            targets.loc[selector, "slitLen"] = l1 + l2
+            targets.loc[selector, "TopDist"] = l1
+            targets.loc[selector, "BotDist"] = l2
+
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
         Recalculates xarcs and yarcs for new center RA/DEC and positionAngle
@@ -505,8 +552,7 @@ class TargetList:
         self.targets["xarcs"] = xarcs
         self.targets["yarcs"] = yarcs
 
-        xs, ys = self.gnom_to_dproj(xarcs * utils.AS2MM, yarcs * utils.AS2MM)
-        xmm, ymm, pas = self.proj_to_mask(xs, ys, 0)
+        xmm, ymm, pas = self.proj_to_mask(xarcs, yarcs, 0)
 
         self.targets["xmm"] = xmm
         self.targets["ymm"] = ymm
@@ -610,14 +656,21 @@ class TargetList:
         deltaPA = pa0 - p
         return rArcsec * np.cos(deltaPA), rArcsec * np.sin(deltaPA)
 
-    def gnom_to_dproj(self, xg, yg):
+    def _gnom_to_dproj(self, xg, yg):
+        """
+        GNOMONIC projection
+        xg, yg in [mm]
+        """
         rho2 = xg * xg + yg * yg
         f = 1.0 + DIST_C0 + DIST_C2 * rho2
         xd = xg * f
         yd = yg * f
         return xd, yd
 
-    def proj_to_mask(self, xp, yp, ap):
+    def _spherical_proj_to_mask(self, xp, yp, ap):
+        """
+        xp, yp: output of the GNOM projection
+        """
         mu = np.arcsin(np.clip(xp / M_RCURV, -1.0, 1.0))
         cosm = np.cos(mu)
         cost = np.cos(M_ANGLERAD)
@@ -638,6 +691,11 @@ class TargetList:
         yc = yy + (hs - hm) * yp / PPLDIST / cost
         xc = xx + (hs - hm) * xp / PPLDIST / cosm
         return xc, yc, ac
+
+    def proj_to_mask(self, xs, ys, ap):
+        as2mm = utils.AS2MM
+        xmm, ymm = self._gnom_to_dproj(xs * as2mm, ys * as2mm)
+        return self._spherical_proj_to_mask(xmm, ymm, ap)
 
     def getDistortionFunctions(self):
         """
@@ -669,6 +727,10 @@ class TargetList:
                 ),
                 file=fh,
             )
+            print("#", file=fh)
+            print("#", file=fh)
+            print ("# Columns", file=fh)
+            print("# Obj_Id, RA, DEC, EQX, Magn, pBand, pCode, sampleNr, selected, slitLPA, length1, length2, slitWidth", file=fh)
             print("#", file=fh)
             print("#", file=fh)
             # end of outputPA

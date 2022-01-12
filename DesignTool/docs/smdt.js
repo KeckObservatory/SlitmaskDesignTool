@@ -436,7 +436,20 @@ function SlitmaskDesignTool() {
 		self.recalculateMaskHelper(callback);
 	};
 
+	function splitArgs() {
+		var parts = window.location.search.replace('?', '').split("&");
+		var out = Array();
+		for (arg in parts) {
+			var twoparts = parts[arg].split('=');
+			out[twoparts[0]] = twoparts[1];
+		}
+		return out;
+	} // splitArgs	
+
 	self.checkQuit = function () {
+		let args = splitArgs();
+		if (!args["quit"]) return;
+
 		ajaxCall("quit", {}, function () { });
 		return "Quit";
 	};
