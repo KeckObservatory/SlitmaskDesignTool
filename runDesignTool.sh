@@ -1,23 +1,25 @@
 #!/bin/sh
 
-PYTHONPATH="${PYTHONPATH}:DesignTool:DesignTool/smdtLibs"
+DIR0=`readlink -e $0`
+PROGBASE=`dirname $DIR0`
+
+PYTHONPATH="${PYTHONPATH}:${PROGBASE}/DesignTool:${PROGBASE}/DesignTool/smdtLibs"
 export PYTHONPATH
 PYTHON=`which python3`
 
 checkIfRunning()
 {
-	pgrep -fl "slitmaskdesign.py $*"
+	pgrep -lf "DesignTool/slitmaskdesign.py*"
 }
 
 start()
 {
-	RES=`checkIfRunning $*`
+	RES=`checkIfRunning`
 	if [ "x$RES" = "x" ]
 	then
-		echo "Starting .." $*
+		echo "Starting ..." $*
 		#$PYTHON  slitmaskdesign.py $*        
-        $PYTHON slitmaskdesign.py $*
-
+        $PYTHON DesignTool/slitmaskdesign.py $*
 	else
 		echo "slitmaskdesign.py $* already running"
 	fi
@@ -25,24 +27,25 @@ start()
 
 stop()
 {
-	RES=`checkIfRunning $*`
+	RES=`checkIfRunning`
 	if [ "x$RES" = "x" ]
 	then
 		echo "Nothing to stop"
 	else
-		pkill -f "slitmaskdesign.py $*"
+		pkill -f "DesignTool/slitmaskdesign.py"
 	fi
 }
 
 status()
 {
-	RES=`checkIfRunning $*`
+	RES=`checkIfRunning`
 	if [ "x$RES" = "x" ]
 	then
 		echo "slitmaskdesign.py not running"
 		echo $RES
 	else
-		pgrep -fl "slitmaskdesign.py $*"
+		echo "slitmasdesign is running"
+		ps -ef | fgrep slitmaskdesign.py | fgrep -v grep
 	fi
 }
 
