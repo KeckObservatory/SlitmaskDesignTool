@@ -19,7 +19,7 @@ start()
 	then
 		echo "Starting ..." $*
 		#$PYTHON  slitmaskdesign.py $*        
-        $PYTHON DesignTool/slitmaskdesign.py $*
+        $PYTHON ${PROGBASE}/DesignTool/slitmaskdesign.py $*
 	else
 		echo "slitmaskdesign.py $* already running"
 	fi

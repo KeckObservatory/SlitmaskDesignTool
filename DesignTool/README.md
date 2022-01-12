@@ -1,34 +1,34 @@
 
 # How to run
 
-SlitmaskDesignServer.py is the main entry point for the server.
-The client is the web browser running the HTML and Javascript.
+The file runDesignTool.sh is convenient shell script to start and stop the Slitmask Design Tool.
+
+The Slitmask Design Tool starts the main program that acts as a web server. Optionally, a web-browser can be started at the same time. If a web-browser is manually, say from another machine then the URL http://hostname:9301 should be used, where hostname is the name of the machine running the main program.
+
 
 To run the server:	
 
-   * python3  SlitmaskDesignServer.py 
-	
-Either set the current directory must be this directory or 
-set PYTHONPATH to include this directory.
+   * runDesignTool.sh start
+   or, start with browser
+   * runDesignTool.sh start -b  
 
-If you have a configuration file different from smdr.cfg, it can be specified on the 
-command line as -c
+To stop the server:
 
-If there are issue with automatically determining the host name (Error 8), you can 
-specify the host on the command line:
+   * runDesignTool.sh stop
 
-   * python3 SlitmaskDesignServer.py -host 127.0.0.1
+To check if running:
 
-The file smdt.cfg defines the configuration parameters, including the port number for the server.
+   * runDesignTool.sh status
 
 
-On the client side, start the browser and enter the URL:
-	
-   * on local machine
-   
-      http://localhost:50080
-      
-   * on remote machine
-      http:/ip-of-server:50080
-      
-Use 50080 or another port number given in the configuration file (smdt.cfg).
+The Slitmask Design Tool need the a configuration file (default smdt.cfg) and a parameters file (default params.cfg). These default files are in the Design directory.
+
+The location of the parameters file is given in smdt.cfg.
+
+To use another, customized, smdt.cfg file, start the program with:
+   * runDesignTool.sh start -c <where_is_the_smdt_file>
+
+The main python program is slitmaskdesign.py, which can be started manually if the environment variable PYTHONPATH includes the directory Design/ and Design/smdtLibs.
+
+The URL to connect to the server is http://hostname:portNr.
+The hostname is the name of the machine running the main program and portNr is defautl 9301 as given in smdt.cfg.
