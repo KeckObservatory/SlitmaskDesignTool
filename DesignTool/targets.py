@@ -408,7 +408,7 @@ class TargetList:
             )
         else:
             # Add a new entry
-            idx = self.targets.objectId.shape[0]
+            idx = self.targets.obejctName.shape[0]
             newItem = {
                 "objectId": targetName,
                 "raHour": raHour,
@@ -514,13 +514,13 @@ class TargetList:
 
             slitX10 = slitX - cosines * l1
             slitY10 = slitY - sines * l1
-            slitX1, slitY1, pa0 = self.proj_to_mask(slitX10, slitY10 - half, 0)
             slitX2, slitY2, pa0 = self.proj_to_mask(slitX10, slitY10 + half, 0)
+            slitX3, slitY3, pa0 = self.proj_to_mask(slitX10, slitY10 - half, 0)
 
             slitX30 = slitX + cosines * l2
             slitY30 = slitY + sines * l2
-            slitX3, slitY3, pa0 = self.proj_to_mask(slitX30, slitY30 + half, 0)
             slitX4, slitY4, pa0 = self.proj_to_mask(slitX30, slitY30 - half, 0)
+            slitX1, slitY1, pa0 = self.proj_to_mask(slitX30, slitY30 + half, 0)
 
             targets.loc[selector, "slitX1"] = slitX1
             targets.loc[selector, "slitY1"] = slitY1
