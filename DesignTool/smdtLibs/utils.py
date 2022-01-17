@@ -11,7 +11,7 @@ import webbrowser
 import traceback
 
 #MM2AS = math.degrees(3600 / 150327) 
-MM2AS = math.degrees(3600 / 150280)  # 
+MM2AS = math.degrees(3600 / 150327)  # 
 AS2MM = 1.0 / MM2AS  # 
 
 

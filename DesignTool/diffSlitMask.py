@@ -10,11 +10,13 @@ import logging
 import argparse
 import matplotlib.pyplot as plt
 
+from astropy.modeling import models, fitting
+
 rpath = os.path.dirname(os.path.realpath(__file__))
 sys.path.extend((rpath + "/smdtLibs",))
 
 from configFile import ConfigFile
-from targets import TargetList
+from targets import TargetList, ZPT_YM
 from maskDesignFile import MaskDesignInputFitsFile
 import maskLayouts
 from smdtLibs import drawUtils, utils
@@ -28,56 +30,59 @@ class DiffSlitMask:
         self.fitsname2 = fits2
         self.mdf1 = MaskDesignInputFitsFile(fits1)
         self.mdf2 = MaskDesignInputFitsFile(fits2)
-        self.allSlits = None
-
+        self._merge ()
+    
     def diffValues(self, v1, v2):
         return v1 - v2
 
-    def calcDiffs(self):
+    def _merge(self):
         slits1 = self.mdf1.allSlits
         slits2 = self.mdf2.allSlits
-        jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX"
-        joined = slits1.merge (slits2, on=jCols, how="outer")
+        jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX", "pcode"
+        joined = slits1.merge (slits2, on=jCols, how="inner")
         self.joinedSlits = joined
+        self._calcTargetPositions()
+
+    def calcDiffs (self):
+        slits = self.joinedSlits
+        slits = slits[slits.pcode > 0]     
         out = {}
         for a in "x", "y":
             for y in range(1, 5):
                 name = f"{a}{y}"
                 colName = f"slitX{y}"
-                out[f"d{name}"] = self.diffValues(joined[colName+"_x"], joined[colName+"_y"])
+                out[f"d{name}"] = self.diffValues(slits[colName+"_x"], slits[colName+"_y"])
+        out["pcode"] = slits.pcode
+        
         return out
+
+    def _calcTargetPositions (self):
+        allSlits = self.joinedSlits
+        allSlits = allSlits[allSlits.pcode > 0]                
+
+        xs1, ys1 = getTargetPos(allSlits, "_x", allSlits.slitX1_x,allSlits.slitY1_x,allSlits.slitX2_x,allSlits.slitY2_x,
+            allSlits.slitX3_x,allSlits.slitY3_x,allSlits.slitX4_x,allSlits.slitY4_x)
+
+        xs2, ys2 = getTargetPos(allSlits, "_y", allSlits.slitX1_y,allSlits.slitY1_y,allSlits.slitX2_y,allSlits.slitY2_y,
+            allSlits.slitX3_y,allSlits.slitY3_y,allSlits.slitX4_y,allSlits.slitY4_y)
+
+        self.target1XYs = xs1, ys1        
+        self.target2XYs = xs2, ys2
+    
 
     def printDiffs(self, diffs):
         format = ",".join(["{:4.2f}"] * 8)
         for row in zip(*diffs.values()):
             print(format.format(*row))
-
     
     def plotSlits (self):
-        def genCode (x1, y1, x2, y2, x3, y3, x4, y4):
-            slitXYs = []
-            for xx1, yy1, xx2, yy2, xx3, yy3, xx4, yy4 in zip (x1, y1, x2, y2, x3, y3, x4, y4):
-                slitXYs.append ((xx1, yy1, 0))
-                slitXYs.append ((xx2, yy2, 1))
-                slitXYs.append ((xx3, yy3, 1))
-                slitXYs.append ((xx4, yy4, 1))
-                slitXYs.append ((xx1, yy1, 2))                
-            return slitXYs
-        
-        def getTargetPos (x1, y1, x2, y2, x3, y3, x4, y4):
-            xLeft, yLeft = (x1 + x4) / 2, (y1 + y4) / 2
-            xRight, yRight = (x2 + x3) / 2, (y2 + y3) / 2
-            
-            t = (allSlits.slitLen_y - allSlits.TopDist_y) / allSlits.slitLen_y
-
-            targetOnSlitX = (xRight - xLeft) * t + xLeft
-            targetOnSlitY = (yRight - yLeft) * t + yLeft
-            return targetOnSlitX, targetOnSlitY
         
         layout = maskLayouts.MaskLayouts["deimos"]
-        layoutMM = maskLayouts.scaleLayout(layout, utils.AS2MM, 0, -128)
+        layoutMM = maskLayouts.scaleLayout(layout, utils.AS2MM, 0, -ZPT_YM)
 
         allSlits = self.joinedSlits
+        aboxes = allSlits[allSlits.pcode < 0]
+        allSlits = allSlits[allSlits.pcode > 0]
 
         codes1 = genCode (allSlits.slitX1_x,allSlits.slitY1_x,allSlits.slitX2_x,allSlits.slitY2_x,
             allSlits.slitX3_x,allSlits.slitY3_x,allSlits.slitX4_x,allSlits.slitY4_x)
@@ -85,33 +90,60 @@ class DiffSlitMask:
         codes2 = genCode (allSlits.slitX1_y,allSlits.slitY1_y,allSlits.slitX2_y,allSlits.slitY2_y,
             allSlits.slitX3_y,allSlits.slitY3_y,allSlits.slitX4_y,allSlits.slitY4_y)
 
-        drawUtils.drawPatch(plt.gca(), codes1, fc="None", ec="r", label=self.fitsname1)        
-        drawUtils.drawPatch(plt.gca(), codes2, fc="None", ec="b", label=self.fitsname2)
-        drawUtils.drawPatch(plt.gca(), layoutMM, fc="None", ec="y")
+        boxCodes = genCode (aboxes.slitX1_y,aboxes.slitY1_y,aboxes.slitX2_y,aboxes.slitY2_y,
+            aboxes.slitX3_y,aboxes.slitY3_y,aboxes.slitX4_y,aboxes.slitY4_y)
 
+        ax = plt.gca()
+        drawUtils.drawPatch(ax, boxCodes, fc="None", ec='g', label="A.box")
+            
+        drawUtils.drawPatch(ax, codes1, fc="None", ec="r", label=self.fitsname1)        
+        drawUtils.drawPatch(ax, codes2, fc="None", ec="b", label=self.fitsname2)
+        drawUtils.drawPatch(ax, layoutMM, fc="None", ec="y")
 
-        xs, ys = getTargetPos(allSlits.slitX1_y,allSlits.slitY1_y,allSlits.slitX2_y,allSlits.slitY2_y,
-            allSlits.slitX3_y,allSlits.slitY3_y,allSlits.slitX4_y,allSlits.slitY4_y)
+        xs, ys = self.target1XYs
+        plt.plot (xs, ys, 'r.')        
+        
+        xs, ys = self.target2XYs
+        plt.plot (xs, ys, 'b.')
 
-        plt.plot (xs, ys, '.')
         plt.gca().invert_xaxis()
         plt.grid()
         plt.legend()
 
-
-    def plotDiffs(self, diffs):
-        slits1 = self.mdf1.allSlits
-        x1, x2, x3, x4 = slits1.slitX1, slits1.slitX2, slits1.slitX3, slits1.slitX4
-        y1, y2, y3, y4 = slits1.slitY1, slits1.slitY2, slits1.slitY3, slits1.slitY4
-
-        fig, sps = plt.subplots(3, figsize=(10, 8))
-        plt.subplot(311)
-        self.plotSlits()
+    def plotTargetDiffs (self):        
+        xs2, ys2 = self.target2XYs
+        xs1, ys1 = self.target1XYs
+        dxs = xs2-xs1
+        dys = ys2-ys1
 
         plt.subplot(312)        
-        plt.title ("Compare " + self.fitsname1 + " and " + self.fitsname2)
-        plt.plot(x1, diffs["dx1"], ".", label="dX1")
-        plt.plot(x2, diffs["dx2"], ".", label="dX2")
+        plt.title ("Diff target Xs and Ys " + self.fitsname1 + " and " + self.fitsname2)
+        plt.plot(xs2, dxs, "v", label="dXs")  
+        plt.plot(xs2, dys, "v", label="dYs")  
+
+        plt.legend()
+        plt.xlabel ("X position [mm]")      
+        plt.grid()
+        plt.tight_layout()
+
+        plt.subplot(313)
+        plt.plot(ys2, dxs, ".", label="dXs")
+        plt.plot(ys2, dys, ".", label="dYs")
+        
+        plt.legend()
+        plt.ylabel("Y position [mm]")
+        plt.grid()
+        plt.tight_layout()
+
+
+    def plotCorners (self, diffs):
+        slits1 = self.mdf2.allSlits
+        slits1 = slits1[slits1.pcode > 0]
+        x1, x2, x3, x4 = slits1.slitX1, slits1.slitX2, slits1.slitX3, slits1.slitX4
+        y1, y2, y3, y4 = slits1.slitY1, slits1.slitY2, slits1.slitY3, slits1.slitY4
+        plt.subplot(312)        
+        plt.plot(x1, diffs["dx1"], "v", label="dX1")
+        plt.plot(x2, diffs["dx2"], "^", label="dX2")
         plt.plot(x3, diffs["dx3"], ".", label="dX3")
         plt.plot(x4, diffs["dx4"], ".", label="dX4")
         plt.xlabel("Slit X position [mm]")
@@ -121,58 +153,65 @@ class DiffSlitMask:
         plt.tight_layout()
 
         plt.subplot(313)
-        plt.plot(y1, diffs["dy1"], ".", label="dy1")
-        plt.plot(y2, diffs["dy2"], ".", label="dy2")
+        plt.plot(y1, diffs["dy1"], "v", label="dy1")
+        plt.plot(y2, diffs["dy2"], "^", label="dy2")
         plt.plot(y3, diffs["dy3"], ".", label="dy3")
         plt.plot(y4, diffs["dy4"], ".", label="dy4")
 
         plt.xlabel("Slit Y position [mm]")
         plt.ylabel("Y Error [mm]")
-        plt.legend()
+        
         plt.grid()
         plt.tight_layout()
+
+
+    def plotDiffs(self, diffs):
+
+        fig, sps = plt.subplots(3, figsize=(10, 8))
+        plt.subplot(311)
+        
+        plt.title ("Compare " + self.fitsname1 + " and " + self.fitsname2)
+        self.plotSlits()
+        
+        self.plotTargetDiffs()
         plt.show()
 
-    def projectTargetXYs(self, allSlits):
-        """
-        Takes the DSIM slits coordinates in mm,
-        and builds the outline of the slits for plotting.
-        
-        Returns targetOnSlitX, targetOnSlitY from Slits (Dsim), slitXYs
+    def fitModel (self):
+        xs2, ys2 = self.target2XYs
+        xs1, ys1 = self.target1XYs
 
-        targetOnSlitX: list of X
-        targetOnSlitY: list of Y
-        slitsXYs: closed outline of the slit, ie the corners 0,1,2,3,0
-        """
+        pdeg = 1
+        model0 = models.Polynomial2D(degree=pdeg)
+        xfitter = fitting.LinearLSQFitter()
+        yfitter = fitting.LinearLSQFitter()
 
-        slitXYs = []
+        xfitted = xfitter(model0, xs2, ys2, xs1)
+        yfitted = yfitter(model0, xs2, ys2, ys1)
+        return xfitted, yfitted
 
-        x1 = allSlits.slitX1
-        y1 = allSlits.slitY1
-        x2 = allSlits.slitX2
-        y2 = allSlits.slitY2
-        x3 = allSlits.slitX3
-        y3 = allSlits.slitY3
-        x4 = allSlits.slitX4
-        y4 = allSlits.slitY4
 
-        for xx1, yy1, xx2, yy2, xx3, yy3, xx4, yy4 in zip(x1, y1, x2, y2, x3, y3, x4, y4):
-            slitXYs.append((xx1, yy1, 0))
-            slitXYs.append((xx2, yy2, 1))
-            slitXYs.append((xx3, yy3, 1))
-            slitXYs.append((xx4, yy4, 1))
-            slitXYs.append((xx1, yy1, 2))
+def getTargetPos (allSlits, suffix, x1, y1, x2, y2, x3, y3, x4, y4):
+    xLeft, yLeft = (x1 + x4) / 2, (y1 + y4) / 2
+    xRight, yRight = (x2 + x3) / 2, (y2 + y3) / 2
+    
+    t = (allSlits[f"slitLen{suffix}"] - allSlits[f"TopDist{suffix}"]) / allSlits[f"slitLen{suffix}"]
 
-        xLeft, yLeft = (x1 + x4) / 2, (y1 + y4) / 2
-        xRight, yRight = (x2 + x3) / 2, (y2 + y3) / 2
+    targetOnSlitX = (xRight - xLeft) * t + xLeft
+    targetOnSlitY = (yRight - yLeft) * t + yLeft
+    return targetOnSlitX, targetOnSlitY
 
-        t = (allSlits.slitLen - allSlits.TopDist) / allSlits.slitLen
 
-        targetOnSlitX = (xRight - xLeft) * t + xLeft
-        targetOnSlitY = (yRight - yLeft) * t + yLeft
-
-        return targetOnSlitX, targetOnSlitY, slitXYs
-
+def genCode (x1, y1, x2, y2, x3, y3, x4, y4):
+    slitXYs = []
+    if len(x1) == 0: return slitXYs
+    for xx1, yy1, xx2, yy2, xx3, yy3, xx4, yy4 in zip (x1, y1, x2, y2, x3, y3, x4, y4):
+        slitXYs.append ((xx1, yy1, 0))
+        slitXYs.append ((xx2, yy2, 1))
+        slitXYs.append ((xx3, yy3, 1))
+        slitXYs.append ((xx4, yy4, 1))
+        slitXYs.append ((xx1, yy1, 2))                
+    return slitXYs
+    
 
 if __name__ == "__main__":
     epilog = """
@@ -184,14 +223,19 @@ if __name__ == "__main__":
     )
     parser.add_argument(dest="input1", help="Input1", nargs=1)
     parser.add_argument(dest="input2", help="Input2", nargs=1)
+    parser.add_argument ("-m", "--fitModel", help="Fit a model", action="store_true")
 
     try:
         args = parser.parse_args()
     except:
-        parser.print_help()
         sys.exit(0)
 
     diffTest = DiffSlitMask(args.input1[0], args.input2[0])
     diffs = diffTest.calcDiffs()
-    # diffTest.printDiffs(diffs)
+    
+    if args.fitModel:
+        xf, yf = diffTest.fitModel()
+        print("X fit", list(zip(xf.param_names, xf.parameters)))
+        print("Y fit", list(zip(yf.param_names, yf.parameters)))
+
     diffTest.plotDiffs(diffs)

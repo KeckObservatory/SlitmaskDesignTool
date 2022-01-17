@@ -38,7 +38,8 @@ class SlitmaskDesignTool:
             tlist = io.StringIO(tlistRaw.decode("UTF-8"))
             self.setTargetList(tlist, config=config)
         self.instrument = instrument
-        self.config = config
+        self.config = config        
+        self.maskLayout = MaskLayouts[instrument]
 
     def setTargetList(self, tlist, config):
         """
@@ -80,12 +81,12 @@ class SlitmaskDesignTool:
         targets.centerRADeg = raDeg
         targets.centerDEC = decDeg
         targets.positionAngle = paDeg
-        mask = MaskLayouts[self.config.getValue("instrument", "deimos").lower()]
+        mask = self.maskLayout
         minX, maxX = np.min(mask, axis=0)[0], np.max(mask, axis=0)[0]
 
         # Updates targets coordinates for the new center raDeg and decDeg
-        targets.markInside ()
         targets.reCalcCoordinates(raDeg, decDeg, paDeg)
+        targets.markInside ()
         targets.calcSlitPosition(minX, maxX, minSlitLength, minSep, ext)
         # Results are stored in targets
 

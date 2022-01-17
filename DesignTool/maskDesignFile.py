@@ -186,7 +186,6 @@ class MaskDesignOutputFitsFile:
         objInMask = targets[targets.inMask > 0]
         nSlits = objInMask[objInMask.pcode > 0].shape[0]
         nObjs = nSlits + objInMask[objInMask == -2].shape[0]
-        pId = -1
 
         cols.append(pf.Column(name="DesId", format="I11", null="-9999", unit="None", array=[1]))
         cols.append(pf.Column(name="DesName", format="A68", null="INDEF", unit="None", array=[params.MaskName[0]],))
@@ -422,9 +421,9 @@ class MaskDesignInputFitsFile:
                 self.__dict__[hdr.name.lower()] = pd.DataFrame(hdr.data)
             self.allSlits = self.mergeSlitTables()
 
-    def _genPcode(self, slits):
-        table = {"A": -2, "G": -1, "I": 0, "P": 1}
-        return [table.get(t, 0) for t in slits.slitTyp]
+    def _genPcode(self, slits):        
+        objClassTable = {"Alignment_Star":-2, "Guide_Star":-1, "Ignored":0, "Program_Target":1}        
+        return [int(objClassTable.get(t, 0)) for t in slits.ObjClass]
         
     def mergeSlitTables(self):
         """
@@ -492,7 +491,7 @@ class MaskDesignInputFitsFile:
         dy = math.sin(paRad) * radius
         return pntX - dx, pntY - dy
 
-    def getAlignBoxes(self, slits=None):
+    def deplicated_getAlignBoxes(self, slits=None):
         slits = self.allSlists if slits == None else slits
         return slits[["A" == s for s in slits.slitTyp]]
 
@@ -516,6 +515,34 @@ class MaskDesignInputFitsFile:
         Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
         """
 
+        allSlits = self.allSlits
+        nSlits = len(self.allSlits)
+        self.allSlits["raHour"] = allSlits.RA_OBJ / 15.0 
+        self.allSlits["decDeg"] = allSlits.DEC_OBJ
+        self.allSlits["raRad"] =  np.radians(allSlits.RA_OBJ)
+        self.allSlits["decRad"] = np.radians(allSlits.DEC_OBJ)
+
+        self.allSlits["objectId"] = [d.strip() for d in allSlits.OBJECT]
+        self.allSlits["eqx"] = allSlits.EQUINOX
+        self.allSlits["length1"] = self.allSlits["TopDist"]
+        self.allSlits["length2"] = self.allSlits["BotDist"]
+
+        self.allSlits["orgIndex"] = range(nSlits)
+        self.allSlits["inMask"] = [0] * nSlits
+        self.allSlits["selected"] = [0] * nSlits
+        self.allSlits["sampleNr"] = [1] * nSlits
+        self.allSlits["slitWidth"] = self.allSlits.slitWid
+
+        # raDeg, decDeg = self.getCenter()
+        paDeg = self.maskdesign.PA_PNT[0]
+
+        return TargetList(pd.DataFrame(self.allSlits).copy(), config)
+
+    def xgetAsTargets(self, config):
+        """
+        Returns the target list stored int the FITS file as a TargetList object.
+        Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
+        """
 
         objects = self.objectcat
         objIndices = dict([(i1, i0) for i0, i1 in enumerate(objects.ObjectId)])
@@ -544,4 +571,5 @@ class MaskDesignInputFitsFile:
         paDeg = self.maskdesign.PA_PNT[0]
 
         return TargetList(pd.DataFrame(self.allSlits).copy(), config)
+
 

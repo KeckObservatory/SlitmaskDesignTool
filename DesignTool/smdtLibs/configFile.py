@@ -95,3 +95,9 @@ class ConfigFile(ConfigParser):
 
     def setValue(self, key, value):
         self.properties[key] = value
+
+def getDefaultConfig ():
+        rpath = os.path.dirname(os.path.realpath(__file__))
+        config = ConfigFile(rpath + "/../smdt.cfg")
+        config.properties["params"] = ConfigFile(rpath + "/../params.cfg")
+        return config

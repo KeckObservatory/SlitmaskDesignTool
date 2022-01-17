@@ -281,7 +281,7 @@ class TargetSelector:
                 x = tg.xarcs
                 x0, x1 = x - tg.length1, x + tg.length2
                 isSegm = 0
-                if tg.pcode == -2:
+                if tg.pcode < 0:
                     isSegm = -2
                 allPairs.append((x0, x1, tIdx, isSegm))
                 #print(f"gen gap {x0:.2f}, {x1:.2f}, {tIdx=}, {tg.oldIndex=} {tg.pcode}, {tg.orgIndex=}, {tg.selected=}")

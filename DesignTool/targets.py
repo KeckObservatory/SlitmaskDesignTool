@@ -215,6 +215,7 @@ class TargetList:
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
             if self._checkPA(p1):
+                slitpa = self.positionAngle
                 continue
 
             sampleNr, selected, slitLPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
@@ -336,7 +337,7 @@ class TargetList:
 
         return json.dumps(data2, cls=MyJsonEncoder)
 
-    def setColum(self, colName, value):
+    def deplicated_setColum(self, colName, value):
         """
         Updates the dataframe by column name
         """
@@ -495,7 +496,7 @@ class TargetList:
         """
         targets = self.targets
         selector = targets.inMask > 0
-        aboxSelect = targets.pcode == -2
+        aboxSelect = targets.pcode < 0
         targets.loc[aboxSelect, "slitLPA"] = self.positionAngle
         selected = targets[selector]
         nSlits = selected.shape[0]
@@ -695,7 +696,10 @@ class TargetList:
     def proj_to_mask(self, xs, ys, ap):
         as2mm = utils.AS2MM
         xmm, ymm = self._gnom_to_dproj(xs * as2mm, ys * as2mm)
-        return self._spherical_proj_to_mask(xmm, ymm, ap)
+        xout, yout, ac =  self._spherical_proj_to_mask(xmm, ymm, ap)
+        
+        xfudge, yfudge = (0.9996118208910862, 0.9996192685264905)
+        return xout*xfudge, yout*yfudge, ac
 
     def getDistortionFunctions(self):
         """
@@ -762,4 +766,3 @@ class TargetList:
         with open(fileName, "w") as fh:
             outputPA(fh)
             outputTargets(fh)
-
