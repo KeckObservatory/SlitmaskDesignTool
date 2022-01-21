@@ -605,7 +605,7 @@ function CanvasShow(containerName, zoomContainer) {
         //self.slitBaseAngleDeg = self.compassNorthDeg + 90;
         self.slitBaseAngleDeg = tmDeg;
 
-        self.slitRel2Mask = 0; //radians(skyPA);
+        //self.slitRel2Mask = 0; //radians(skyPA);
 
         // mask angle in screen angle
         self.maskBaseAngleRad = tmAngle;
@@ -828,7 +828,8 @@ function CanvasShow(containerName, zoomContainer) {
             let maskY = maskXY[1] * halfWidth;
 
             // The slit angle is relative to screen
-            let slitAngle = radians(Number(slitPAs[idx]));
+            let pa = self.positionAngle + self.origPA;
+            let slitAngle = radians(pa - Number(slitPAs[idx]));
             let slitAngleOnScreen = radians(self.slitBaseAngleDeg) + slitAngle;
 
             let cosa = Math.cos(slitAngleOnScreen);
