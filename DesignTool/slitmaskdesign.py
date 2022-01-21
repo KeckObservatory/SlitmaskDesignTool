@@ -36,7 +36,7 @@ if __name__ == "__main__":
     SMDesignHandler.defaultFile = cf.getValue("defaultFile", "index.html")
     SMDesignHandler.logEnabled = cf.getValue("logEnabled", False)
 
-    port = cf.getValue("serverPort", 50080)
+    port = cf.getValue("serverPort", 9301)
     smd = SMDesignServer(args.host, port)
     smd.start()
     initSignals(smd)

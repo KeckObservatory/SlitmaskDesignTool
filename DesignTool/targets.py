@@ -8,7 +8,7 @@ from targetSelector import TargetSelector
 from smdtLogger import SMDTLogger
 from smdtLibs.inOutChecker import InOutChecker
 from maskLayouts import MaskLayouts
-from smdtLibs import utils, dss2Header, DARCalculator
+from smdtLibs import utils, dss2Header, DARCalculator, configFile
 from astropy.modeling import models
 import datetime
 import json
@@ -75,7 +75,7 @@ class TargetList:
     def __init__(self, input, config):
         """
         Reads the target list from file of from string.
-        """
+        """        
         self.config = config
         self.positionAngle = None
         self.centerRADeg = None
@@ -93,6 +93,10 @@ class TargetList:
             self.targets = self.readFromFile(input)
 
         instrument = "deimos"
+        if config is None:
+            config = configFile.getDefaultConfig()
+            self.config = config
+
         if config is not None:
             instrument = config.properties["instrument"]
 
@@ -536,7 +540,7 @@ class TargetList:
             targets.loc[selector, "slitLen"] = l1 + l2
             targets.loc[selector, "TopDist"] = l1
             targets.loc[selector, "BotDist"] = l2
-            
+
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
         Recalculates xarcs and yarcs for new center RA/DEC and positionAngle
@@ -716,7 +720,7 @@ class TargetList:
             return pol
 
         ccf = self.config
-        distDegree = ccf.properties['distortiondegree']
+        distDegree = ccf.getValue('distortiondegree', 2)
         xPoly = _getPoly(ccf.distortionXCoeffs, distDegree)
         yPoly = _getPoly(ccf.distortionYCoeffs, distDegree)
         return xPoly, yPoly
