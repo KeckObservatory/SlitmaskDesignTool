@@ -122,7 +122,8 @@ class DiffSlitMask:
         plt.plot(xs2, dys, "v", label="dYs")  
 
         plt.legend()
-        plt.xlabel ("X position [mm]")      
+        plt.xlabel ("X position [mm]") 
+        plt.ylabel("X or Y error [mm]")     
         plt.grid()
         plt.tight_layout()
 
@@ -131,7 +132,8 @@ class DiffSlitMask:
         plt.plot(ys2, dys, ".", label="dYs")
         
         plt.legend()
-        plt.ylabel("Y position [mm]")
+        plt.xlabel("Y position [mm]")
+        plt.ylabel("X or Y error [mm]")
         plt.grid()
         plt.tight_layout()
 
