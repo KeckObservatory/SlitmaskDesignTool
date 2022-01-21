@@ -201,3 +201,32 @@ def calcDistortionCoef(designInfo, config, deg):
     yresid = np.linalg.norm(dsimYs - yfitted(xmm, ymm))
 
     return mdf, xfitted, yfitted, xresid, yresid
+
+
+
+def plotPairs(pairs, ecolor, y0, label):
+    """
+    To display gaps 
+    """
+    vertices = []
+    codes = []
+    as2mm = utils.AS2MM
+    if len(pairs) == 0:
+        return
+    for i, ab in enumerate(pairs):
+        y = y0 + (i % 2) * 20
+        vertices.append((ab[0]*as2mm, y))
+        vertices.append((ab[1]*as2mm, y))
+        codes.append(path.Path.MOVETO)
+        codes.append(path.Path.LINETO)
+
+    slits = path.Path(vertices, codes)
+    patch = patches.PathPatch(slits, facecolor=ecolor, edgecolor=ecolor, label=label)
+    ax = plt.gca()
+    ax.add_patch(patch)
+    for i, ab in enumerate(pairs):
+        y = y0 + (i % 2) * 20
+        ax.annotate(
+            f"{ab[3]}", xy=(ab[0]*as2mm, y0 + 0.2), xytext=((ab[0] + ab[1])*as2mm / 2, y + 0.2)
+        )
+

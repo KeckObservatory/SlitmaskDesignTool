@@ -96,6 +96,7 @@ class TargetList:
         if config is not None:
             instrument = config.properties["instrument"]
 
+        self.distFuncs = self.getDistortionFunctions()
         self.xgaps = []
         self.layout = MaskLayouts[instrument]
         self.project2FocalPlane()
@@ -515,6 +516,7 @@ class TargetList:
 
             slitX10 = slitX - cosines * l1
             slitY10 = slitY - sines * l1
+
             slitX2, slitY2, pa0 = self.proj_to_mask(slitX10, slitY10 + half, 0)
             slitX3, slitY3, pa0 = self.proj_to_mask(slitX10, slitY10 - half, 0)
 
@@ -534,7 +536,7 @@ class TargetList:
             targets.loc[selector, "slitLen"] = l1 + l2
             targets.loc[selector, "TopDist"] = l1
             targets.loc[selector, "BotDist"] = l2
-
+            
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
         Recalculates xarcs and yarcs for new center RA/DEC and positionAngle
@@ -697,9 +699,10 @@ class TargetList:
         as2mm = utils.AS2MM
         xmm, ymm = self._gnom_to_dproj(xs * as2mm, ys * as2mm)
         xout, yout, ac =  self._spherical_proj_to_mask(xmm, ymm, ap)
-        
-        xfudge, yfudge = (0.9996118208910862, 0.9996192685264905)
-        return xout*xfudge, yout*yfudge, ac
+        xfc, yfc = self.distFuncs
+        #return xout*xfudge, yout*yfudge, ac
+
+        return xfc(xout, yout), yfc(xout, yout), ac
 
     def getDistortionFunctions(self):
         """
@@ -707,15 +710,15 @@ class TargetList:
         Returns the polynomial models for X and Y
         """
 
-        def _getPoly(coeffs):
-            pol = models.Polynomial2D(degree=4)
+        def _getPoly(coeffs, dd):
+            pol = models.Polynomial2D(degree=dd)
             pol.parameters = [float(x) for x in coeffs.split(",")]
             return pol
 
         ccf = self.config
-
-        xPoly = _getPoly(ccf.distortionXCoeffs)
-        yPoly = _getPoly(ccf.distortionYCoeffs)
+        distDegree = ccf.properties['distortiondegree']
+        xPoly = _getPoly(ccf.distortionXCoeffs, distDegree)
+        yPoly = _getPoly(ccf.distortionYCoeffs, distDegree)
         return xPoly, yPoly
 
     def writeTo(self, fileName):

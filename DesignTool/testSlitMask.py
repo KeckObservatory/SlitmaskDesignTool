@@ -15,6 +15,7 @@ sys.path.extend((rpath + "/smdtLibs",))
 from configFile import ConfigFile
 from targets import TargetList
 from slitmaskDesignTool import SlitmaskDesignTool
+from diffSlitMask import DiffSlitMask
 
 logging.disable()
 
@@ -75,6 +76,12 @@ def testMaskDesign(args):
     if args.output_list is not None:
         checkNRemove(args.output_list) and tester.sdt.saveDesignAsList(args.output_list)
 
+    diffFits = args.diffFits
+    if diffFits is not None and args.output_file is not None:
+        dsm = DiffSlitMask (diffFits, args.output_file)
+        diffs = dsm.calcDiffs()
+        dsm.plotDiffs (diffs)
+
     return tester, tester.targetList
 
 
@@ -94,14 +101,20 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--minSep", help="Min. separation in arcsec", default=0.35)
     parser.add_argument("-e", "--extend", help="Extend slits", default=True)
     parser.add_argument("-c", "--clobber", help="Overwrite output file", action="store_true", default=False)
-
+    parser.add_argument("-d", "--diffFits", help="FITS file to compare with", type=str)
+    
     try:
         args = parser.parse_args()
     except:
         sys.exit(0)
 
     if os.path.exists(args.input_file[0]):
-        testMaskDesign(args)
+        bname = os.path.basename (args.input_file[0])
+        ext = bname.split(".")[-1]
+        if ext == "fits":
+            print ("Input file cannot be a fits file")
+        else:
+            testMaskDesign(args)
         sys.exit(0)
     else:
         print (f"File {args.input_file[0]} does not exist")

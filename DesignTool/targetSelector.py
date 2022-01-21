@@ -218,10 +218,10 @@ class TargetSelector:
         def updateLengths(start, end, idx, isGap):
             """
             Updates the segment at index idx with the new lengths
-            Ignores segment is no a gap
+            No update for gaps
             """
             if isGap == 0:
-                mid = tgs.at[idx, "xarcs"]
+                mid = self.targets.at[idx, "xarcs"]
                 self.targets.at[idx, "length1"] = mid - start
                 self.targets.at[idx, "length2"] = end - mid
                 #print (f"update {idx=}, {mid=:.1f}, {start:.1f}, {end:.1f}")
@@ -280,10 +280,10 @@ class TargetSelector:
             for tIdx, tg in tgs.iterrows():
                 x = tg.xarcs
                 x0, x1 = x - tg.length1, x + tg.length2
-                isSegm = 0
+                isGap = 0
                 if tg.pcode < 0:
-                    isSegm = -2
-                allPairs.append((x0, x1, tIdx, isSegm))
+                    isGap = -2
+                allPairs.append((x0, x1, tIdx, isGap))
                 #print(f"gen gap {x0:.2f}, {x1:.2f}, {tIdx=}, {tg.oldIndex=} {tg.pcode}, {tg.orgIndex=}, {tg.selected=}")
 
             return sorted(allPairs, key=lambda x: x[0])
