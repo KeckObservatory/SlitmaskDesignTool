@@ -9,6 +9,15 @@ function SlitmaskDesignTool() {
 
 	self.xAsPerPixel = 1;
 	self.yAsPerPixel = 1;
+	self.dirtyFlag = 0;
+
+	function sexa2deg(sexa) {
+		let parts = sexa.split(":");
+		let dd = Number(parts[0]);
+		let mm = Number(parts[1]) / 60;
+		let ss = Number(parts[2]) / 3600;
+		return dd + mm + ss;
+	}
 
 	function E(n) {
 		return document.getElementById(n);
@@ -19,9 +28,19 @@ function SlitmaskDesignTool() {
 			return Math.floor((1 + Math.random()) * 0x10000).toString(16)
 				.substring(1);
 		}
-		return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4()
-			+ s4() + s4();
+		return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() +
+			s4() + s4();
 	}
+
+	self.ajaxCallDirty = function (cmd, params, cb) {
+		self.dirtyFlag = 1;
+		return ajaxCall(cmd, params, cb);
+	};
+
+	self.ajaxPostDirty = function (cmd, params, cb) {
+		self.dirtyFlag = 1;
+		return ajaxPost(cmd, params, cb);
+	};
 
 	self.setStatus = function (msg) {
 		self.statusDiv.innerHTML = msg;
@@ -58,7 +77,9 @@ function SlitmaskDesignTool() {
 			return;
 		}
 
-		ajaxCall("getMaskLayout", { 'instrument': 'deimos' }, callback);
+		self.ajaxCallDirty("getMaskLayout", {
+			'instrument': 'deimos'
+		}, callback);
 	};
 
 	self.buildParamTable = function (params) {
@@ -134,14 +155,14 @@ function SlitmaskDesignTool() {
 			self.canvasShow.selectTargetByIndex(newIdx);
 		}
 
-		ajaxCall("getTargetsAndInfo", {}, callback);
+		self.ajaxCallDirty("getTargetsAndInfo", {}, callback);
 	};
 
 	self.loadConfigParams = function () {
 		function callback(data) {
 			self.buildParamTable(data.params);
 		}
-		ajaxCall('getConfigParams', {}, callback);
+		self.ajaxCallDirty('getConfigParams', {}, callback);
 	};
 
 	self.loadAll = function () {
@@ -153,6 +174,11 @@ function SlitmaskDesignTool() {
 
 	self.redraw = function () {
 		self.canvasShow.redrawTxImage();
+		if (self.dirtyFlag) {
+			E('recalculateMask').style.backgroundColor = "#ffaaaa";
+		} else {
+			E('recalculateMask').style.backgroundColor = "#bbbbbb";
+		}
 	};
 
 	self.resetDisplay1 = function () {
@@ -168,7 +194,7 @@ function SlitmaskDesignTool() {
 
 	self.setMinPcode = function () {
 		self.canvasShow.setShowPriorities(E('minPriority').value, E('maxPriority').value);
-		self.canvasShow.redrawTxImage();
+		self.redraw()
 	};
 
 	self.showHideParams = function (evt) {
@@ -176,13 +202,13 @@ function SlitmaskDesignTool() {
 		let elm = E('paramTableDiv');
 		if (curr == 'Show Parameters') {
 			this.value = 'Hide Parameters';
-			with (elm.style) {
+			with(elm.style) {
 				visibility = 'visible';
 				display = 'block';
 			}
 		} else {
 			this.value = 'Show Parameters';
-			with (elm.style) {
+			with(elm.style) {
 				visibility = 'hidden';
 				display = 'none';
 			}
@@ -190,8 +216,7 @@ function SlitmaskDesignTool() {
 	};
 
 	self.setMaskPA = function (evt) {
-		let pa = Number(E('maskpafd').value);
-		self.canvasShow.setMaskPA(pa);
+		self.setCenterRADEC(evt);
 	};
 
 	self.setSlitsPA = function (evt) {
@@ -208,8 +233,13 @@ function SlitmaskDesignTool() {
 
 		let colName = 'slitLPA';
 		let value = pa;
-		let params = { 'colName': colName, 'value': value, 'avalue': value };
-		ajaxPost('setColumnValue', params, function () { });
+		let params = {
+			'colName': colName,
+			'value': value,
+			'avalue': value
+		};
+		self.ajaxPostDirty('setColumnValue', params, function () {});
+		return false;
 	};
 
 	self.setSlitsLength = function (evt) {
@@ -223,8 +253,7 @@ function SlitmaskDesignTool() {
 			if (tgs.pcode[i] <= 0) {
 				tgs.length1[i] = ahalf;
 				tgs.length2[i] = ahalf;
-			}
-			else {
+			} else {
 				tgs.length1[i] = halfLen;
 				tgs.length2[i] = halfLen;
 			}
@@ -234,13 +263,22 @@ function SlitmaskDesignTool() {
 
 		let colName = 'length1';
 		let value = halfLen;
-		let params = { 'colName': colName, 'value': value, 'avalue': ahalf };
-		ajaxPost('setColumnValue', params, function () { });
+		let params = {
+			'colName': colName,
+			'value': value,
+			'avalue': ahalf
+		};
+		self.ajaxPostDirty('setColumnValue', params, function () {});
 
 		colName = 'length2';
 		value = halfLen;
-		params = { 'colName': colName, 'value': value, 'avalue': ahalf };
-		ajaxPost('setColumnValue', params, function () { });
+		params = {
+			'colName': colName,
+			'value': value,
+			'avalue': ahalf
+		};
+		self.ajaxPostDirty('setColumnValue', params, function () {});
+		return false;
 	};
 
 	self.setSlitsWidth = function (evt) {
@@ -257,8 +295,37 @@ function SlitmaskDesignTool() {
 
 		let colName = 'slitWidth';
 		let value = width;
-		let params = { 'colName': colName, 'value': value, 'avalue': value };
-		ajaxPost('setColumnValue', params, function () { });
+		let params = {
+			'colName': colName,
+			'value': value,
+			'avalue': value
+		};
+		self.ajaxPostDirty('setColumnValue', params, function () {});
+		return false;
+	};
+
+	self.setCenterRADEC = function (evt) {
+		function callback(data) {
+			self.reloadTargets(self.selectedTargetIdx);
+		}
+		let raSexa = E('inputrafd').value;
+		let decSexa = E('inputdecfd').value;
+
+		let raDeg = sexa2deg(raSexa) * 15;
+		let decDeg = sexa2deg(decSexa);
+		let paDeg = Number(E('maskpafd').value);
+
+		if (isNaN(raDeg) || isNaN(decDeg)) {
+			alert("Invalid inpuit");
+			return;
+		}
+
+		self.ajaxCallDirty("setCenterRADEC", {
+			"raDeg": raDeg,
+			"decDeg": decDeg,
+			'paDeg': paDeg
+		}, callback);
+		return false;
 	};
 
 	self.clearSelection = function (evt) {
@@ -274,8 +341,12 @@ function SlitmaskDesignTool() {
 		self.redraw();
 
 		let colName = 'selected';
-		let params = { 'colName': colName, 'value': 0, 'avalue': 0 };
-		ajaxPost('setColumnValue', params, function () { });
+		let params = {
+			'colName': colName,
+			'value': 0,
+			'avalue': 0
+		};
+		self.ajaxPostDirty('setColumnValue', params, function () {});
 	};
 
 	self.recalculateMaskHelper = function (callback) {
@@ -295,25 +366,30 @@ function SlitmaskDesignTool() {
 		let extendSlits = E('extendSlits').checked ? 1 : 0;
 
 		let params = {
-			'currRaDeg': cs.currRaDeg, 'currDecDeg': cs.currDecDeg,
+			'currRaDeg': cs.currRaDeg,
+			'currDecDeg': cs.currDecDeg,
 			'currAngleDeg': cs.positionAngle + cs.origPA,
 			'minSepAs': minSepAs,
 			'minSlitLengthAs': minSlitLengthAs,
 			'boxSize': boxSizeAs,
 			'extendSlits': extendSlits
 		};
-		let ajax = new AjaxClass();
-		ajax.postRequest('recalculateMask', params, callback);
+		//let ajax = new AjaxClass();
+		self.setStatus("Recalculating ...");
+		self.ajaxPostDirty('recalculateMask', params, callback);
 	};
 
 	self.recalculateMask = function (evt) {
 		function callback(data) {
 			self.canvasShow.slitsReady = false;
-			if (!data) return;
-			if (!data.targets) return;
-
-			self.canvasShow.slitsReady = true;
-			self.updateLoadedTargets(data);
+			let msg = "No returned, recalculte failed";
+			if (data && data.targets) {
+				self.dirtyFlag = 0;
+				self.canvasShow.slitsReady = true;
+				self.updateLoadedTargets(data);
+				msg = "OK";
+			}
+			self.setStatus(msg);
 		}
 		self.recalculateMaskHelper(callback);
 	};
@@ -342,13 +418,24 @@ function SlitmaskDesignTool() {
 		let targetBand = E('targetBand').value;
 
 		let params = {
-			'idx': idx, 'raSexa': targetRA, 'decSexa': targetDEC, 'eqx': 2000,
-			'mag': targetMagn, 'pBand': targetBand,
-			'prior': prior, 'selected': selected, 'slitLPA': slitLPA, 'slitWidth': slitWidth,
-			'len1': length1, 'len2': length2, 'targetName': tname
+			'idx': idx,
+			'raSexa': targetRA,
+			'decSexa': targetDEC,
+			'eqx': 2000,
+			'mag': targetMagn,
+			'pBand': targetBand,
+			'prior': prior,
+			'selected': selected,
+			'slitLPA': slitLPA,
+			'slitWidth': slitWidth,
+			'len1': length1,
+			'len2': length2,
+			'targetName': tname
 		};
-		let ajax = new AjaxClass();
-		ajax.postRequest('updateTarget', { 'values': JSON.stringify(params) }, callback);
+		//let ajax = new AjaxClass();
+		self.ajaxPostDirty('updateTarget', {
+			'values': JSON.stringify(params)
+		}, callback);
 	};
 
 	self.deleteTarget = function (evt) {
@@ -358,12 +445,17 @@ function SlitmaskDesignTool() {
 
 		let idx = self.canvasShow.selectedTargetIdx;
 		if (idx < 0) return;
-		let params = { 'idx': idx };
+		let params = {
+			'idx': idx
+		};
 
-		ajaxCall("deleteTarget", params, callback);
+		self.ajaxCallDirty("deleteTarget", params, callback);
 	};
 
 	self.showDiv = function (divname, cont) {
+		//
+		// Shows dialog box
+		//
 		let elem = E(divname);
 
 		elem.style.display = "block";
@@ -383,7 +475,9 @@ function SlitmaskDesignTool() {
 
 		let closeBt = E('closeBt');
 		if (closeBt)
-			closeBt.onclick = function (evt) { self.hideDiv(divname); };
+			closeBt.onclick = function (evt) {
+				self.hideDiv(divname);
+			};
 	};
 
 	self.hideDiv = function (divname) {
@@ -401,9 +495,11 @@ function SlitmaskDesignTool() {
 			let errstr = data['errstr'];
 			let fbackup = data['fbackup'];
 			let lbackup = data['lbackup'];
+			self.setStatus("OK");
 
 			if (errstr != "OK") {
 				alert(`Failed to save mask design ${mdFile}`);
+				self.setStatus("Failed to save mask design");
 				return;
 			}
 			let fbstr = "";
@@ -418,6 +514,7 @@ function SlitmaskDesignTool() {
 			let lstr = `Target list<br><b>${lname}</b> successfully saved to <b>${path}</b> ${lbstr}`;
 
 			self.showDiv("savePopup", `${fstr}<br><br>${lstr}`);
+			self.dirtyFlag = 0;
 
 		}
 
@@ -426,13 +523,15 @@ function SlitmaskDesignTool() {
 			//self.canvasShow.setShowPriorities(E('minPriority').value, E('maxPriority').value);
 			self.canvasShow.slitsReady = 1;
 			self.canvasShow.setTargets(data.targets);
-			self.redraw();
-
-			ajaxCall("saveMaskDesignFile", params, callbackSave);
+			//self.redraw();
+			self.setStatus("Saving slitmask file");
+			self.ajaxCallDirty("saveMaskDesignFile", params, callbackSave);
 		}
 
 		let mdFile = E('outputfitsfd').value;
-		let params = { 'mdFile': mdFile };
+		let params = {
+			'mdFile': mdFile
+		};
 		self.recalculateMaskHelper(callback);
 	};
 
@@ -450,13 +549,14 @@ function SlitmaskDesignTool() {
 		let args = splitArgs();
 		if (!args["quit"]) return;
 
-		ajaxCall("quit", {}, function () { });
+		self.ajaxCallDirty("quit", {}, function () {});
 		return "Quit";
 	};
 
 	window.onbeforeunload = self.checkQuit
 
 	self.statusDiv = E('statusDiv');
+	self.centerStatusDiv = E('centerStatusDiv');
 	self.canvasShow = new CanvasShow('canvasDiv', 'zoomCanvasDiv');
 	self.canvasShow.setShowPriorities(E('minPriority').value, E('maxPriority').value);
 	self.loadConfigParams();
@@ -481,6 +581,7 @@ function SlitmaskDesignTool() {
 	E('setMaskPA').onclick = self.setMaskPA;
 	E('setSlitsLength').onclick = self.setSlitsLength;
 	E('setSlitsWidth').onclick = self.setSlitsWidth;
+	E('setCenterRADEC').onclick = self.setCenterRADEC;
 
 	E('recalculateMask').onclick = self.recalculateMask;
 	E('clearSelection').onclick = self.clearSelection;

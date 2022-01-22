@@ -23,7 +23,7 @@ function TxMatrix() {
     }
 
     self.translate = function (tx, ty) {
-        with (self) {
+        with(self) {
             mat[0][2] += tx;
             mat[1][2] += ty;
         }
@@ -31,7 +31,7 @@ function TxMatrix() {
 
     self.rotate = function (angRad, xc, yc) {
         // Rotates incrementally
-        with (self) {
+        with(self) {
             angRad = normRad(angRad);
             var sina = Math.sin(angRad);
             var cosa = Math.cos(angRad);
@@ -58,7 +58,7 @@ function TxMatrix() {
     };
 
     self.getScale = function () {
-        with (self) {
+        with(self) {
             var ca2 = mat[0][0] * mat[1][1];
             var sa2 = mat[0][1] * mat[1][0];
             return Math.sqrt(Math.abs(ca2 - sa2));
@@ -66,7 +66,7 @@ function TxMatrix() {
     };
 
     self.setRotAngle = function (angRad) {
-        with (self) {
+        with(self) {
             var s = self.getScale();
             var sina = Math.sin(angRad);
             var cosa = Math.cos(angRad);
@@ -77,7 +77,7 @@ function TxMatrix() {
     };
 
     self.setRotAngleTrans = function (angRad, xc, yc) {
-        with (self) {
+        with(self) {
             var sina = Math.sin(angRad);
             var cosa = Math.cos(angRad);
 
@@ -91,7 +91,7 @@ function TxMatrix() {
     };
 
     self.setTranslation = function (x, y) {
-        with (self) {
+        with(self) {
             mat[0][2] = x;
             mat[1][2] = y;
         }
@@ -99,7 +99,7 @@ function TxMatrix() {
 
     self.getRotAngle = function () {
         // Returns angle in radians
-        with (self) {
+        with(self) {
             var ca = (mat[0][0] + mat[1][1]) / 2;
             var sa = (mat[0][1] - mat[1][0]) / 2;
             return Math.atan2(sa, ca);
@@ -107,7 +107,7 @@ function TxMatrix() {
     };
 
     self.scale = function (s) {
-        with (self) {
+        with(self) {
             mat[0][0] *= s;
             mat[0][1] *= s;
             mat[1][0] *= s;
@@ -117,7 +117,7 @@ function TxMatrix() {
 
     self.scaleCenter = function (s, xc, yc) {
         // Scale such that the pixel in the center of the canvas stays there.
-        with (self) {
+        with(self) {
             scale(s);
             mat[0][2] = mat[0][2] * s + xc * (1 - s);
             mat[1][2] = mat[1][2] * s + yc * (1 - s);
@@ -128,7 +128,7 @@ function TxMatrix() {
     // First 4 values represents 2x2 rotation/scale matrix
     // Last 2 values are translation.
     self.getTx = function (flipY) {
-        with (self) {
+        with(self) {
             var r0 = mat[0];
             var r1 = mat[1];
             if (flipY) return [r0[0], r0[1], -r1[0], -r1[1], r0[2], r1[2]];
@@ -361,7 +361,7 @@ function CanvasShow(containerName, zoomContainer) {
     self.zoomElem = E(zoomContainer);
 
     self.mouseAction = "panSky";
-    self.showInfo = function () { };
+    self.showInfo = function () {};
     // End variables
 
     function E(n) {
@@ -550,7 +550,7 @@ function CanvasShow(containerName, zoomContainer) {
             E("maskpafd").value = paDeg.toFixed(3);
 
             showMsg(
-                "statusDiv",
+                "centerStatusDiv",
                 " RA= <b>" + raSexa + "</b> hrs; DEC= <b>" + decSexa + "</b> deg; Pos Ang= <b>" + paDeg.toFixed(2) + "</b> deg "
             );
         }
@@ -573,7 +573,7 @@ function CanvasShow(containerName, zoomContainer) {
         var east = rotateSaCa(sa, ca, -len, 0);
         var eastText = rotateSaCa(sa, ca, -len - 10, 0);
 
-        with (ctx) {
+        with(ctx) {
             //setTransform(1, 0, 0, 1, 0, 0);
             strokeStyle = color;
             lineWidth = 1;
@@ -623,7 +623,7 @@ function CanvasShow(containerName, zoomContainer) {
 
         self.calculateAngles();
 
-        with (self._Ctx) {
+        with(self._Ctx) {
             setTransform(1, 0, 0, 1, 0, 0);
             clearRect(0, 0, cv.width, cv.height);
             transform(tp[0], tp[1], tp[2], tp[3], tp[4], tp[5]);
@@ -637,7 +637,7 @@ function CanvasShow(containerName, zoomContainer) {
         // Draw this after drawing the DSS/background image
         // because contrast filter is applied to the DSS/background image.
         var ctx2 = self.filter.tmpCtx2;
-        with (ctx2) {
+        with(ctx2) {
             setTransform(1, 0, 0, 1, 0, 0);
             self.drawGuiderFOV(ctx2, self.guiderFOV);
             self.drawBadColumns(ctx2, self.badColumns);
@@ -669,7 +669,7 @@ function CanvasShow(containerName, zoomContainer) {
         let y1 = y0;
 
         minSlitLen = Math.max(4, minSlitLen);
-        with (ctx) {
+        with(ctx) {
             strokeStyle = color;
 
             lineWidth = lw;
@@ -739,8 +739,13 @@ function CanvasShow(containerName, zoomContainer) {
                 }
 
                 if (pri == AlignBox) {
+                    if (showSelected) {
+                        if (!selected[i]) continue;
+                    }
+
                     if (inMask) alignBoxInIdx.push(i);
                     else alignBoxOutIdx.push(i);
+
                     continue;
                 }
 
@@ -841,8 +846,7 @@ function CanvasShow(containerName, zoomContainer) {
                 let scosa = -Math.cos(slitAngle);
                 if (scosa < 0) {
                     if (scosa > -0.01) scosa = -0.01;
-                }
-                else {
+                } else {
                     if (scosa < 0.01) scosa = 0.01;
                 }
                 l1 = l1 / scosa;
@@ -1072,13 +1076,13 @@ function CanvasShow(containerName, zoomContainer) {
     self.drawGuiderFOV = function (ctx, guiderFOV) {
         if (!E("showGuiderFOV").checked) return;
         var layout = self.rotateMaskLayout(guiderFOV);
-        drawPolylines(ctx, layout, self.guiderFOVColor, 1);
+        drawPolylines(ctx, layout, self.guiderFOVColor, 0);
     };
 
     self.drawBadColumns = function (ctx, badColumns) {
         if (!E("showBadColumns").checked) return;
         var layout = self.rotateMaskLayout(badColumns);
-        drawPolylines(ctx, layout, self.BadColumnsColor, 1);
+        drawPolylines(ctx, layout, self.BadColumnsColor, 0);
     };
 
     self.drawMask = function (ctx, mask) {
@@ -1171,13 +1175,11 @@ function CanvasShow(containerName, zoomContainer) {
         while (raHrs > 24) raHrs -= 24;
         while (raHrs < 0) raHrs += 24;
 
-        showMsg("mouseStatus", "RA= <b>" + toSexa(raHrs) + "</b> hrs; DEC= <b>" + toSexa(dec) + "</b> deg");
+        let skyxy = self.targetMatrix.s2w(xy0[0], xy0[1], 0);
+        let msg = `<b>Xarc</b>= ${skyxy[0].toFixed(2)} <b>Yarc</b>= ${skyxy[1].toFixed(2)} `;
 
-        if (E("extraStatusDiv")) {
-            let skyxy = self.targetMatrix.s2w(xy0[0], xy0[1], 0);
-            let msg = `Xarc= ${skyxy[0].toFixed(2)} Yarc= ${skyxy[1].toFixed(2)} `;
-            showMsg("extraStatusDiv", msg);
-        }
+        showMsg("mouseStatus", "RA= <b>" + toSexa(raHrs) + "</b> hrs; DEC= <b>" + toSexa(dec) + "</b> deg " +
+            " &nbsp;&nbsp; " + msg);
     };
 
     self.zoomAll = function (mv) {

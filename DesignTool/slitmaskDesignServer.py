@@ -75,6 +75,22 @@ class SMDesignHandler(EasyHTTPHandler):
                 # print("setting ", k1, qstr[k][0])
                 params.setValue(k1, (utils.asType(qstr[k][0]), v2, v3, v4))
 
+    def setCenterRADEC(self, req, qstr):
+        """
+        Updates center RA and DEC in targetlist
+        """
+        sm = _getData("smdt")
+
+        raDeg = self.floatVal(qstr, "raDeg", 0)
+        decDeg = self.floatVal(qstr, "decDeg", 0)
+        paDeg = self.floatVal(qstr, "paDeg", 0)
+        sm.targetList.centerRADeg = raDeg
+        sm.targetList.centerDEC = decDeg
+        sm.targetList.positionAngle = paDeg
+        sm.targetList.reCalcCoordinates(raDeg, decDeg, paDeg)
+
+        return "OK", self.PlainTextType
+
     @utils.tryEx
     def sendTargets2Server(self, req, qstr):
         """

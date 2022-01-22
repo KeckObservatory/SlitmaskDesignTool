@@ -41,18 +41,19 @@
                             <td>Target List:
                             <td><input type='file' id='targetList' name='targetList' value="mask_ex1.txt"
                                     title="Input file of targets">
-                            <td><input type='button' id='loadTargets' name='loadTargets' value='Load targets'>
-                            <td><input type='button' id='showHideParams' value='Show Parameters'>
-                            <td><input type='button' id='saveMDF' value='Save Mask Design File'>
+                            <td><button id='loadTargets' name='loadTargets' value='Load targets'>Load Targets</button>
+                            <td><button id='showHideParams' value='Show Parameters'>Show Parameters</button>
+                            <td><button id='saveMDF' value='Save Mask Design File'>Save Mask Design File</button>
                         </tr>
                     </table>
                     <div id='paramTableDiv' style='visibility: hidden; display: none'></div>
                     <table id='paramButtonTable'>
                         <tr>
-                            <td colspan='8'><input type='button' id='setSlitsPA' value='Set slits PA'> &nbsp;
-                                <input type='button' id='setMaskPA' value='Set mask PA'> &nbsp;
-                                <input type='button' id='setSlitsLength' value='Set slits length'> &nbsp; <input
-                                    type='button' id='setSlitsWidth' value='Set slit width'>
+                            <td><button id='setSlitsPA' value='Set slits PA'>Set slits PA</button> &nbsp;
+                            <td><button id='setMaskPA' value='Set mask PA'>Set mask PA</button> &nbsp;
+                            <td><button id='setSlitsLength' value='Set slits length'>Set slits length</button>&nbsp;
+                            <td><button id='setSlitsWidth' value='Set slit width'>Set slit width </button> &nbsp;
+                            <td><button id='setCenterRADEC' value='Set Center RA/DEC'>Set Center RA/DEC</button>
                     </table>
 
                     <table id='contentPanel'>
@@ -65,18 +66,20 @@
                                         <td>
                                             <table class='panButtonTable'>
                                                 <tr>
-                                                    <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky' checked>
+                                                    <td>Pan Sky: <input type='radio' name='mouseAction' id='panSky'
+                                                            checked>
                                                     <td>Rotate Sky: <input type='radio' name='mouseAction'
                                                             id='rotateSky'>
-                                                    <td>Enable selection: <input type='checkbox' 
-                                                            id='enableSelection' checked='checked'>
+                                                    <td>Enable selection: <input type='checkbox' id='enableSelection'
+                                                            checked='checked'>
                                                     <td><input type='button' id='resetDisplay' value='Reset Display'>
                                                         &nbsp; <input type='button' id='resetOffsets'
                                                             value='Reset Offsets'>
 
                                                 <tr>
                                                     <td>Pan Display: <input type='radio' name='mouseAction' id='panAll'>
-                                                    <td>Rotate display: <input type='radio' name='mouseAction' id='rotateAll'>
+                                                    <td>Rotate display: <input type='radio' name='mouseAction'
+                                                            id='rotateAll'>
                                             </table>
                                     <tr>
                                         <td>
@@ -91,15 +94,15 @@
                                                     <td>Show by priority:<input type='radio' name='showSel'
                                                             id='showByPriority'>
                                                     <td>Min. Priority: <input id='minPriority' value='0' size=6>
-                                                    <td>Max. Priority: <input id='maxPriority' value='9999', size=6>
+                                                    <td>Max. Priority: <input id='maxPriority' value='9999' , size=6>
                                                 <tr>
                                                     <td colspan='6'><input type='button' id='recalculateMask'
                                                             value='Recalculate mask'>
-                                                            <input type='button' id='clearSelection'
-                                                            value="Clear selection">                                                        
-                                                            &nbsp;&nbsp;
-                                                            Extend Slits: <input type='checkbox' id='extendSlits' checked>
-                                                    
+                                                        <input type='button' id='clearSelection'
+                                                            value="Clear selection">
+                                                        &nbsp;&nbsp;
+                                                        Extend Slits: <input type='checkbox' id='extendSlits' checked>
+
                                             </table>
                                     <tr>
                                         <td>
@@ -111,9 +114,12 @@
                                             </table>
                                     <tr>
                                         <td>
-                                            <div id='testDiv'></div>
+                                            <div id='statusDiv0'>
+                                                Status: <span id='statusDiv'></span>
+                                            </div>
+                                        </td>
                                     <tr>
-                                        <td>Center: <span id='statusDiv'>&nbsp;</span>
+                                        <td>Center: <span id='centerStatusDiv'>&nbsp;</span>
                                     </tr>
                                     <tr>
                                         <td style='display:contents'>
@@ -172,7 +178,7 @@
                     </table>
                     <input type='button' id='updateTarget' value='Update/Add target'>&nbsp;
                     <input type='button' id='deleteTarget' value='Delete target'>
-                    
+
                 </div>
     </table>
 
@@ -180,12 +186,12 @@
     <hr>
     <table id='footerTable'>
         <tr>
-            <td>Slitmask Design Tool  - (C) - <a href='https://keckobservatory.org'>W. M. Keck Observatory</a>
+            <td>Slitmask Design Tool - (C) - <a href='https://keckobservatory.org'>W. M. Keck Observatory</a>
     </table>
-    <div>        
-    <div id='savePopup'>
-        Save popup div
-    </div>
+    <div>
+        <div id='savePopup'>
+            Save popup div
+        </div>
     </div>
     <iframe name='targetListFrame' id='targetListFrame'> allowfullscreen</iframe>
 </body>
