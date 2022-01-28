@@ -1,6 +1,13 @@
 #!/bin/sh
 
-DIR0=`readlink -e $0`
+my_realpath() {
+	BNAME=`basename $1`
+    DNAME=`dirname $1`
+    FDIR=`(cd $DNAME; pwd)`
+    echo $FDIR/$BNAME
+}
+
+DIR0=`my_realpath $0`
 PROGBASE=`dirname $DIR0`
 
 PYTHONPATH="${PYTHONPATH}:${PROGBASE}/DesignTool:${PROGBASE}/DesignTool/smdtLibs"
