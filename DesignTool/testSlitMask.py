@@ -53,6 +53,10 @@ class TestSlitmask:
 
         self.sdt.recalculateMask(raDeg, decDeg, paDeg, self.minSlitLength, self.minSep, ext)
         tlist = self.targetList.targets
+        tlist["OBJECT"] = tlist.objectId
+        tlist["RA_OBJ"] = np.degrees(tlist.raRad)
+        tlist["DEC_OBJ"] = np.degrees(tlist.decRad)
+        tlist["EQUINOX"] = tlist.eqx
         self.targetList.targets = tlist[tlist.selected == 1].copy()
 
 def testMaskDesign(args):
@@ -78,6 +82,7 @@ def testMaskDesign(args):
 
     diffFits = args.diffFits
     if diffFits is not None and args.output_file is not None:
+        #if diffFits is not None:
         dsm = DiffSlitMask (diffFits, args.output_file)
         diffs = dsm.calcDiffs()
         dsm.plotDiffs (diffs)

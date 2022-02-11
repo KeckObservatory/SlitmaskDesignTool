@@ -8,6 +8,7 @@ import os
 import numpy as np
 import logging
 import argparse
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from astropy.modeling import models, fitting
@@ -27,17 +28,26 @@ logging.disable()
 class DiffSlitMask:
     def __init__(self, fits1, fits2):
         self.fitsname1 = fits1
-        self.fitsname2 = fits2
-        self.mdf1 = MaskDesignInputFitsFile(fits1)
-        self.mdf2 = MaskDesignInputFitsFile(fits2)
+        mdf1 = MaskDesignInputFitsFile(fits1)
+        self.allSlits1 = mdf1.allSlits
+
+        self.fitsname2 = "internal"
+        if type(fits2) == type(pd.DataFrame()):
+            self.allSlits2 = fits2
+        elif type(fits2) == str:
+            self.fitsname2 = fits2
+            mdf2 = MaskDesignInputFitsFile(fits2)
+            self.allSlits2 = mdf2.allSlits
+        else: 
+            return
         self._merge ()
     
     def diffValues(self, v1, v2):
         return v1 - v2
 
     def _merge(self):
-        slits1 = self.mdf1.allSlits
-        slits2 = self.mdf2.allSlits
+        slits1 = self.allSlits1
+        slits2 = self.allSlits2
         jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX", "pcode"
         joined = slits1.merge (slits2, on=jCols, how="inner")
         self.joinedSlits = joined
@@ -139,7 +149,7 @@ class DiffSlitMask:
 
 
     def plotCorners (self, diffs):
-        slits1 = self.mdf2.allSlits
+        slits1 = self.allSlits2
         slits1 = slits1[slits1.pcode > 0]
         x1, x2, x3, x4 = slits1.slitX1, slits1.slitX2, slits1.slitX3, slits1.slitX4
         y1, y2, y3, y4 = slits1.slitY1, slits1.slitY2, slits1.slitY3, slits1.slitY4

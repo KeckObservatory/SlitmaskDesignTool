@@ -13,6 +13,7 @@ def drawPatch(ax, vertCodes, offx=0, offy=0, **kwargs):
     """
     # cTable = path.Path.MOVETO, path.Path.LINETO, path.Path.CLOSEPOLY
 
+    if len(vertCodes) == 0: return None
     vertices = [(offx + x, offy + y) for x, y, m in vertCodes]
     codes = [(path.Path.MOVETO if m == 0 else path.Path.LINETO) for x, y, m in vertCodes]
 
