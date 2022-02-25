@@ -31,7 +31,7 @@ if __name__ == "__main__":
     cfname = args.config_file
     cf = readConfig(cfname)
 
-    SMDesignHandler.config = cf
+    SMDesignHandler.setConfig(cf)
     SMDesignHandler.setDocRoot(cf.getValue("docRoot", "docs"))
     SMDesignHandler.defaultFile = cf.getValue("defaultFile", "index.html")
     SMDesignHandler.logEnabled = cf.getValue("logEnabled", False)

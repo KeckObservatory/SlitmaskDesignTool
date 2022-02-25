@@ -144,8 +144,8 @@ class MaskDesignOutputFitsFile:
         nTargets = targets.shape[0]
         zeros = [0] * nTargets
         objClass = [objClassTable[min(3, p + 2)] for p in targets.pcode]
-        cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=range(nTargets)))
-        cols.append(pf.Column(name="OBJECT", format="A68", null="INDEF", unit="None", array=targets.objectId))
+        cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=targets.orgIndex))
+        cols.append(pf.Column(name="OBJECT", format="A68", null="INDEF", unit="None", array=targets.OBJECT))
         cols.append(pf.Column(name="RA_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.raHour * 15.0))
         cols.append(pf.Column(name="DEC_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.decDeg))
         cols.append(pf.Column(name="RADESYS", format="A8", null="INDEF", unit="None"))
@@ -220,14 +220,15 @@ class MaskDesignOutputFitsFile:
         targets = self.targetList.targets
         cols = []
 
-        objInMask = targets[targets.inMask > 0]
+        objInMask = targets[targets.inMask > 0]        
+        objInMask = objInMask[objInMask.selected == 1]
         nSlits = objInMask.shape[0]
         if nSlits > 0:
             slitTypeTable = ("A", "G", "I", "P")
 
             slitNames = [("%03d" % x) for x in range(nSlits)]
             slitTypes = [slitTypeTable[min(3, p + 2)] for p in objInMask.pcode]
-            slitLengths = [(l1 + l2) for l1, l2 in zip(objInMask.length1, objInMask.length2)]
+            slitLengths = [(l1 + l2) for l1, l2 in zip(objInMask.TopDist, objInMask.BotDist)]
 
             cols.append(pf.Column(name="dSlitId", format="I11", null="-9999", unit="None", array=range(nSlits)))
             cols.append(pf.Column(name="DesId", format="I11", null="-9999", unit="None", array=[1] * nSlits))
@@ -238,7 +239,8 @@ class MaskDesignOutputFitsFile:
             cols.append(pf.Column(name="slitLen", format="F11.3", null="-9999.000", unit="arcsec", array=slitLengths))
             cols.append(pf.Column(name="slitLPA", format="F8.3", null="-9999.00", unit="deg", array=objInMask.slitLPA))
             cols.append(pf.Column(name="slitWid", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.slitWidth))
-            cols.append(pf.Column(name="slitWPA", format="F8.3", null="-9999.00", unit="deg", array=[140] * nSlits))
+            slitWPA = np.mod(objInMask.slitLPA + 90, 360)
+            cols.append(pf.Column(name="slitWPA", format="F8.3", null="-9999.00", unit="deg", array=slitWPA))
         return pf.TableHDU.from_columns(cols, name="DesiSlits")
 
     def genSlitObMap(self):
@@ -247,14 +249,15 @@ class MaskDesignOutputFitsFile:
         """
         targets = self.targetList.targets
         cols = []
-        objInMask = targets[targets.inMask > 0]
+        objInMask = targets[targets.inMask > 0]        
+        objInMask = objInMask[objInMask.selected == 1]
         nSlits = objInMask.shape[0]
         if nSlits > 0:
             cols.append(pf.Column(name="DesId", format="I11", null="-9999", unit="None", array=[1] * nSlits,))
-            cols.append(pf.Column(name="ObjectId", format="I11", null="-9999", unit="None", array=range(nSlits)))
+            cols.append(pf.Column(name="ObjectId", format="I11", null="-9999", unit="None", array=objInMask.orgIndex))
             cols.append(pf.Column(name="dSlitId", format="I11", null="-9999", unit="None", array=range(nSlits)))
-            cols.append(pf.Column(name="TopDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.length1))
-            cols.append(pf.Column(name="BotDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.length2))
+            cols.append(pf.Column(name="TopDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.TopDist))
+            cols.append(pf.Column(name="BotDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.BotDist))
 
         return pf.TableHDU.from_columns(cols, name="SlitObjMap")
 
@@ -301,6 +304,7 @@ class MaskDesignOutputFitsFile:
 
         cols = []
         objInMask = targets[targets.inMask > 0]
+        objInMask = objInMask[objInMask.selected == 1]
         nSlits = objInMask.shape[0]
         if nSlits > 0:
             cols.append(pf.Column(name="bSlitId", format="I11", null="-9999", unit="None", array=range(nSlits)))
@@ -372,10 +376,10 @@ def _outputAsList(fh, targets):
     for i, row in targets.iterrows():
         print(
             "{:18s}{} {} {:.0f}{:>6.2f} {} {:5d} {} {} {}".format(
-                row.objectId,
+                row.OBJECT,
                 toSexagecimal(row.raHour),
                 toSexagecimal(row.decDeg),
-                row.eqx,
+                row.EQUINOX,
                 row.mag,
                 row.pBand,
                 row.pcode,
@@ -443,6 +447,8 @@ class MaskDesignInputFitsFile:
         out = out.merge(self.bluslits, on="dSlitId", how="outer")
         out = out.merge(self.desislits, on="dSlitId", how="outer")
         out["pcode"] = self._genPcode(out)
+        sumx = np.abs(out.TopDist + out.BotDist - out.slitLen) < 1
+        out = out[sumx]
         return out
 
     def getObjOnSlit(self, slits=None):
@@ -461,7 +467,7 @@ class MaskDesignInputFitsFile:
         y = (y1 - y0) * t + y0
         return x, y
 
-    def getLengths(self):
+    def deplicated_getLengths(self):
         slits = self.allSlits
         x0 = slits.slitX1
         x1 = slits.slitX2
@@ -522,10 +528,7 @@ class MaskDesignInputFitsFile:
         self.allSlits["raRad"] =  np.radians(allSlits.RA_OBJ)
         self.allSlits["decRad"] = np.radians(allSlits.DEC_OBJ)
 
-        self.allSlits["objectId"] = [d.strip() for d in allSlits.OBJECT]
-        self.allSlits["eqx"] = allSlits.EQUINOX
-        self.allSlits["length1"] = self.allSlits["TopDist"]
-        self.allSlits["length2"] = self.allSlits["BotDist"]
+        self.allSlits["OBJECT"] = [d.strip() for d in allSlits.OBJECT]
 
         self.allSlits["orgIndex"] = range(nSlits)
         self.allSlits["inMask"] = [0] * nSlits
@@ -538,38 +541,5 @@ class MaskDesignInputFitsFile:
 
         return TargetList(pd.DataFrame(self.allSlits).copy(), config)
 
-    def xgetAsTargets(self, config):
-        """
-        Returns the target list stored int the FITS file as a TargetList object.
-        Pcode: -2 alignment, -1 guide box, 0 ignore, 1 target
-        """
-
-        objects = self.objectcat
-        objIndices = dict([(i1, i0) for i0, i1 in enumerate(objects.ObjectId)])
-
-        orgIndices = [objIndices[d] for d in self.slitobjmap.ObjectId]
-        nSlits = len(self.allSlits)
-        self.allSlits["raHour"] = [objects.RA_OBJ.iloc[d] / 15.0 for d in orgIndices]
-        self.allSlits["decDeg"] = [objects.DEC_OBJ.iloc[d] for d in orgIndices]
-        self.allSlits["raRad"] =  [math.radians(objects.RA_OBJ.iloc[d]) for d in orgIndices]
-        self.allSlits["decRad"] =  [math.radians(objects.DEC_OBJ.iloc[d]) for d in orgIndices]
-
-        self.allSlits["objectId"] = [objects.OBJECT.iloc[d].strip() for d in orgIndices]
-        self.allSlits["eqx"] = [objects.EQUINOX.iloc[d] for d in orgIndices]
-        self.allSlits["mag"] = [objects.mag.iloc[d] for d in orgIndices]
-        self.allSlits["pBand"] = [objects.pBand.loc[d].strip() for d in orgIndices]
-        self.allSlits["length1"] = self.allSlits["TopDist"]
-        self.allSlits["length2"] = self.allSlits["BotDist"]
-
-        self.allSlits["orgIndex"] = range(nSlits)
-        self.allSlits["inMask"] = [0] * nSlits
-        self.allSlits["selected"] = [0] * nSlits
-        self.allSlits["sampleNr"] = [1] * nSlits
-        self.allSlits["slitWidth"] = self.allSlits.slitWid
-
-        # raDeg, decDeg = self.getCenter()
-        paDeg = self.maskdesign.PA_PNT[0]
-
-        return TargetList(pd.DataFrame(self.allSlits).copy(), config)
 
 

@@ -60,8 +60,8 @@ class TargetList:
         sampleNr: 1,2,3
         selected: 0 or 1
         slitLPA: PA of the slit
-        length1: 4 arcsec
-        length2: 4 arcsec
+        TopDist: 4 arcsec
+        BotDist: 4 arcsec
         slitWidth: 1 arcsec
 
     Input can be a string, a pandas data frame, or a file.
@@ -106,6 +106,10 @@ class TargetList:
         self.project2FocalPlane()
         self.__updateDate()
 
+
+    def __str__ (self):
+        return "Targets file {}, raDeg {}, decDeg {}, paDeg {}".format (self.fileName, self.centerRADeg, self.centerDEC, self.positionAngle )
+        
     def getNrTargets(self):
         return self.targets.shape[0]
 
@@ -120,7 +124,7 @@ class TargetList:
         if self.positionAngle is None:
             self.positionAngle = 0
         if len(targets) <= 0:
-            self.centerRADeg = self.centerDEC = 0, 0
+            self.centerRADeg, self.centerDEC = 0, 0
         else:
             if self.centerRADeg is None and self.centerDEC is None:
                 self.centerRADeg = np.mean(targets.raHour) * 15
@@ -175,18 +179,18 @@ class TargetList:
 
         out = []
         cols = (
-            "objectId",
+            "OBJECT",
             "raHour",
             "decDeg",
-            "eqx",
+            "EQUINOX",
             "mag",
             "pBand",
             "pcode",
             "sampleNr",
             "selected",
             "slitLPA",
-            "length1",
-            "length2",
+            "TopDist",
+            "BotDist",
             "slitWidth",
             "orgIndex",
             "inMask",
@@ -210,7 +214,7 @@ class TargetList:
                 # line empty
                 continue
 
-            objectId = parts[0]
+            OBJECT = parts[0]
             parts = parts[1:]
             if len(parts) < 3:
                 continue
@@ -223,7 +227,7 @@ class TargetList:
                 slitpa = self.positionAngle
                 continue
 
-            sampleNr, selected, slitLPA, length1, length2, slitWidth = 1, 1, 0, 4, 4, 1.5
+            sampleNr, selected, slitLPA, TopDist, BotDist, slitWidth = 1, 1, 0, 4, 4, 1.5
             mag, pBand, pcode = 99, "I", 99
 
             try:
@@ -234,9 +238,9 @@ class TargetList:
                 if decDeg < -90 or decDeg > 90:
                     raise Exception("Bad DEC value " + decDeg)
 
-                eqx = float(template[2])
-                if eqx > 3000:
-                    eqx = float(template[2][:4])
+                EQUINOX = float(template[2])
+                if EQUINOX > 3000:
+                    EQUINOX = float(template[2][:4])
                     tmp = template[2][4:]
                     template[3 : minLength + 1] = parts[2:minLength]
                     template[3] = tmp
@@ -247,8 +251,8 @@ class TargetList:
                 sampleNr = int(template[6])
                 selected = int(template[7])
                 slitLPA = toFloat(template[8])
-                length1 = toFloat(template[9])
-                length2 = toFloat(template[10])
+                TopDist = toFloat(template[9])
+                BotDist = toFloat(template[10])
                 slitWidth = toFloat(template[11])
                 inMask = int(template[12])
             except Exception as e:
@@ -259,18 +263,18 @@ class TargetList:
             raRad = math.radians(raHour * 15)
             decRad = math.radians(decDeg)
             target = (
-                objectId,
+                OBJECT,
                 raHour,
                 decDeg,
-                eqx,
+                EQUINOX,
                 mag,
                 pBand,
                 pcode,
                 sampleNr,
                 selected,
                 slitLPA,
-                length1,
-                length2,
+                TopDist,
+                BotDist,
                 slitWidth,
                 cnt,
                 inMask,
@@ -366,7 +370,7 @@ class TargetList:
         Returns idx, or -1 if not found
         """
         for i, stg in self.targets.iterrows():
-            if stg.objectId == targetName:
+            if stg.OBJECT == targetName:
                 return stg.orgIndex
         return -1
 
@@ -401,8 +405,8 @@ class TargetList:
             tgs.at[idx, "selected"] = selected
             tgs.at[idx, "slitLPA"] = slitLPA
             tgs.at[idx, "slitWidth"] = slitWidth
-            tgs.at[idx, "length1"] = len1
-            tgs.at[idx, "length2"] = len2
+            tgs.at[idx, "TopDist"] = len1
+            tgs.at[idx, "BotDist"] = len2
 
             tgs.at[idx, "raHour"] = raHour
             tgs.at[idx, "decDeg"] = decDeg
@@ -416,10 +420,10 @@ class TargetList:
             # Add a new entry
             idx = self.targets.obejctName.shape[0]
             newItem = {
-                "objectId": targetName,
+                "OBJECT": targetName,
                 "raHour": raHour,
                 "decDeg": decDeg,
-                "eqx": 2000,
+                "EQUINOX": 2000,
                 "mag": int(values["mag"]),
                 "pBand": values["pBand"],
                 "pcode": int(values["prior"]),
@@ -427,8 +431,8 @@ class TargetList:
                 "selected": selected,
                 "slitLPA": slitLPA,
                 "inMask": 0,
-                "length1": len1,
-                "length2": len2,
+                "TopDist": len1,
+                "BotDist": len2,
                 "slitWidth": slitWidth,
                 "orgIndex": idx,
                 "raRad": raRad,
@@ -515,8 +519,8 @@ class TargetList:
 
             slitX = selected.xarcs
             slitY = selected.yarcs
-            l1 = selected.length1
-            l2 = selected.length2
+            l1 = selected.TopDist
+            l2 = selected.BotDist
 
             slitX10 = slitX - cosines * l1
             slitY10 = slitY - sines * l1
@@ -538,8 +542,6 @@ class TargetList:
             targets.loc[selector, "slitX4"] = slitX4
             targets.loc[selector, "slitY4"] = slitY4
             targets.loc[selector, "slitLen"] = l1 + l2
-            targets.loc[selector, "TopDist"] = l1
-            targets.loc[selector, "BotDist"] = l2
 
     def reCalcCoordinates(self, raDeg, decDeg, posAngleDeg):
         """
@@ -556,15 +558,26 @@ class TargetList:
 
         xarcs, yarcs = self._calcTelTargetCoords(telRaRad, telDecRad, self.targets.raRad, self.targets.decRad, posAngleDeg)
 
-        self.targets["xarcs"] = xarcs
-        self.targets["yarcs"] = yarcs
+        targets = self.targets        
+        targets["xarcs"] = xarcs
+        targets["yarcs"] = yarcs
 
         xmm, ymm, pas = self.proj_to_mask(xarcs, yarcs, 0)
 
-        self.targets["xmm"] = xmm
-        self.targets["ymm"] = ymm
+        targets["xmm"] = xmm
+        targets["ymm"] = ymm
 
-        self.targets["orgIndex"] = range(0, self.targets.shape[0])
+        targets["orgIndex"] = range(0, targets.shape[0])
+
+        targets["slitX1"] = 0
+        targets["slitY1"] = 0
+        targets["slitX2"] = 0
+        targets["slitY2"] = 0
+        targets["slitX3"] = 0
+        targets["slitY3"] = 0
+        targets["slitX4"] = 0
+        targets["slitY4"] = 0
+        targets["slitLen"] = 0
 
         self.__updateDate()
         return xarcs, yarcs
@@ -726,6 +739,9 @@ class TargetList:
         return xPoly, yPoly
 
     def writeTo(self, fileName):
+        """
+        Outputs the list of targets and slit information
+        """
         def outputPA(fh):
             print("# Mark name, center:", file=fh)
             print("#", file=fh)
@@ -741,7 +757,7 @@ class TargetList:
             print("#", file=fh)
             print("#", file=fh)
             print ("# Columns", file=fh)
-            print("# Obj_Id, RA, DEC, EQX, Magn, pBand, pCode, sampleNr, selected, slitLPA, length1, length2, slitWidth", file=fh)
+            print("# Obj_Id, RA, DEC, EQX, Magn, pBand, pCode, sampleNr, selected, slitLPA, TopDist, BotDist, slitWidth", file=fh)
             print("#", file=fh)
             print("#", file=fh)
             # end of outputPA
@@ -750,18 +766,18 @@ class TargetList:
             for i, row in tgs.iterrows():
                 print(
                     fmt.format(
-                        row.objectId,
+                        row.OBJECT,
                         utils.toSexagecimal(row.raHour, secFmt="{:06.3f}"),
                         utils.toSexagecimal(row.decDeg, plus="+"),
-                        row.eqx,
+                        row.EQUINOX,
                         row.mag,
                         row.pBand,
                         row.pcode,
                         row.sampleNr,
                         row.selected,
                         row.slitLPA,
-                        row.length1,
-                        row.length2,
+                        row.TopDist,
+                        row.BotDist,
                         row.slitWidth,
                     ),
                     file=fh,

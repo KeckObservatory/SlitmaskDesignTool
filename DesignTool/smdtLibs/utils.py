@@ -143,10 +143,8 @@ def getBackupName(name):
     """
     Returns a filename that does not already exist.
     """
-    bname = name
-    while os.path.exists(bname):
+    while os.path.exists(name):
         dstr = datetime.datetime.now().strftime(".%Y%m%d_%H%M%S")
         bname = name + dstr
-    if bname != name:
         return bname
     return None

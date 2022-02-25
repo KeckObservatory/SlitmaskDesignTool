@@ -30,6 +30,7 @@ class DiffSlitMask:
         self.fitsname1 = fits1
         mdf1 = MaskDesignInputFitsFile(fits1)
         self.allSlits1 = mdf1.allSlits
+        #self.allSlits1 = self.allSlits1[self.allSlits1.dSlitId > 0]
 
         self.fitsname2 = "internal"
         if type(fits2) == type(pd.DataFrame()):
@@ -48,8 +49,9 @@ class DiffSlitMask:
     def _merge(self):
         slits1 = self.allSlits1
         slits2 = self.allSlits2
-        jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX", "pcode"
+        jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX",
         joined = slits1.merge (slits2, on=jCols, how="inner")
+        joined['pcode'] = joined.pcode_y
         self.joinedSlits = joined
         self._calcTargetPositions()
 
@@ -68,7 +70,7 @@ class DiffSlitMask:
 
     def _calcTargetPositions (self):
         allSlits = self.joinedSlits
-        allSlits = allSlits[allSlits.pcode > 0]                
+        #allSlits = allSlits[allSlits.pcode > 0]                
 
         xs1, ys1 = getTargetPos(allSlits, "_x", allSlits.slitX1_x,allSlits.slitY1_x,allSlits.slitX2_x,allSlits.slitY2_x,
             allSlits.slitX3_x,allSlits.slitY3_x,allSlits.slitX4_x,allSlits.slitY4_x)
@@ -76,16 +78,17 @@ class DiffSlitMask:
         xs2, ys2 = getTargetPos(allSlits, "_y", allSlits.slitX1_y,allSlits.slitY1_y,allSlits.slitX2_y,allSlits.slitY2_y,
             allSlits.slitX3_y,allSlits.slitY3_y,allSlits.slitX4_y,allSlits.slitY4_y)
 
-        self.target1XYs = xs1, ys1        
-        self.target2XYs = xs2, ys2
-    
+        allSlits["xs1"] = xs1
+        allSlits["ys1"] = ys1
+        allSlits["xs2"] = xs2
+        allSlits["ys2"] = ys2    
 
     def printDiffs(self, diffs):
         format = ",".join(["{:4.2f}"] * 8)
         for row in zip(*diffs.values()):
             print(format.format(*row))
     
-    def plotSlits (self):
+    def plotSlits (self, annotate=False):
         
         layout = maskLayouts.MaskLayouts["deimos"]
         layoutMM = maskLayouts.scaleLayout(layout, utils.AS2MM, 0, -ZPT_YM)
@@ -100,36 +103,41 @@ class DiffSlitMask:
         codes2 = genCode (allSlits.slitX1_y,allSlits.slitY1_y,allSlits.slitX2_y,allSlits.slitY2_y,
             allSlits.slitX3_y,allSlits.slitY3_y,allSlits.slitX4_y,allSlits.slitY4_y)
 
-        boxCodes = genCode (aboxes.slitX1_y,aboxes.slitY1_y,aboxes.slitX2_y,aboxes.slitY2_y,
-            aboxes.slitX3_y,aboxes.slitY3_y,aboxes.slitX4_y,aboxes.slitY4_y)
+        boxCodes1 = genCode (aboxes.slitX1_x,aboxes.slitY1_x,aboxes.slitX2_x,aboxes.slitY2_x,
+            aboxes.slitX3_x,aboxes.slitY3_x,aboxes.slitX4_x,aboxes.slitY4_x)
 
+        boxCodes2 = genCode (aboxes.slitX1_y,aboxes.slitY1_y,aboxes.slitX2_y,aboxes.slitY2_y,
+            aboxes.slitX3_y,aboxes.slitY3_y,aboxes.slitX4_y,aboxes.slitY4_y)
+      
         ax = plt.gca()
-        drawUtils.drawPatch(ax, boxCodes, fc="None", ec='g', label="A.box")
+        drawUtils.drawPatch(ax, boxCodes1, fc="None", ec='g', label="A.box1")
+        drawUtils.drawPatch(ax, boxCodes2, fc="None", ec='k', label="A.box2")
             
         drawUtils.drawPatch(ax, codes1, fc="None", ec="r", label=self.fitsname1)        
         drawUtils.drawPatch(ax, codes2, fc="None", ec="b", label=self.fitsname2)
         drawUtils.drawPatch(ax, layoutMM, fc="None", ec="y")
 
-        xs, ys = self.target1XYs
-        plt.plot (xs, ys, 'r.')        
+        plt.plot (allSlits.xs1, allSlits.ys1, 'r.') 
+        if annotate:
+            drawUtils.annotate(ax, allSlits.OBJECT, allSlits.xs1, allSlits.ys1, color='r')
+            drawUtils.annotate(ax, allSlits.OBJECT, allSlits.xs2, allSlits.ys2, color='b')
         
-        xs, ys = self.target2XYs
-        plt.plot (xs, ys, 'b.')
+        plt.plot (allSlits.xs2, allSlits.ys2, 'b.')
 
         plt.gca().invert_xaxis()
         plt.grid()
         plt.legend()
 
-    def plotTargetDiffs (self):        
-        xs2, ys2 = self.target2XYs
-        xs1, ys1 = self.target1XYs
-        dxs = xs2-xs1
-        dys = ys2-ys1
+    def plotTargetDiffs (self): 
+        allSlits = self.joinedSlits  
+        allSlits = allSlits[allSlits.pcode > 0]
+        dxs = allSlits.xs2-allSlits.xs1
+        dys = allSlits.ys2-allSlits.ys1
 
         plt.subplot(312)        
         plt.title ("Diff target Xs and Ys " + self.fitsname1 + " and " + self.fitsname2)
-        plt.plot(xs2, dxs, "v", label="dXs")  
-        plt.plot(xs2, dys, "v", label="dYs")  
+        plt.plot(allSlits.xs2, dxs, "v", label="dXs")  
+        plt.plot(allSlits.xs2, dys, "v", label="dYs")  
 
         plt.legend()
         plt.xlabel ("X position [mm]") 
@@ -138,8 +146,8 @@ class DiffSlitMask:
         plt.tight_layout()
 
         plt.subplot(313)
-        plt.plot(ys2, dxs, ".", label="dXs")
-        plt.plot(ys2, dys, ".", label="dYs")
+        plt.plot(allSlits.ys2, dxs, ".", label="dXs")
+        plt.plot(allSlits.ys2, dys, ".", label="dYs")
         
         plt.legend()
         plt.xlabel("Y position [mm]")
@@ -177,7 +185,7 @@ class DiffSlitMask:
         plt.tight_layout()
 
 
-    def plotDiffs(self, diffs):
+    def plotDiffs(self, showDiffs=True):
 
         fig, sps = plt.subplots(3, figsize=(10, 8))
         plt.subplot(311)
@@ -185,7 +193,10 @@ class DiffSlitMask:
         plt.title ("Compare " + self.fitsname1 + " and " + self.fitsname2)
         self.plotSlits()
         
-        self.plotTargetDiffs()
+        if showDiffs:
+            self.plotTargetDiffs()
+        else:
+            self.plotCorners(self.calcDiffs())
         plt.show()
 
     def fitModel (self):
@@ -206,8 +217,9 @@ def getTargetPos (allSlits, suffix, x1, y1, x2, y2, x3, y3, x4, y4):
     xLeft, yLeft = (x1 + x4) / 2, (y1 + y4) / 2
     xRight, yRight = (x2 + x3) / 2, (y2 + y3) / 2
     
-    t = (allSlits[f"slitLen{suffix}"] - allSlits[f"TopDist{suffix}"]) / allSlits[f"slitLen{suffix}"]
-
+    #t = (allSlits[f"slitLen{suffix}"] - allSlits[f"TopDist{suffix}"]) / allSlits[f"slitLen{suffix}"]
+    botDist = allSlits[f"BotDist{suffix}"]
+    t = botDist / (allSlits[f"TopDist{suffix}"] + botDist)
     targetOnSlitX = (xRight - xLeft) * t + xLeft
     targetOnSlitY = (yRight - yLeft) * t + yLeft
     return targetOnSlitX, targetOnSlitY

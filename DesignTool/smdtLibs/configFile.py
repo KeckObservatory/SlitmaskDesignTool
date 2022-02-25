@@ -11,10 +11,10 @@ class ConfigFile(ConfigParser):
         split=True if, fields are comma separated values; False, if single value.
         """
         super(ConfigFile, self).__init__(kwargs)
-        self.fileName = fileName
         self.default_secion = kwargs.get("default_section", "DEFAULT")
         self.properties = {}
         if fileName is not None:
+            self.fileName = fileName
             self.read(fileName)
 
     def _getType(self, value):
@@ -95,6 +95,12 @@ class ConfigFile(ConfigParser):
 
     def setValue(self, key, value):
         self.properties[key] = value
+
+    def clone (self):
+        cfg = ConfigFile(None)
+        cfg.properties = self.properties.copy()
+        return cfg
+
 
 def getDefaultConfig ():
         rpath = os.path.dirname(os.path.realpath(__file__))

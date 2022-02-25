@@ -33,17 +33,21 @@ class TestSlitmask:
         self.sdt = SlitmaskDesignTool(self.targetList, instrument, config)
 
     def runDesign(self, slitLength, boxLength, slitWidth, minSep, ext):
-        tlist = self.targetList.targets
+        @np.vectorize
+        def toFixed (x, m=8):
+            return float(f"{x:.{m}f}")
+
+        tlist = self.sdt.targetList.targets
         self.minSep = minSep
         self.minSlitLength = slitLength
         self.minABoxLength = boxLength
         self.slitWidth = slitWidth
-        self.sdt.setColumnValue("length1", self.minSlitLength / 2, self.minABoxLength / 2)
-        self.sdt.setColumnValue("length2", self.minSlitLength / 2, self.minABoxLength / 2)
+        self.sdt.setColumnValue("TopDist", self.minSlitLength / 2, self.minABoxLength / 2)
+        self.sdt.setColumnValue("BotDist", self.minSlitLength / 2, self.minABoxLength / 2)
         self.sdt.setColumnValue("slitWidth", self.slitWidth, self.minABoxLength)
-
+        
         tlist = tlist[tlist.selected == 1].copy()
-
+        
         self.targetList.targets = tlist
         targets = self.targetList
 
@@ -52,12 +56,12 @@ class TestSlitmask:
         #tlist.loc[tlist.pcode > 0, "slitLPA"] = paDeg
 
         self.sdt.recalculateMask(raDeg, decDeg, paDeg, self.minSlitLength, self.minSep, ext)
-        tlist = self.targetList.targets
-        tlist["OBJECT"] = tlist.objectId
-        tlist["RA_OBJ"] = np.degrees(tlist.raRad)
-        tlist["DEC_OBJ"] = np.degrees(tlist.decRad)
-        tlist["EQUINOX"] = tlist.eqx
-        self.targetList.targets = tlist[tlist.selected == 1].copy()
+        
+        tlist = self.targetList.targets        
+        tlist["RA_OBJ"] = toFixed(np.degrees(tlist.raRad))
+        tlist["DEC_OBJ"] = toFixed(np.degrees(tlist.decRad))
+        tlist['pcode'] = [min(1, x) for x in tlist.pcode]
+        self.targetList.targets = tlist
 
 def testMaskDesign(args):
     def checkNRemove (fname):    
@@ -81,9 +85,12 @@ def testMaskDesign(args):
         checkNRemove(args.output_list) and tester.sdt.saveDesignAsList(args.output_list)
 
     diffFits = args.diffFits
-    if diffFits is not None and args.output_file is not None:
-        #if diffFits is not None:
-        dsm = DiffSlitMask (diffFits, args.output_file)
+    if diffFits is not None:
+        output = args.output_file
+        if output is None:
+            output = tester.sdt.targetList.targets
+            output = output[output.selected == 1]
+        dsm = DiffSlitMask (diffFits, output)
         diffs = dsm.calcDiffs()
         dsm.plotDiffs (diffs)
 
@@ -100,11 +107,11 @@ if __name__ == "__main__":
     parser.add_argument(dest="input_file", help="Input file", nargs=1)
     parser.add_argument("-o", "--output_file", help="Output Fits file", type=str)
     parser.add_argument("-t", "--output_list", help="Output list file", type=str)
-    parser.add_argument("-l", "--slitLength", help="Slit length in arcsec", default=1)
-    parser.add_argument("-a", "--boxLength", help="Alignment box size in arcsec", default=4)
-    parser.add_argument("-w", "--slitWidth", help="Slit width in arcsec", default=0.7)
-    parser.add_argument("-s", "--minSep", help="Min. separation in arcsec", default=0.35)
-    parser.add_argument("-e", "--extend", help="Extend slits", default=True)
+    parser.add_argument("-l", "--slitLength", help="Slit length in arcsec", type=float, default=1)
+    parser.add_argument("-a", "--boxLength", help="Alignment box size in arcsec", type=float, default=4)
+    parser.add_argument("-w", "--slitWidth", help="Slit width in arcsec", type=float, default=0.7)
+    parser.add_argument("-s", "--minSep", help="Min. separation in arcsec", type=float, default=0.35)
+    parser.add_argument("-E", "--extend", help="Do not extend slits", action="store_false", default=True)
     parser.add_argument("-c", "--clobber", help="Overwrite output file", action="store_true", default=False)
     parser.add_argument("-d", "--diffFits", help="FITS file to compare with", type=str)
     

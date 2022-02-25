@@ -142,7 +142,7 @@ class TargetSelector:
         xsegms = []
         for aIdx, seg in sortedBoxes.iterrows():
             xpos = seg.xarcs
-            x0, x1 = xpos - seg.length1, xpos + seg.length2
+            x0, x1 = xpos - seg.TopDist, xpos + seg.BotDist
             if x1 < minx:
                 continue
             if x0 > maxx:
@@ -204,8 +204,8 @@ class TargetSelector:
             fits, gIdx = self._canFit(xgaps, xpos, minSlitLength, minSep)
             if fits:
                 xgaps, left, right = self._splitGap(xgaps, gIdx, xpos, minSlitLength, minSep)
-                self.targets.at[tIdx, "length1"] = xpos - left
-                self.targets.at[tIdx, "length2"] = right - xpos
+                self.targets.at[tIdx, "TopDist"] = xpos - left
+                self.targets.at[tIdx, "BotDist"] = right - xpos
                 self.targets.at[tIdx, "selected"] = 1
             
         return xgaps
@@ -222,8 +222,8 @@ class TargetSelector:
             """
             if isGap == 0:
                 mid = self.targets.at[idx, "xarcs"]
-                self.targets.at[idx, "length1"] = mid - start
-                self.targets.at[idx, "length2"] = end - mid
+                self.targets.at[idx, "TopDist"] = mid - start
+                self.targets.at[idx, "BotDist"] = end - mid
                 #print (f"update {idx=}, {mid=:.1f}, {start:.1f}, {end:.1f}")
             return start, end, idx, isGap
 
@@ -279,7 +279,7 @@ class TargetSelector:
 
             for tIdx, tg in tgs.iterrows():
                 x = tg.xarcs
-                x0, x1 = x - tg.length1, x + tg.length2
+                x0, x1 = x - tg.TopDist, x + tg.BotDist
                 isGap = 0
                 if tg.pcode < 0:
                     isGap = -2
@@ -338,7 +338,7 @@ class TargetSelector:
         #self.allPairs1 = allPairs.copy()
         splitGaps(allPairs)
         #self.allPairs2 = allPairs.copy()
-        # print (self.targets[self.targets.pcode >0][['objectId','length1', 'length2']])
+        # print (self.targets[self.targets.pcode >0][['OBJECT','TopDist', 'BotDist']])
         return [x for x in allPairs if x[3] == 1]
 
     def performSelection(self, extendSlits=False):
@@ -350,22 +350,24 @@ class TargetSelector:
         """
 
         # Inserts the alignment boxes
-        inAlignBoxes = self.targets[self.targets.inMask == 1]
-        inAlignBoxes = inAlignBoxes[inAlignBoxes.pcode < 0]
+        inTargets = self.targets[self.targets.inMask == 1]        
+        inAlignBoxes = inTargets[inTargets.pcode == -2]
+
         xsegms = self.insertPairs(inAlignBoxes, self.minX, self.maxX)
         self.xsegms = xsegms.copy()
         # Turns the segments into gaps
         xgaps = self.segments2Gaps(xsegms, self.minX, self.maxX, self.minSep)
         self.xgaps0 = xgaps.copy()
         # Inserts the targets
-        inTargets = self.targets[self.targets.inMask == 1]
         inTargets = inTargets[inTargets.pcode > 0]
 
         self.xgaps = self._selectTargets(xgaps, inTargets, self.minSlitLength, self.minSep)
         self.xgaps1 = self.xgaps.copy()
         self.allPairs1 = []
-        if extendSlits:
-            inTargets = self.targets[self.targets.selected == 1]
+        if extendSlits:                
+            inTargets = self.targets[self.targets.selected == 1] 
+            inTargets = inTargets[inTargets.inMask == 1]
+
             xsegms = self.insertPairs (inTargets, self.minX, self.maxX)
             xgaps = self.segments2Gaps (xsegms, self.minX, self.maxX, self.minSep)
             self.xgaps = self._extendSlits(self.xgaps, inTargets, self.minSep)

@@ -23,6 +23,9 @@ def drawPatch(ax, vertCodes, offx=0, offy=0, **kwargs):
     ax.add_patch(patch)
     return patch
 
+def annotate (ax, labels, xs, ys, color):
+    for label, x, y in zip (labels, xs, ys):
+        ax.annotate(label, xy=(x, y), xytext=(x, y), color=color)
 
 def img2Bitmap(img, format="png"):
     """

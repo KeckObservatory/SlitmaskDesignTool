@@ -86,6 +86,7 @@ class SlitmaskDesignTool:
 
         # Updates targets coordinates for the new center raDeg and decDeg
         targets.reCalcCoordinates(raDeg, decDeg, paDeg)
+        
         targets.markInside ()
         targets.calcSlitPosition(minX, maxX, minSlitLength, minSep, ext)
         # Results are stored in targets
@@ -99,14 +100,21 @@ class SlitmaskDesignTool:
         targets.loc[targets.pcode > 0, colName] = value
         targets.loc[targets.pcode < 0, colName] = avalue
 
-    def saveDesignAsFits(self, fname):
+    def saveDesignAsFits(self, fname, backup=True):
         """
         Saves mask design FITS file
         """
-        mdf = MaskDesignOutputFitsFile(self.targetList)
-        backupName = utils.getBackupName(fname)
-        if backupName:
-            os.rename(fname, backupName)
+        mdf = MaskDesignOutputFitsFile(self.targetList)        
+        if backup:
+            backupName = utils.getBackupName(fname)
+            if backupName:
+                os.rename(fname, backupName)
+        else:
+            backupName = fname
+            try:
+                os.unlink(fname)
+            except:
+                pass
         mdf.writeTo(fname)
         SMDTLogger.info("Saved mask degins as FITS " + fname)
         return fname, backupName
@@ -120,3 +128,9 @@ class SlitmaskDesignTool:
         SMDTLogger.info("Saved mask design as list " + fname)
         return fname, backupName
 
+    def getAsFits (self):
+        fh = io.BytesIO()
+        mdf = MaskDesignOutputFitsFile(self.targetList)
+        mdf.writeTo(fh)
+        fh.seek(0)
+        return fh.read()

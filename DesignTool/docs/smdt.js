@@ -10,6 +10,7 @@ function SlitmaskDesignTool() {
 	self.xAsPerPixel = 1;
 	self.yAsPerPixel = 1;
 	self.dirtyFlag = 0;
+	self.sessId = false;
 
 	function sexa2deg(sexa) {
 		let parts = sexa.split(":");
@@ -20,6 +21,7 @@ function SlitmaskDesignTool() {
 	}
 
 	function E(n) {
+		``
 		return document.getElementById(n);
 	}
 
@@ -32,19 +34,29 @@ function SlitmaskDesignTool() {
 			s4() + s4();
 	}
 
-	self.ajaxCallDirty = function (cmd, params, cb) {
-		self.dirtyFlag = 1;
-		return ajaxCall(cmd, params, cb);
+	function array2Query(arr) {
+		let buf = new Array();
+		for (idx in arr) {
+			buf.push(idx + "=" + arr[idx]);
+		}
+		return buf.join("&");
+	}
+
+	self.remoteCall = function (command, params, callback) {
+		let options = { method: 'POST', body: array2Query(params) }
+		//fetch(command, options).then(resp => resp.json()).then(data => callback(data));
+		fetch(command, options).then(resp => resp.json()).then(callback);
 	};
 
-	self.ajaxPostDirty = function (cmd, params, cb) {
+	self.remoteCallDirty = function (command, params, callback) {
 		self.dirtyFlag = 1;
-		return ajaxPost(cmd, params, cb);
+		params["sessId"] = self.sessId;
+		self.remoteCall(command, params, callback);
 	};
 
 	self.setStatus = function (msg) {
 		self.statusDiv.innerHTML = msg;
-	}
+	};
 
 	self.sendTargets2Server = function () {
 		// The browser loads the targets and sends them to the server.
@@ -60,6 +72,7 @@ function SlitmaskDesignTool() {
 		self.setStatus("Loading ...");
 
 		let form2 = E('form2');
+		E("sessId").value = self.sessId;
 		form2.submit();
 	};
 
@@ -77,7 +90,7 @@ function SlitmaskDesignTool() {
 			return;
 		}
 
-		self.ajaxCallDirty("getMaskLayout", {
+		self.remoteCallDirty("getMaskLayout", {
 			'instrument': 'deimos'
 		}, callback);
 	};
@@ -155,20 +168,28 @@ function SlitmaskDesignTool() {
 			self.canvasShow.selectTargetByIndex(newIdx);
 		}
 
-		self.ajaxCallDirty("getTargetsAndInfo", {}, callback);
+		self.remoteCallDirty("getTargetsAndInfo", {}, callback);
+	};
+
+	self.getSessId = function (callThis) {
+		function callback(data) {
+			self.sessId = data.sessId;
+			callThis();
+		}
+		self.remoteCall('getNewSession', { "sessId": 0 }, callback);
 	};
 
 	self.loadConfigParams = function () {
 		function callback(data) {
 			self.buildParamTable(data.params);
 		}
-		self.ajaxCallDirty('getConfigParams', {}, callback);
+		self.remoteCallDirty('getConfigParams', {}, callback);
 	};
 
 	self.loadAll = function () {
 		self.loadBackgroundImage();
 		self.canvasShow.clearTargetSelection();
-		self.canvasShow.slitsReady = 0;
+		self.canvasShow.slitsReady = false;
 		self.reloadTargets(0);
 	};
 
@@ -202,13 +223,13 @@ function SlitmaskDesignTool() {
 		let elm = E('paramTableDiv');
 		if (curr == 'Show Parameters') {
 			this.value = 'Hide Parameters';
-			with(elm.style) {
+			with (elm.style) {
 				visibility = 'visible';
 				display = 'block';
 			}
 		} else {
 			this.value = 'Show Parameters';
-			with(elm.style) {
+			with (elm.style) {
 				visibility = 'hidden';
 				display = 'none';
 			}
@@ -238,7 +259,7 @@ function SlitmaskDesignTool() {
 			'value': value,
 			'avalue': value
 		};
-		self.ajaxPostDirty('setColumnValue', params, function () {});
+		self.remoteCallDirty('setColumnValue', params, function () { });
 		return false;
 	};
 
@@ -268,7 +289,7 @@ function SlitmaskDesignTool() {
 			'value': value,
 			'avalue': ahalf
 		};
-		self.ajaxPostDirty('setColumnValue', params, function () {});
+		self.remoteCallDirty('setColumnValue', params, function () { });
 
 		colName = 'length2';
 		value = halfLen;
@@ -277,7 +298,7 @@ function SlitmaskDesignTool() {
 			'value': value,
 			'avalue': ahalf
 		};
-		self.ajaxPostDirty('setColumnValue', params, function () {});
+		self.remoteCallDirty('setColumnValue', params, function () { });
 		return false;
 	};
 
@@ -300,7 +321,7 @@ function SlitmaskDesignTool() {
 			'value': value,
 			'avalue': value
 		};
-		self.ajaxPostDirty('setColumnValue', params, function () {});
+		self.remoteCallDirty('setColumnValue', params, function () { });
 		return false;
 	};
 
@@ -320,7 +341,7 @@ function SlitmaskDesignTool() {
 			return;
 		}
 
-		self.ajaxCallDirty("setCenterRADEC", {
+		self.remoteCallDirty("setCenterRADEC", {
 			"raDeg": raDeg,
 			"decDeg": decDeg,
 			'paDeg': paDeg
@@ -337,7 +358,7 @@ function SlitmaskDesignTool() {
 			tgs.selected[i] = 0;
 		}
 		self.canvasShow.reDrawTable();
-		self.canvasShow.slitsReady = 0;
+		self.canvasShow.slitsReady = false;
 		self.redraw();
 
 		let colName = 'selected';
@@ -346,7 +367,7 @@ function SlitmaskDesignTool() {
 			'value': 0,
 			'avalue': 0
 		};
-		self.ajaxPostDirty('setColumnValue', params, function () {});
+		self.remoteCallDirty('setColumnValue', params, function () { });
 	};
 
 	self.recalculateMaskHelper = function (callback) {
@@ -374,15 +395,15 @@ function SlitmaskDesignTool() {
 			'boxSize': boxSizeAs,
 			'extendSlits': extendSlits
 		};
-		//let ajax = new AjaxClass();
+
 		self.setStatus("Recalculating ...");
-		self.ajaxPostDirty('recalculateMask', params, callback);
+		self.remoteCallDirty('recalculateMask', params, callback);
 	};
 
 	self.recalculateMask = function (evt) {
 		function callback(data) {
 			self.canvasShow.slitsReady = false;
-			let msg = "No returned, recalculte failed";
+			let msg = "No data returned, recalculate failed";
 			if (data && data.targets) {
 				self.dirtyFlag = 0;
 				self.canvasShow.slitsReady = true;
@@ -432,8 +453,8 @@ function SlitmaskDesignTool() {
 			'len2': length2,
 			'targetName': tname
 		};
-		//let ajax = new AjaxClass();
-		self.ajaxPostDirty('updateTarget', {
+
+		self.remoteCallDirty('updateTarget', {
 			'values': JSON.stringify(params)
 		}, callback);
 	};
@@ -449,7 +470,7 @@ function SlitmaskDesignTool() {
 			'idx': idx
 		};
 
-		self.ajaxCallDirty("deleteTarget", params, callback);
+		self.remoteCallDirty("deleteTarget", params, callback);
 	};
 
 	self.showDiv = function (divname, cont) {
@@ -519,19 +540,23 @@ function SlitmaskDesignTool() {
 		}
 
 		function callback(data) {
-			self.targets = data;
-			//self.canvasShow.setShowPriorities(E('minPriority').value, E('maxPriority').value);
-			self.canvasShow.slitsReady = 1;
-			self.canvasShow.setTargets(data.targets);
-			//self.redraw();
-			self.setStatus("Saving slitmask file");
-			self.ajaxCallDirty("saveMaskDesignFile", params, callbackSave);
+			self.canvasShow.slitsReady = false;
+			let msg = "No returned, recalculate failed";
+			if (data && data.targets) {
+				self.dirtyFlag = 0;
+				self.canvasShow.slitsReady = true;
+				self.updateLoadedTargets(data);
+				msg = "OK";
+			}
+			self.setStatus(msg);
+
+			let mdFile = E('outputfitsfd').value;
+			let params = {
+				'mdFile': mdFile
+			};
+			self.remoteCall("downloadMDF", params, downloadCB); self.remoteCallDirty("saveMaskDesignFile", params, callbackSave);
 		}
 
-		let mdFile = E('outputfitsfd').value;
-		let params = {
-			'mdFile': mdFile
-		};
 		self.recalculateMaskHelper(callback);
 	};
 
@@ -549,7 +574,7 @@ function SlitmaskDesignTool() {
 		let args = splitArgs();
 		if (!args["quit"]) return;
 
-		self.ajaxCallDirty("quit", {}, function () {});
+		self.remoteCallDirty("quit", {}, function () { });
 		return "Quit";
 	};
 
@@ -559,9 +584,11 @@ function SlitmaskDesignTool() {
 	self.centerStatusDiv = E('centerStatusDiv');
 	self.canvasShow = new CanvasShow('canvasDiv', 'zoomCanvasDiv');
 	self.canvasShow.setShowPriorities(E('minPriority').value, E('maxPriority').value);
-	self.loadConfigParams();
-	self.loadMaskLayout();
-	self.loadBackgroundImage();
+	self.getSessId(function () {
+		self.loadConfigParams();
+		self.loadMaskLayout();
+		self.loadBackgroundImage();
+	});
 
 	E('showHideParams').onclick = self.showHideParams;
 	E('targetListFrame').onload = self.loadAll;
@@ -594,3 +621,4 @@ function SlitmaskDesignTool() {
 
 	return this;
 }
+
