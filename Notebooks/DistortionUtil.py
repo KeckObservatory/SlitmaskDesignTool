@@ -43,8 +43,8 @@ def projectTargetXYs(allSlits, scale=1.0):
     xLeft, yLeft = (x1 + x4) / 2, (y1 + y4) / 2
     xRight, yRight = (x2 + x3) / 2, (y2 + y3) / 2
 
-    # t = allSlits.BotDist / (allSlits.TopDist + allSlits.BotDist)
-    t = (allSlits.slitLen - allSlits.TopDist) / allSlits.slitLen
+    t = allSlits.BotDist / (allSlits.TopDist + allSlits.BotDist)
+    #t = (allSlits.slitLen - allSlits.TopDist) / allSlits.slitLen
 
     targetOnSlitX = (xRight - xLeft) * t + xLeft
     targetOnSlitY = (yRight - yLeft) * t + yLeft

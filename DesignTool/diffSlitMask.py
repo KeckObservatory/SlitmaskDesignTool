@@ -29,6 +29,7 @@ class DiffSlitMask:
     def __init__(self, fits1, fits2):
         self.fitsname1 = fits1
         mdf1 = MaskDesignInputFitsFile(fits1)
+        self.mdf1 = mdf1
         self.allSlits1 = mdf1.allSlits
         #self.allSlits1 = self.allSlits1[self.allSlits1.dSlitId > 0]
 
@@ -38,6 +39,7 @@ class DiffSlitMask:
         elif type(fits2) == str:
             self.fitsname2 = fits2
             mdf2 = MaskDesignInputFitsFile(fits2)
+            self.mdf2 = mdf2
             self.allSlits2 = mdf2.allSlits
         else: 
             return
@@ -50,7 +52,7 @@ class DiffSlitMask:
         slits1 = self.allSlits1
         slits2 = self.allSlits2
         jCols = "OBJECT", "RA_OBJ", "DEC_OBJ", "EQUINOX",
-        joined = slits1.merge (slits2, on=jCols, how="inner")
+        joined = slits1.merge (slits2, on=jCols, how="outer")
         joined['pcode'] = joined.pcode_y
         self.joinedSlits = joined
         self._calcTargetPositions()
@@ -113,8 +115,8 @@ class DiffSlitMask:
         drawUtils.drawPatch(ax, boxCodes1, fc="None", ec='g', label="A.box1")
         drawUtils.drawPatch(ax, boxCodes2, fc="None", ec='k', label="A.box2")
             
-        drawUtils.drawPatch(ax, codes1, fc="None", ec="r", label=self.fitsname1)        
-        drawUtils.drawPatch(ax, codes2, fc="None", ec="b", label=self.fitsname2)
+        drawUtils.drawPatch(ax, codes1, fc="None", ec="r", label=os.path.basename(self.fitsname1)[-10:])        
+        drawUtils.drawPatch(ax, codes2, fc="None", ec="b", label=os.path.basename(self.fitsname2)[-10:])
         drawUtils.drawPatch(ax, layoutMM, fc="None", ec="y")
 
         plt.plot (allSlits.xs1, allSlits.ys1, 'r.') 
@@ -125,6 +127,66 @@ class DiffSlitMask:
         plt.plot (allSlits.xs2, allSlits.ys2, 'b.')
 
         plt.gca().invert_xaxis()
+        plt.grid()
+        plt.legend()
+
+    def calcSlitXY (self, slits):
+        """
+        Calculates the slit corners using slit ceneters in RA/DEC and lengths
+        """
+        slitRADeg = slits.slitRA 
+        slitDec = slits.slitDec
+        
+        slitAngle = np.radians(slits.slitLPA-90)
+        half = slits.slitLen / 2 / 3600
+        cosdec = np.cos (np.radians(slitDec))
+
+        sines = np.sin(slitAngle)
+        cosines = np.cos(slitAngle)
+        vx = cosines * half * cosdec
+        vy = sines * half
+
+        upX = sines * slits.slitWid/2 / 3600
+        upY = cosines * slits.slitWid/2 / 3600
+
+        leftX = slitRADeg - vx
+        leftY = slitDec - vy
+        rightX = slitRADeg + vx
+        rightY = slitDec + vy
+
+        x2 = leftX + upX
+        y2 = leftY + upY
+        
+        x3 = leftX - upX
+        y3 = leftY - upY
+
+        x1 = rightX + upX
+        y1 = rightY + upY
+        
+        x4 = rightX - upX
+        y4 = rightY - upY
+        return genCode(x1, y1, x2, y2, x3, y3, x4, y4)
+
+
+    def plotSlitCenters (self, annotate=False):        
+        """
+        Plot slits using slits Center and slitlength, in arcsec
+        """
+
+        layout = maskLayouts.MaskLayouts["deimos"]
+
+        allSlits = self.joinedSlits
+        aboxes = allSlits[allSlits.pcode < 0]
+        allSlits = allSlits[allSlits.pcode > 0]
+
+        codes1 = self.calcSlitXY(self.allSlits2[self.allSlits2.pcode > 0])
+      
+        ax = plt.gca()
+
+        drawUtils.drawPatch(ax, codes1, fc="None", ec="r", label=os.path.basename(self.fitsname1)[-10:])        
+        #drawUtils.drawPatch(ax, layout, fc="None", ec="y")
+
+        #plt.gca().invert_xaxis()
         plt.grid()
         plt.legend()
 
@@ -197,7 +259,11 @@ class DiffSlitMask:
             self.plotTargetDiffs()
         else:
             self.plotCorners(self.calcDiffs())
-        plt.show()
+        try:
+            plt.show()
+        except:
+            print ("Keyboard interrupt.")
+            pass
 
     def fitModel (self):
         xs2, ys2 = self.target2XYs

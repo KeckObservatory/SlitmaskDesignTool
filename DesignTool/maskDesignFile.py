@@ -144,7 +144,7 @@ class MaskDesignOutputFitsFile:
         nTargets = targets.shape[0]
         zeros = [0] * nTargets
         objClass = [objClassTable[min(3, p + 2)] for p in targets.pcode]
-        cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=targets.orgIndex))
+        cols.append(pf.Column(name="ObjectId", format="I6", null="-9999", unit="None", array=targets.ObjectId))
         cols.append(pf.Column(name="OBJECT", format="A68", null="INDEF", unit="None", array=targets.OBJECT))
         cols.append(pf.Column(name="RA_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.raHour * 15.0))
         cols.append(pf.Column(name="DEC_OBJ", format="F12.8", null="-9999.000000", unit="deg", array=targets.decDeg))
@@ -233,8 +233,8 @@ class MaskDesignOutputFitsFile:
             cols.append(pf.Column(name="dSlitId", format="I11", null="-9999", unit="None", array=range(nSlits)))
             cols.append(pf.Column(name="DesId", format="I11", null="-9999", unit="None", array=[1] * nSlits))
             cols.append(pf.Column(name="SlitName", format="A20", null="None", unit="None", array=slitNames))
-            cols.append(pf.Column(name="slitRA", format="F12.8", null="-9999.000000", unit="deg", array=objInMask.raHour * 15))
-            cols.append(pf.Column(name="slitDec", format="F12.8", null="-9999.000000", unit="deg", array=objInMask.decDeg))
+            cols.append(pf.Column(name="slitRA", format="F12.8", null="-9999.000000", unit="deg", array=objInMask.slitRADeg))
+            cols.append(pf.Column(name="slitDec", format="F12.8", null="-9999.000000", unit="deg", array=objInMask.slitDEC))
             cols.append(pf.Column(name="slitTyp", format="A1", null="I", unit="None", array=slitTypes))
             cols.append(pf.Column(name="slitLen", format="F11.3", null="-9999.000", unit="arcsec", array=slitLengths))
             cols.append(pf.Column(name="slitLPA", format="F8.3", null="-9999.00", unit="deg", array=objInMask.slitLPA))
@@ -254,7 +254,7 @@ class MaskDesignOutputFitsFile:
         nSlits = objInMask.shape[0]
         if nSlits > 0:
             cols.append(pf.Column(name="DesId", format="I11", null="-9999", unit="None", array=[1] * nSlits,))
-            cols.append(pf.Column(name="ObjectId", format="I11", null="-9999", unit="None", array=objInMask.orgIndex))
+            cols.append(pf.Column(name="ObjectId", format="I11", null="-9999", unit="None", array=objInMask.ObjectId))
             cols.append(pf.Column(name="dSlitId", format="I11", null="-9999", unit="None", array=range(nSlits)))
             cols.append(pf.Column(name="TopDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.TopDist))
             cols.append(pf.Column(name="BotDist", format="F11.3", null="-9999.000", unit="arcsec", array=objInMask.BotDist))
@@ -530,7 +530,6 @@ class MaskDesignInputFitsFile:
 
         self.allSlits["OBJECT"] = [d.strip() for d in allSlits.OBJECT]
 
-        self.allSlits["orgIndex"] = range(nSlits)
         self.allSlits["inMask"] = [0] * nSlits
         self.allSlits["selected"] = [0] * nSlits
         self.allSlits["sampleNr"] = [1] * nSlits

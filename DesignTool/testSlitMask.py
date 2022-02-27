@@ -29,6 +29,8 @@ class TestSlitmask:
         self.inFile = inFile
         self.config = config
         self.targetList = TargetList(inFile, config)
+        
+        #print ("run", self.targetList.targets.ObjectId)
         instrument = self.config.getValue("instrument", "deimos").lower()
         self.sdt = SlitmaskDesignTool(self.targetList, instrument, config)
 
@@ -47,7 +49,8 @@ class TestSlitmask:
         self.sdt.setColumnValue("slitWidth", self.slitWidth, self.minABoxLength)
         
         tlist = tlist[tlist.selected == 1].copy()
-        
+
+        #print ("run", tlist.ObjectId)
         self.targetList.targets = tlist
         targets = self.targetList
 
@@ -76,6 +79,7 @@ def testMaskDesign(args):
         return True
 
     tester = TestSlitmask(args.input_file[0])
+    
     tester.runDesign(args.slitLength, args.boxLength, args.slitWidth, args.minSep, args.extend)
     
     if args.output_file is not None:

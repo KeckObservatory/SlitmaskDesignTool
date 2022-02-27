@@ -4,6 +4,7 @@ Created on Mar 20, 2018
 @author: skwok
 """
 
+from multidict import MultiDictProxy
 from targetSelector import TargetSelector
 from smdtLogger import SMDTLogger
 from smdtLibs.inOutChecker import InOutChecker
@@ -192,7 +193,7 @@ class TargetList:
             "TopDist",
             "BotDist",
             "slitWidth",
-            "orgIndex",
+            "ObjectId",
             "inMask",
             "raRad",
             "decRad",
@@ -219,7 +220,7 @@ class TargetList:
             if len(parts) < 3:
                 continue
             # print (nr, "len", parts)
-
+            # RAHour, DECDeg, EQUINOX, mag, pBand, pcode, sampleNr, selected
             template = ["", "", "2000", "99", "I", "0", "-1", "0", slitpa, halfLen, halfLen, slitWidth, "0", "0"]
             minLength = min(len(parts), len(template))
             template[:minLength] = parts[:minLength]
@@ -371,7 +372,7 @@ class TargetList:
         """
         for i, stg in self.targets.iterrows():
             if stg.OBJECT == targetName:
-                return stg.orgIndex
+                return stg.ObjectId
         return -1
 
     def updateTarget(self, jvalues):
@@ -434,7 +435,7 @@ class TargetList:
                 "TopDist": len1,
                 "BotDist": len2,
                 "slitWidth": slitWidth,
-                "orgIndex": idx,
+                "ObjectId": idx,
                 "raRad": raRad,
                 "decRad": decRad,
             }
@@ -504,6 +505,10 @@ class TargetList:
         Calculates the corners of the slits
         """
         targets = self.targets
+        
+        targets['slitRA'] = targets.raHour * 15
+        targets['slitDec'] = targets.decDeg
+
         selector = targets.inMask > 0
         aboxSelect = targets.pcode < 0
         targets.loc[aboxSelect, "slitLPA"] = self.positionAngle
@@ -521,10 +526,10 @@ class TargetList:
             slitY = selected.yarcs
             l1 = selected.TopDist
             l2 = selected.BotDist
+            m0 = (l2-l1)/2
 
             slitX10 = slitX - cosines * l1
             slitY10 = slitY - sines * l1
-
             slitX2, slitY2, pa0 = self.proj_to_mask(slitX10, slitY10 + half, 0)
             slitX3, slitY3, pa0 = self.proj_to_mask(slitX10, slitY10 - half, 0)
 
@@ -532,6 +537,16 @@ class TargetList:
             slitY30 = slitY + sines * l2
             slitX4, slitY4, pa0 = self.proj_to_mask(slitX30, slitY30 - half, 0)
             slitX1, slitY1, pa0 = self.proj_to_mask(slitX30, slitY30 + half, 0)
+
+            ang = np.radians(selected.slitLPA-90)
+            sina1 = np.sin(ang)
+            cosa1 = np.cos(ang)
+            midY =  selected.decDeg - (m0 * sina1) / 3600 
+            cosdec = np.cos(np.radians(midY))
+            midX =  (m0 * cosa1) / 3600 / cosdec + selected.raHour * 15
+
+            targets.loc[selector, "slitRADeg"] = midX
+            targets.loc[selector, "slitDEC"] = midY
 
             targets.loc[selector, "slitX1"] = slitX1
             targets.loc[selector, "slitY1"] = slitY1
@@ -566,8 +581,6 @@ class TargetList:
 
         targets["xmm"] = xmm
         targets["ymm"] = ymm
-
-        targets["orgIndex"] = range(0, targets.shape[0])
 
         targets["slitX1"] = 0
         targets["slitY1"] = 0

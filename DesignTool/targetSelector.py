@@ -284,7 +284,7 @@ class TargetSelector:
                 if tg.pcode < 0:
                     isGap = -2
                 allPairs.append((x0, x1, tIdx, isGap))
-                #print(f"gen gap {x0:.2f}, {x1:.2f}, {tIdx=}, {tg.oldIndex=} {tg.pcode}, {tg.orgIndex=}, {tg.selected=}")
+                #print(f"gen gap {x0:.2f}, {x1:.2f}, {tIdx=}, {tg.oldIndex=} {tg.pcode}, {tg.ObjectId=}, {tg.selected=}")
 
             return sorted(allPairs, key=lambda x: x[0])
 
@@ -364,6 +364,7 @@ class TargetSelector:
         self.xgaps = self._selectTargets(xgaps, inTargets, self.minSlitLength, self.minSep)
         self.xgaps1 = self.xgaps.copy()
         self.allPairs1 = []
+        
         if extendSlits:                
             inTargets = self.targets[self.targets.selected == 1] 
             inTargets = inTargets[inTargets.inMask == 1]
